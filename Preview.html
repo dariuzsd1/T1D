@@ -1,1 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T1D Management - Site Rotation & Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #34495E; /* Midnight Graphite */
+            --bg-card: rgba(30, 43, 56, 0.65); /* Dark Graphite alpha */
+            --bg-card-hover: rgba(40, 56, 73, 0.85); /* Light Graphite alpha */
+            --text-primary: #F0F4F8;
+            --text-secondary: #9BA4B5;
+            --accent-primary: #005FB8; /* International Blue */
+            --accent-secondary: #4DB6AC; /* Cannula Teal */
+            --accent-gradient: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
+            
+            --zone-available: rgba(77, 182, 172, 0.3); /* Cannula Teal alpha */
+            --zone-used: rgba(178, 34, 34, 0.5); /* Prick Crimson alpha */
+            --zone-border: rgba(255, 255, 255, 0.2);
+            --zone-active: rgba(255, 191, 0, 0.6); /* Juice Box Amber alpha */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 95, 184, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(77, 182, 172, 0.1), transparent 25%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-glass);
+            background: rgba(20, 17, 15, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-glass);
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 15px rgba(0, 95, 184, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            border: none;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 8px 20px rgba(0, 95, 184, 0.4);
+        }
+
+        main {
+            flex: 1;
+            padding: 3rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 2.5rem;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            background: var(--bg-card-hover);
+        }
+
+        /* Calendar Section */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-header h2 {
+            font-size: 1.8rem;
+            font-weight: 500;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .weekday {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding-bottom: 0.5rem;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+            position: relative;
+        }
+
+        .day:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .day.active {
+            background: var(--accent-gradient);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 95, 184, 0.4);
+        }
+
+        .day.has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+        }
+
+        .upcoming-events .event-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .upcoming-events .event-card:hover {
+            border-color: rgba(77, 182, 172, 0.4);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .event-time {
+            color: var(--accent-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 60px;
+        }
+
+        .event-details h4 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .event-details p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .integration-banner {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 16px;
+            background: linear-gradient(45deg, rgba(0, 95, 184, 0.1), rgba(77, 182, 172, 0.05));
+            border: 1px dashed var(--accent-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .integration-banner p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            max-width: 60%;
+        }
+
+        /* Body Mapping Section */
+        .model-container {
+            position: relative;
+            height: 600px;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .model-switcher {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0,0,0,0.4);
+            padding: 0.5rem;
+            border-radius: 30px;
+            z-index: 10;
+        }
+
+        .model-switcher button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .model-switcher button.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .human-body-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .human-body-wrapper.show-back {
+            transform: rotateY(180deg);
+        }
+
+        .body-side {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .body-side.back {
+            transform: rotateY(180deg);
+        }
+        
+        .body-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .zone-info {
+            background: rgba(0, 0, 0, 0.5);
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(8px);
+        }
+
+        /* SVG Styles */
+        svg.human-svg {
+            height: 100%;
+            max-width: 100%;
+            filter: drop-shadow(0 0 20px rgba(0, 95, 184, 0.15));
+        }
+
+        .svg-body {
+            fill: #1C2833;
+            stroke: #2C3E50;
+            stroke-width: 2;
+        }
+
+        .zone {
+            fill: var(--zone-available);
+            stroke: var(--zone-border);
+            stroke-width: 1.5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .zone:hover {
+            fill: var(--zone-active);
+            stroke: var(--accent-primary);
+        }
+        
+        .zone.used-recently {
+            fill: var(--zone-used);
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .color-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">T1D Core</div>
+        <nav>
+            <button class="btn">Dashboard</button>
+            <button class="btn">Insights</button>
+            <button class="btn btn-primary">Profile</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Calendar & Scheduling Panel -->
+        <div class="glass-panel">
+            <div class="calendar-header">
+                <h2>April 2026</h2>
+                <div>
+                    <button class="btn" style="padding: 0.4rem 0.8rem;">&lt;</button>
+                    <button class="btn" style="padding: 0.4rem 0.8rem;">&gt;</button>
+                </div>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="weekday">Sun</div>
+                <div class="weekday">Mon</div>
+                <div class="weekday">Tue</div>
+                <div class="weekday">Wed</div>
+                <div class="weekday">Thu</div>
+                <div class="weekday">Fri</div>
+                <div class="weekday">Sat</div>
+
+                <!-- Empty days for start of month -->
+                <div></div><div></div><div></div>
+                
+                <div class="day">1</div>
+                <div class="day">2</div>
+                <div class="day">3</div>
+                <div class="day has-event">4</div>
+                <div class="day has-event">5</div>
+                <div class="day">6</div>
+                <div class="day">7</div>
+                <div class="day">8</div>
+                <div class="day active">9</div>
+                <div class="day">10</div>
+                <div class="day has-event">11</div>
+                <div class="day">12</div>
+                <div class="day">13</div>
+                <div class="day">14</div>
+                <div class="day">15</div>
+                <div class="day">16</div>
+                <div class="day">17</div>
+                <div class="day has-event">18</div>
+                <div class="day">19</div>
+                <div class="day">20</div>
+                <div class="day">21</div>
+                <div class="day">22</div>
+                <div class="day">23</div>
+                <div class="day">24</div>
+                <div class="day">25</div>
+                <div class="day">26</div>
+                <div class="day">27</div>
+                <div class="day">28</div>
+                <div class="day">29</div>
+                <div class="day">30</div>
+            </div>
+
+            <div class="upcoming-events">
+                <h3 style="margin-bottom: 1rem; font-weight: 500;">Today's Schedule</h3>
+                <div class="event-card">
+                    <div class="event-time">08:00</div>
+                    <div class="event-details">
+                        <h4>Morning Basal</h4>
+                        <p>Recommended Site: Left Abdomen</p>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <div class="event-time">19:00</div>
+                    <div class="event-details">
+                        <h4>Evening Basal</h4>
+                        <p>Recommended Site: Right Thigh</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="integration-banner">
+                <div>
+                    <h4 style="margin-bottom: 0.25rem;">Sync your life</h4>
+                    <p>Connect Google Calendar or Apple Calendar to see your personal events alongside your health routine.</p>
+                </div>
+                <button class="btn btn-primary">Link Calendar <span style="font-size: 1.2rem;">+</span></button>
+            </div>
+        </div>
+
+        <!-- Body Mapping Panel -->
+        <div class="glass-panel">
+            <div class="calendar-header">
+                <h2>Interactive Body Map</h2>
+                <span class="btn" style="border:none; padding:0; color:var(--accent-primary);">View Zones</span>
+            </div>
+
+            <div class="model-container">
+                <div class="model-switcher">
+                    <button class="active" onclick="rotateBody('front')">Front</button>
+                    <button onclick="rotateBody('back')">Back</button>
+                </div>
+
+                <div class="human-body-wrapper" id="bodyWrapper">
+                    <!-- Front View -->
+                    <div class="body-side front">
+                        <svg class="human-svg" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Base Silhouette -->
+                            <!-- Head & Neck -->
+                            <path class="svg-body" d="M170 80 C170 50, 230 50, 230 80 C230 110, 215 130, 215 130 L185 130 C185 130, 170 110, 170 80 Z" />
+                            <path class="svg-body" d="M185 130 L215 130 L225 150 L175 150 Z" />
+                            
+                            <!-- Torso -->
+                            <path class="svg-body" d="M175 150 L225 150 L260 180 L250 350 L220 400 L180 400 L150 350 L140 180 Z" />
+                            
+                            <!-- Arms -->
+                            <path class="svg-body" d="M140 180 L100 240 L80 340 L100 350 L120 250 L150 190 Z" /> <!-- Left Arm -->
+                            <path class="svg-body" d="M260 180 L300 240 L320 340 L300 350 L280 250 L250 190 Z" /> <!-- Right Arm -->
+                            
+                            <!-- Legs -->
+                            <path class="svg-body" d="M180 400 L150 550 L140 700 L170 700 L190 550 L200 420 Z" /> <!-- Left Leg -->
+                            <path class="svg-body" d="M220 400 L250 550 L260 700 L230 700 L210 550 L200 420 Z" /> <!-- Right Leg -->
+
+                            <!-- INTERACTIVE ZONES -->
+                            <!-- Left Upper Arm Zone -->
+                            <path class="zone" id="zone-arm-l" d="M140 180 L115 220 L130 230 L150 190 Z" onclick="selectZone('Left Upper Arm')" />
+                            
+                            <!-- Right Upper Arm Zone -->
+                            <path class="zone" id="zone-arm-r" d="M260 180 L285 220 L270 230 L250 190 Z" onclick="selectZone('Right Upper Arm')" />
+                            
+                            <!-- Abdomen Left -->
+                            <path class="zone" id="zone-abd-l" d="M160 250 L195 250 L195 350 L160 330 Z" onclick="selectZone('Left Abdomen')" />
+                            
+                            <!-- Abdomen Right -->
+                            <path class="zone used-recently" id="zone-abd-r" d="M205 250 L240 250 L240 330 L205 350 Z" onclick="selectZone('Right Abdomen - Recently Used')" />
+                            
+                            <!-- Left Thigh -->
+                            <path class="zone" id="zone-thigh-l" d="M170 420 L155 520 L185 520 L195 420 Z" onclick="selectZone('Left Thigh')" />
+                            
+                            <!-- Right Thigh -->
+                            <path class="zone" id="zone-thigh-r" d="M230 420 L245 520 L215 520 L205 420 Z" onclick="selectZone('Right Thigh')" />
+
+                        </svg>
+                    </div>
+
+                    <!-- Back View -->
+                    <div class="body-side back">
+                        <svg class="human-svg" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Base Silhouette Back (Mirrored basically, but zones differ) -->
+                            <!-- Head & Neck -->
+                            <path class="svg-body" d="M170 80 C170 50, 230 50, 230 80 C230 110, 215 130, 215 130 L185 130 C185 130, 170 110, 170 80 Z" />
+                            <path class="svg-body" d="M185 130 L215 130 L225 150 L175 150 Z" />
+                            <!-- Torso -->
+                            <path class="svg-body" d="M175 150 L225 150 L260 180 L250 350 L220 400 L180 400 L150 350 L140 180 Z" />
+                            <!-- Arms -->
+                            <path class="svg-body" d="M140 180 L100 240 L80 340 L100 350 L120 250 L150 190 Z" />
+                            <path class="svg-body" d="M260 180 L300 240 L320 340 L300 350 L280 250 L250 190 Z" />
+                            <!-- Legs -->
+                            <path class="svg-body" d="M180 400 L150 550 L140 700 L170 700 L190 550 L200 420 Z" />
+                            <path class="svg-body" d="M220 400 L250 550 L260 700 L230 700 L210 550 L200 420 Z" />
+
+                            <!-- INTERACTIVE ZONES BACK -->
+                            <!-- Back Upper Arms -->
+                            <path class="zone" d="M115 220 L85 280 L105 290 L130 230 Z" onclick="selectZone('Back Left Arm')" />
+                            <path class="zone" d="M285 220 L315 280 L295 290 L270 230 Z" onclick="selectZone('Back Right Arm')" />
+                            
+                            <!-- Buttocks Left -->
+                            <path class="zone" id="zone-butt-l" d="M145 350 L195 350 L195 420 L175 420 Z" onclick="selectZone('Left Buttock')" />
+                            
+                            <!-- Buttocks Right -->
+                            <path class="zone" id="zone-butt-r" d="M205 350 L255 350 L225 420 L205 420 Z" onclick="selectZone('Right Buttock')" />
+                        </svg>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="color-box" style="background: var(--zone-available);"></div> Available
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: var(--zone-used);"></div> Recently Used
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: var(--zone-active);"></div> Hover/Select
+                    </div>
+                </div>
+
+                <div class="body-info">
+                    <div class="zone-info" id="zoneInfoText">Hover or click a zone to view details</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function rotateBody(side) {
+            const wrapper = document.getElementById('bodyWrapper');
+            const buttons = document.querySelectorAll('.model-switcher button');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            if (side === 'back') {
+                wrapper.classList.add('show-back');
+                buttons[1].classList.add('active');
+            } else {
+                wrapper.classList.remove('show-back');
+                buttons[0].classList.add('active');
+            }
+        }
+
+        function selectZone(zoneName) {
+            const infoText = document.getElementById('zoneInfoText');
+            infoText.innerHTML = `<strong>Selected:</strong> ${zoneName}`;
+            infoText.style.color = 'var(--accent-primary)';
+            infoText.style.borderColor = 'var(--accent-primary)';
+            
+            setTimeout(() => {
+                infoText.style.color = 'var(--text-secondary)';
+                infoText.style.borderColor = 'var(--border-glass)';
+            }, 1500);
+        }
+
+        // Add hover effects to update text
+        document.querySelectorAll('.zone').forEach(zone => {
+            zone.addEventListener('mouseenter', (e) => {
+                const name = e.target.getAttribute('onclick').match(/'([^']+)'/)[1];
+                document.getElementById('zoneInfoText').innerText = name;
+            });
+            zone.addEventListener('mouseleave', () => {
+                document.getElementById('zoneInfoText').innerText = 'Hover or click a zone to view details';
+            });
+        });
+    </script>
+</body>
+</html>
 
