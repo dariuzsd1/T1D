@@ -3,14 +3,19 @@
 import { useEffect, useState } from 'react'
 import { useStore } from "@/lib/store";
 import { ProductCard } from "@/components/inventory/ProductCard";
-import { Plus, Search, Filter, TrendingDown, PackageCheck } from "lucide-react";
+import { stockStatus } from "@/lib/depletion";
+import { useToast } from "@/components/ui/Toast";
+import { Plus, TrendingDown, PackageCheck } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
 export default function DashboardPage() {
-  const { inventory, setInventory, updateProduct, removeProduct } = useStore();
+  const { inventory, setInventory, updateProduct, removeProduct, safetyBufferDays } = useStore();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const handleOrder = (name: string) =>
+    showToast(`Reorder for ${name} isn't connected yet — coming in a later update.`, 'info')
   
   // Fetch inventory on mount
   useEffect(() => {
@@ -37,19 +42,20 @@ export default function DashboardPage() {
     fetchInventory()
   }, [])
   
-  // Risk-First Sorting: Most urgent items first
+  // Most urgent first. "Needs attention" = anything that would dip below the
+  // user's safety buffer (their reserve), not just items at literal zero.
   const sortedInventory = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays);
-  
-  const criticalItems = sortedInventory.filter(p => p.remainingDays < 7);
-  const stableItems = sortedInventory.filter(p => p.remainingDays >= 7);
+
+  const needsAttention = sortedInventory.filter(p => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok');
+  const stableItems = sortedInventory.filter(p => stockStatus(p.remainingDays, safetyBufferDays) === 'ok');
 
   return (
     <div className="space-y-12">
       {/* Header Section */}
       <section className="flex justify-between items-end">
         <div>
-          <h2 className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mb-2">Triage Dashboard</h2>
-          <h1 className="text-4xl font-black tracking-tight">Supply Risk Analysis</h1>
+          <h2 className="text-gray-500 text-xs font-semibold uppercase tracking-[0.2em] mb-2">Your supplies</h2>
+          <h1 className="text-3xl font-bold tracking-tight">Supply overview</h1>
         </div>
         
         <Link 
@@ -95,43 +101,44 @@ export default function DashboardPage() {
 
       {/* Stats Summary */}
       {!loading && <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 relative overflow-hidden group hover:border-red-500/40 transition-all">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 relative overflow-hidden group hover:border-amber-500/40 transition-all">
           <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none group-hover:scale-110 transition-transform">
-            <TrendingDown className="w-24 h-24 text-red-500" />
+            <TrendingDown className="w-24 h-24 text-amber-500" />
           </div>
-          <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest leading-none mb-4">Critical Shortages</p>
-          <h3 className="text-5xl font-black text-white">{criticalItems.length}</h3>
-          <p className="text-sm text-red-300 font-medium mt-2">
-            {criticalItems.length > 0 
-              ? `Requires immediate replenishment action` 
-              : `All supplies are currently stable`}
+          <p className="text-amber-400 text-[11px] font-semibold uppercase tracking-widest leading-none mb-4">Reorder soon</p>
+          <h3 className="text-5xl font-black text-white">{needsAttention.length}</h3>
+          <p className="text-sm text-amber-200/80 font-medium mt-2">
+            {needsAttention.length > 0
+              ? `Would drop below your ${safetyBufferDays}-day reserve`
+              : `Everything is comfortably stocked`}
           </p>
         </div>
         <div className="bg-[#0D0D0D] border border-white/10 rounded-2xl p-6 relative overflow-hidden group hover:border-blue-500/30 transition-all">
            <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none group-hover:scale-110 transition-transform">
             <PackageCheck className="w-24 h-24 text-blue-500" />
           </div>
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest leading-none mb-4">Inventory Health</p>
+          <p className="text-gray-500 text-[11px] font-semibold uppercase tracking-widest leading-none mb-4">Tracked supplies</p>
           <h3 className="text-5xl font-black text-white">{inventory.length}</h3>
-          <p className="text-sm text-gray-500 font-medium mt-2">Active medical products tracked</p>
+          <p className="text-sm text-gray-500 font-medium mt-2">Items you're keeping an eye on</p>
         </div>
       </section>}
 
-      {/* CRITICAL SECTION */}
-      {!loading && criticalItems.length > 0 && (
+      {/* NEEDS ATTENTION */}
+      {!loading && needsAttention.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
-            <h2 className="text-lg font-black uppercase tracking-widest text-red-500">Urgent Depletion</h2>
+            <div className="w-2 h-2 bg-amber-500 rounded-full" />
+            <h2 className="text-base font-semibold tracking-wide text-amber-400">Reorder soon</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-            {criticalItems.map((item) => (
-              <ProductCard 
-                key={item.id} 
-                product={item} 
+            {needsAttention.map((item) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                bufferDays={safetyBufferDays}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
-                onOrder={(name) => alert(`Ordering refill for ${name}...`)}
+                onOrder={handleOrder}
               />
             ))}
           </div>
@@ -141,15 +148,16 @@ export default function DashboardPage() {
       {/* STABLE SECTION */}
       {!loading && stableItems.length > 0 && (
         <section className="space-y-6 pt-12 border-t border-white/5">
-          <h2 className="text-lg font-black uppercase tracking-widest text-gray-600">Stable Inventory</h2>
+          <h2 className="text-base font-semibold tracking-wide text-gray-400">Well stocked</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {stableItems.map((item) => (
-              <ProductCard 
-                key={item.id} 
-                product={item} 
+              <ProductCard
+                key={item.id}
+                product={item}
+                bufferDays={safetyBufferDays}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
-                onOrder={(name) => alert(`Ordering refill for ${name}...`)}
+                onOrder={handleOrder}
               />
             ))}
           </div>

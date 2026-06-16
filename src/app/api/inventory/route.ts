@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
         remainingDays: Math.max(0, remainingDays),
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         usageRatePerDay: supply.unit === 'pieces' ? 1 : 0.5,
+        expirationDate: supply.expiration_date || null,
       }
     })
 

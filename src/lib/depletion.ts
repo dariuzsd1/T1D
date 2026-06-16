@@ -1,0 +1,74 @@
+/**
+ * Honest supply-runway math — the single source of truth for "days remaining".
+ *
+ * We deliberately separate the three numbers CLAUDE.md §7 calls out:
+ *   1. stock-on-hand          → `quantity`
+ *   2. how long the stock runs → `daysOfStock` (quantity ÷ daily usage)
+ *   3. shelf-life expiry       → `daysUntilExpiration`
+ *
+ * The headline "runway" a user sees is the *sooner* of running out and expiring,
+ * so the number is never more optimistic than reality. Nothing here fabricates a
+ * value: if usage is unknown we fall back to the conservative 1-unit/day estimate
+ * (shortest reasonable runway), never a rosy guess.
+ */
+
+export const DEFAULT_SAFETY_BUFFER_DAYS = 14
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+export interface RunwayInput {
+  quantity: number
+  usageRatePerDay: number
+  expirationDate?: string | null
+}
+
+/** Days of stock left, derived from units on hand and daily usage. */
+export function daysOfStock(quantity: number, usageRatePerDay: number): number {
+  // Guard divide-by-zero: an unknown/zero rate falls back to a conservative
+  // 1 unit/day, which yields the shortest (safest) runway rather than Infinity.
+  const usage = usageRatePerDay > 0 ? usageRatePerDay : 1
+  return Math.max(0, Math.floor(quantity / usage))
+}
+
+/** Days until the boxed stock expires (shelf life), or null if unknown. */
+export function daysUntilExpiration(expirationDate?: string | null): number | null {
+  if (!expirationDate) return null
+  const ms = new Date(expirationDate).getTime()
+  if (Number.isNaN(ms)) return null
+  return Math.floor((ms - Date.now()) / MS_PER_DAY)
+}
+
+/** The honest runway: the sooner of "stock runs out" and "stock expires". */
+export function effectiveRunwayDays(p: RunwayInput): number {
+  const stock = daysOfStock(p.quantity, p.usageRatePerDay)
+  const exp = daysUntilExpiration(p.expirationDate)
+  if (exp === null) return stock
+  return Math.max(0, Math.min(stock, exp))
+}
+
+export type StockStatus = 'out' | 'low' | 'ok'
+
+/**
+ * Status against the user's safety buffer (their reserve), not against zero.
+ * `low` means "you'd dip below your reserve" — the moment to reorder.
+ */
+export function stockStatus(
+  runwayDays: number,
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+): StockStatus {
+  if (runwayDays <= 0) return 'out'
+  if (runwayDays <= bufferDays) return 'low'
+  return 'ok'
+}
+
+/**
+ * The date to reorder by so you still have `bufferDays` of reserve left when the
+ * new supply arrives. Returns today if you're already at/under the buffer.
+ */
+export function reorderByDate(
+  runwayDays: number,
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+): Date {
+  const daysUntilReorder = Math.max(0, runwayDays - bufferDays)
+  return new Date(Date.now() + daysUntilReorder * MS_PER_DAY)
+}
