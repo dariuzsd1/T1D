@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Map, MapPin, RefreshCcw, Info, ChevronRight, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useStore } from '@/lib/store'
 
 const SITES = [
   { id: 'abdomen-tl', label: 'Top Left Abdomen', lastUsed: '2 days ago', health: 'Optimal', pos: { x: '35%', y: '45%' } },

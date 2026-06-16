@@ -1,4 +1,4 @@
-import { extractEntities } from "../lib/ocrExtractor";
+import { extractEntities } from "../src/lib/ocrExtractor";
 
 const testCases = [
   "HUMALOG 100 units/mL lispro 5x 3mL Prefilled Pens", // Ideal

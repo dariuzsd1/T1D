@@ -1,6 +1,6 @@
-import { extractEntities } from "../lib/ocrExtractor";
-import { executeAPIMatch } from "../lib/apiMatcher";
-import { estimateDuration, UserProfile } from "../lib/durationEstimator";
+import { extractEntities } from "../src/lib/ocrExtractor";
+import { executeAPIMatch } from "../src/lib/apiMatcher";
+import { estimateDuration, UserProfile } from "../src/lib/durationEstimator";
 
 // Simulated User Profiles
 const profileComplete: UserProfile = {
@@ -39,7 +39,7 @@ const testCases = [
 
 console.log("=== INTEGRATION TEST 3: OCR → EXTRACTION → API MATCH → DURATION ===\n");
 
-testCases.forEach((tc, i) => {
+testCases.forEach(async (tc, i) => {
     console.log(`────────────────────────────────────────────────────`);
     console.log(`TEST ${i + 1}: ${tc.label}`);
     console.log(`────────────────────────────────────────────────────`);
@@ -50,7 +50,7 @@ testCases.forEach((tc, i) => {
     console.log(`[2] EXTRACTION: ${extraction.status} | Qty: ${extraction.parsedData.quantity ?? "null"} | Brand: ${extraction.parsedData.brand ?? "null"}`);
 
     // Stage 2: API Match
-    const matchResult = executeAPIMatch(extraction);
+    const matchResult = await executeAPIMatch(extraction);
     if (matchResult.status === "FAILED" || matchResult.topMatches.length === 0) {
         console.log(`[3] API MATCH: FAILED — pipeline halted, manual entry required.\n`);
         return;

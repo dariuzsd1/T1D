@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        const result = executeAPIMatch(input);
+        const result = await executeAPIMatch(input);
 
         return NextResponse.json({
             status: result.status,

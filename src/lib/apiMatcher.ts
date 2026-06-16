@@ -65,8 +65,6 @@ export async function executeAPIMatch(extractionData: OCRExtractionResult): Prom
         }
 
         const result = await withRetry(async () => {
-            if (Math.random() < 0.05) throw new Error("SIMULATED_NETWORK_FAILURE");
-
             let rawHits = fuse.search(query);
             
             // ── FALLBACK LOGIC ──────────────────────────────────────────

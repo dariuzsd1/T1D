@@ -1,5 +1,5 @@
-import { runPipeline } from "../lib/pipeline";
-import { UserProfile } from "../lib/durationEstimator";
+import { runPipeline } from "../src/lib/pipeline";
+import { UserProfile } from "../src/lib/durationEstimator";
 
 const profileComplete: UserProfile = {
     average_daily_basal: 22,
@@ -44,27 +44,26 @@ const testCases = [
 
 console.log("=== FULL PIPELINE INTEGRATION TEST ===\n");
 
-testCases.forEach((tc, i) => {
+testCases.forEach(async (tc, i) => {
     console.log(`\n${"═".repeat(60)}`);
     console.log(`TEST ${i + 1}: ${tc.label}`);
     console.log(`${"═".repeat(60)}`);
 
-    const output = runPipeline(tc.raw, tc.ocrScore, tc.profile);
+    const output = await runPipeline(tc.raw, tc.ocrScore, tc.profile);
 
     // Print structured JSON output
     console.log(JSON.stringify({
         status:     output.status,
-        ui_action:  output.ui_action,
-        confidence: output.confidence,
+        ui_routing: output.ui_routing,
+        confidence: output.confidence_metrics,
         extraction: output.extraction,
-        top_match:  output.api_match.top_matches[0] ?? null,
+        top_match:  output.api_match.topMatches[0] ?? null,
         duration:   output.duration,
-        fatal_error: output.fatal_error,
     }, null, 2));
 
     // Print debug log separately
     console.log("\n── DEBUG LOG ──");
-    output.debug_log.forEach(l => console.log(`  ${l}`));
+    output.debug_logs.forEach(l => console.log(`  [${l.level}] ${l.stage}: ${l.message}`));
 });
 
 console.log(`\n${"═".repeat(60)}`);

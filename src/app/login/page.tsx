@@ -115,9 +115,9 @@ export default function LoginPage() {
       <div className="mt-8 flex gap-6 text-gray-600 text-[10px] font-bold uppercase tracking-[0.2em] relative z-10">
         <span>Precision Tracking</span>
         <span className="w-1 h-1 bg-gray-800 rounded-full my-auto" />
-        <span>HIPAA Compliant</span>
+        <span>Passwordless Sign-In</span>
         <span className="w-1 h-1 bg-gray-800 rounded-full my-auto" />
-        <span>End-to-End Encryption</span>
+        <span>Encrypted in Transit</span>
       </div>
     </div>
   )

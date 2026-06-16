@@ -18,9 +18,8 @@ import { useRouter } from 'next/navigation'
 const navItems = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan Supply', href: '/scan', icon: ScanLine },
-  // TODO: Fix these pages with missing imports
-  // { name: 'Forecast', href: '/calendar', icon: CalendarDays },
-  // { name: 'Site Tracker', href: '/site-tracker', icon: Map },
+  { name: 'Forecast', href: '/dashboard/calendar', icon: CalendarDays },
+  { name: 'Site Tracker', href: '/dashboard/site-tracker', icon: Map },
 ]
 
 export function AppNav() {

@@ -265,7 +265,7 @@ export default function ScanPage() {
 
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex gap-3 items-center">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Validated against openFDA</p>
+                  <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Matched to product catalog</p>
                 </div>
               </div>
 

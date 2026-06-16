@@ -11,11 +11,13 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { 
-  format, 
+import { useStore } from '@/lib/store'
+import {
+  format,
   startOfMonth, 
   endOfMonth, 
-  eachDayOfInterval, 
+  eachDayOfInterval,
+  addDays,
   isSameDay, 
   addMonths, 
   subMonths 
@@ -30,7 +32,11 @@ export default function CalendarPage() {
     date: addDays(new Date(), item.remainingDays),
     type: 'exhaust' as const,
     name: item.name,
-    urgency: item.remainingDays < 7 ? 'critical' as const : 'stable' as const
+    urgency: (item.remainingDays < 3
+      ? 'critical'
+      : item.remainingDays < 7
+        ? 'warning'
+        : 'stable') as 'critical' | 'warning' | 'stable'
   }))
 
   const daysInMonth = eachDayOfInterval({
@@ -79,7 +85,7 @@ export default function CalendarPage() {
               {emptyDays.map((_, i) => <div key={`empty-${i}`} className="h-32 bg-[#0D0D0D]" />)}
               
               {daysInMonth.map((day, i) => {
-                const dayEvent = FORECAST_EVENTS.find(e => isSameDay(e.date, day))
+                const dayEvent = forecastEvents.find(e => isSameDay(e.date, day))
                 
                 return (
                   <motion.div 
@@ -123,7 +129,7 @@ export default function CalendarPage() {
         <div className="space-y-6">
           <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 px-2">Refill Roadmap</h3>
           
-          {FORECAST_EVENTS.map((event, idx) => (
+          {forecastEvents.map((event, idx) => (
             <motion.div 
               key={idx}
               initial={{ opacity: 0, x: 20 }}

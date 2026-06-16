@@ -1,5 +1,5 @@
-import { extractEntities } from "../lib/ocrExtractor";
-import { executeAPIMatch } from "../lib/apiMatcher";
+import { extractEntities } from "../src/lib/ocrExtractor";
+import { executeAPIMatch } from "../src/lib/apiMatcher";
 
 const testCases = [
     { label: "Ideal: Humalog Pen Box",         raw: "HUMALOG 100 units/mL lispro 5x 3mL Prefilled Pens" },
@@ -10,7 +10,7 @@ const testCases = [
 
 console.log("=== BEGIN INTEGRATION TEST: OCR → ENTITY EXTRACTION → API MATCHING ===\n");
 
-testCases.forEach((tc, i) => {
+testCases.forEach(async (tc, i) => {
     console.log(`────────────────────────────────────────────`);
     console.log(`TEST CASE ${i + 1}: ${tc.label}`);
     console.log(`────────────────────────────────────────────`);
@@ -28,7 +28,7 @@ testCases.forEach((tc, i) => {
     }
 
     // Step 2: API match  
-    const match = executeAPIMatch(extraction);
+    const match = await executeAPIMatch(extraction);
     console.log(`\n[3] API MATCH RESULT : ${match.status}`);
 
     if (match.topMatches.length > 0) {
