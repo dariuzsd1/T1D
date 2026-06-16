@@ -15,18 +15,18 @@ export async function middleware(req: NextRequest) {
   )
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
   // Protect Dashboard & Scan routes
-  if (!session && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/scan'))) {
+  if (!user && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/scan'))) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
   // Redirect to Dashboard if already logged in
-  if (session && req.nextUrl.pathname === '/login') {
+  if (user && req.nextUrl.pathname === '/login') {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)

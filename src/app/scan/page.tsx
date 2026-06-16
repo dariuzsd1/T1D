@@ -79,9 +79,9 @@ export default function ScanPage() {
     
     setSaving(true)
     try {
-      // Get user session
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user.id) {
+      // Verify the authenticated user with the auth server
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.id) {
         setError('Not authenticated')
         return
       }
@@ -90,7 +90,7 @@ export default function ScanPage() {
       const { data, error: supabaseError } = await supabase
         .from('supplies')
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           name: activeScan.product_name,
           brand: activeScan.brand,
           category_id: null,
