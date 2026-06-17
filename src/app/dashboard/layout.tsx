@@ -2,6 +2,7 @@ import { AppNav } from "@/components/layout/AppNav";
 import { RiskAlertBanner } from "@/components/layout/RiskAlertBanner";
 import { QuickActionHub } from "@/components/dashboard/QuickActionHub";
 import { ToastProvider } from "@/components/ui/Toast";
+import { PreferencesHydrator } from "@/components/PreferencesHydrator";
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,7 @@ export default function DashboardLayout({
 }) {
   return (
     <ToastProvider>
+      <PreferencesHydrator />
       <div className="flex flex-col min-h-screen bg-canvas text-ink">
         <RiskAlertBanner />
         <div className="flex flex-1">

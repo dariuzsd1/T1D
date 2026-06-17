@@ -66,10 +66,19 @@ export function AppNav() {
         </div>
 
         <div className="mt-auto p-6 space-y-1">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-muted hover:text-ink hover:bg-surface-2 w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <Link
+            href="/dashboard/settings"
+            aria-current={pathname === '/dashboard/settings' ? 'page' : undefined}
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              pathname === '/dashboard/settings'
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-ink hover:bg-surface-2'
+            )}
+          >
             <Settings className="w-5 h-5" />
             Settings
-          </button>
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-muted hover:text-urgent hover:bg-urgent-soft w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"

@@ -21,6 +21,12 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [expirationDate, setExpirationDate] = useState(
     product.expirationDate ? product.expirationDate.slice(0, 10) : ''
   )
+  const [refillIntervalDays, setRefillIntervalDays] = useState<string>(
+    product.refillIntervalDays != null ? String(product.refillIntervalDays) : ''
+  )
+  const [lastFilledDate, setLastFilledDate] = useState(
+    product.lastFilledDate ? product.lastFilledDate.slice(0, 10) : ''
+  )
   const [saving, setSaving] = useState(false)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
@@ -40,6 +46,8 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         quantity,
         // Persist null when cleared so it actually removes the date.
         expirationDate: expirationDate || null,
+        refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
+        lastFilledDate: lastFilledDate || null,
       })
       onSaved?.(product.name)
       onClose()
@@ -100,6 +108,37 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               onChange={(e) => setExpirationDate(e.target.value)}
               className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
             />
+          </div>
+
+          {/* Refill cycle — powers the insurance refill-window engine. Saving
+              requires the columns from docs/REFILL_RULES_MIGRATION.md. */}
+          <div className="pt-5 border-t border-line">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Refill cycle (optional)</p>
+            <p className="text-xs text-faint mb-3">Lets the app tell you when insurance allows a refill.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-refill-interval" className="block text-[11px] font-medium text-muted mb-1.5">Supply length (days)</label>
+                <input
+                  id="edit-refill-interval"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 90"
+                  value={refillIntervalDays}
+                  onChange={(e) => setRefillIntervalDays(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-last-filled" className="block text-[11px] font-medium text-muted mb-1.5">Last filled</label>
+                <input
+                  id="edit-last-filled"
+                  type="date"
+                  value={lastFilledDate}
+                  onChange={(e) => setLastFilledDate(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

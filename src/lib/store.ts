@@ -35,6 +35,9 @@ export interface SiteLog {
   notes?: string;
 }
 
+/** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
+export const SAFETY_BUFFER_KEY = 't1d-safety-buffer'
+
 /** Always derive the headline runway from quantity/usage/expiry so it stays honest
  *  and responds to "Use One" / restock actions. */
 function withRunway(product: Product): Product {
@@ -94,13 +97,42 @@ export const useStore = create<T1DStore>()((set) => ({
         .update(payload)
         .eq('id', id)
 
-      if (!error) {
-        set((state) => ({
-          inventory: state.inventory.map(p =>
-            p.id === id ? withRunway({ ...p, ...updates }) : p
-          )
-        }))
+      if (error) {
+        console.error('Failed to update product:', error)
+        return
       }
+
+      // Refill-cycle columns are optional until docs/REFILL_RULES_MIGRATION.md is
+      // applied. Write them separately and best-effort so a "column does not
+      // exist" error can never break the core quantity/expiration save above.
+      if (
+        updates.refillIntervalDays !== undefined ||
+        updates.lastFilledDate !== undefined
+      ) {
+        const refillPayload: Record<string, unknown> = {}
+        if (updates.refillIntervalDays !== undefined)
+          refillPayload.refill_interval_days = updates.refillIntervalDays
+        if (updates.lastFilledDate !== undefined)
+          refillPayload.last_filled_date = updates.lastFilledDate
+
+        const { error: refillError } = await supabase
+          .from('supplies')
+          .update(refillPayload)
+          .eq('id', id)
+
+        if (refillError) {
+          console.warn(
+            'Refill cycle not saved — run docs/REFILL_RULES_MIGRATION.md:',
+            refillError.message
+          )
+        }
+      }
+
+      set((state) => ({
+        inventory: state.inventory.map(p =>
+          p.id === id ? withRunway({ ...p, ...updates }) : p
+        )
+      }))
     } catch (err) {
       console.error('Failed to update product:', err)
     }
@@ -130,5 +162,13 @@ export const useStore = create<T1DStore>()((set) => ({
   addSiteLog: (log) => set((state) => ({
     siteLogs: [log, ...state.siteLogs]
   })),
-  setSafetyBufferDays: (safetyBufferDays) => set({ safetyBufferDays }),
+  setSafetyBufferDays: (safetyBufferDays) => {
+    // The buffer is a non-PHI UI preference, so it's safe to remember locally
+    // (PHI like inventory/site logs is still never persisted). PreferencesHydrator
+    // re-applies this after mount to avoid any SSR/client hydration mismatch.
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SAFETY_BUFFER_KEY, String(safetyBufferDays))
+    }
+    set({ safetyBufferDays })
+  },
 }))

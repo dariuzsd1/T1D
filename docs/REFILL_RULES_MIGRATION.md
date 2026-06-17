@@ -47,18 +47,24 @@ returned." That's it — the columns now exist.
 
 ## Step 3 — Add a refill cycle to an item (to see it work)
 
-Until the in-app editor for these fields ships (next step on our list), you can
-set them directly:
+Once the columns exist, you can set them **right inside the app**:
 
-1. In the Supabase sidebar, click **Table Editor → `supplies`**.
-2. Find one of your supplies (e.g. your pods).
-3. Set **`refill_interval_days`** to the supply length, e.g. `90`.
-4. Set **`last_filled_date`** to the date you last received it, e.g. `2026-04-01`.
-5. Save the row.
+1. On your dashboard, hover a supply card and click the **pencil (Edit)** icon.
+2. In the dialog, fill in the **Refill cycle** section:
+   - **Supply length (days)** — e.g. `90` for a 90-day supply.
+   - **Last filled** — the date you last received it.
+3. Click **Save changes**.
 
-Now reopen the app's **Forecast** (calendar) page. You'll see:
+> (You can also set `refill_interval_days` and `last_filled_date` directly in
+> **Table Editor → `supplies`** if you prefer.)
+
+Now open the app's **Forecast** (calendar) page. You'll see:
 - a **teal "refill-eligible" marker** on the date insurance allows a refill, and
 - if you'd run out before then, a **"request an early-refill override"** warning.
+
+> Before you run the migration, the app still works normally — it just quietly
+> skips saving the refill cycle (you'll see a one-line note in the browser
+> console). Nothing breaks.
 
 ---
 
@@ -68,10 +74,8 @@ These columns live on the `supplies` table, which is already protected by
 Row-Level Security (each user can only read/write their own rows). No extra RLS
 policy is needed — the new columns inherit the table's existing protection.
 
-## What's next (code, already planned)
+## That's it
 
-Once you've confirmed the columns work, the follow-up is purely in-app polish:
-add `refill_interval_days` + `last_filled_date` inputs to the "Edit supply"
-dialog so you can set them without opening Supabase. That change is safe to make
-*after* this migration (writing to a column that doesn't exist yet would error,
-which is why we do the database step first).
+The in-app **Edit supply** dialog already has the Refill cycle inputs, and the
+calendar already knows how to display eligibility. Running the SQL above is the
+only step needed to turn the whole feature on.
