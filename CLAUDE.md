@@ -45,10 +45,27 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > rotation** (site-tracker "Mark as used" also decrements a linked supply).
 > Refill persistence needs a 2-min DB step — see
 > `docs/REFILL_RULES_MIGRATION.md` (the read path is already forward-compatible
-> via `select('*')`, so it lights up the moment the columns exist). **Blocked on
-> external access:** device auto-depletion (vendor API keys/OAuth), barcode/GTIN
-> scan (scanner dep + GTIN DB), prescription manager + caregiver share (schema +
-> RLS).
+> via `select('*')`, so it lights up the moment the columns exist).
+>
+> **Phase 2 batch 3 (2026-06-17), zero new deps:** (1) **Real barcode scanner**
+> on the Add-a-supply page via the browser-native Barcode Detection API
+> (`src/components/scan/BarcodeScanner.tsx`, ambient types in
+> `src/types/barcode-detector.d.ts`) — no npm dep, Chrome/Safari, graceful manual
+> fallback. GS1 labels are parsed (`src/lib/gs1.ts`) to auto-fill the real
+> **expiration date** + capture GTIN/lot (honest: only surfaces decoded fields).
+> Optional `barcode`/`lot_number` columns are best-effort writes
+> (`docs/BARCODE_SCANNING.md`). The photo path is still the legacy mock. (2)
+> **Prescriptions** manager — full CRUD page (`/dashboard/prescriptions`) with
+> honest renewal nudges derived from real dates (`src/lib/prescriptions.ts`). (3)
+> **Caregiver share** (`/dashboard/caregivers`) — invite by email + view/manage
+> role + revoke. Both new pages are *table-missing-safe* (show a setup prompt, no
+> crash) until `docs/PRESCRIPTIONS_CAREGIVERS_MIGRATION.md` runs (creates
+> `prescriptions` + `caregiver_shares` with RLS, incl. cross-account caregiver-read
+> policies on supplies/prescriptions). New desktop sidebar links; mobile tab bar
+> kept to 4 core items. **Honest gaps documented:** caregiver "viewing-as" switch,
+> auto-invite emails, manage-role writes, GTIN→product directory. **Still blocked
+> on external access:** device auto-depletion (vendor API keys/OAuth), FCM push
+> (Firebase keys).
 
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,

@@ -8,16 +8,21 @@ import {
   Upload,
   Scan,
   Camera,
+  ScanBarcode,
   ChevronRight,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  Tag,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { FastTrackOverlay } from '@/components/scan/FastTrackOverlay'
+import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
 import { ConfidenceBadge } from '@/components/ui/ConfidenceBadge'
 import { createClient } from '@/lib/supabase/client'
+import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 
-type ScanStep = 'UPLOAD' | 'ANALYZING' | 'REVIEW' | 'FAST_TRACK'
+type ScanStep = 'UPLOAD' | 'ANALYZING' | 'REVIEW' | 'FAST_TRACK' | 'BARCODE_CONFIRM'
 
 export default function ScanPage() {
   const [step, setStep] = useState<ScanStep>('UPLOAD')
@@ -28,7 +33,14 @@ export default function ScanPage() {
   const [expirationDate, setExpirationDate] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const { setActiveScan, activeScan, setScanning, isScanning, addProduct } = useStore()
+  // Barcode flow
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanned, setScanned] = useState<Gs1Parsed | null>(null)
+  const [expiryFromBarcode, setExpiryFromBarcode] = useState(false)
+  const [bcName, setBcName] = useState('')
+  const [bcBrand, setBcBrand] = useState('')
+
+  const { setActiveScan, activeScan, setScanning, addProduct } = useStore()
   const router = useRouter()
   const supabase = createClient()
 
@@ -74,6 +86,107 @@ export default function ScanPage() {
       setScanning(false)
     }
   }
+
+  // --- Barcode capture -------------------------------------------------------
+
+  const handleBarcodeDetected = (rawValue: string) => {
+    const parsed = parseGs1(rawValue)
+    setScanned(parsed)
+    setShowScanner(false)
+    setError(null)
+
+    // Only prefill the expiration if the barcode actually carried one — never
+    // fabricate a date (CLAUDE.md §9.1).
+    if (parsed.expirationDate) {
+      setExpirationDate(parsed.expirationDate)
+      setExpiryFromBarcode(true)
+    } else {
+      setExpirationDate('')
+      setExpiryFromBarcode(false)
+    }
+    setQuantity(1)
+    setBcName('')
+    setBcBrand('')
+    setStep('BARCODE_CONFIRM')
+  }
+
+  const handleSaveBarcode = async () => {
+    if (!scanned) return
+    if (!bcName.trim()) {
+      setError('Please enter the product name.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.id) {
+        setError('Not authenticated')
+        return
+      }
+
+      // Core insert first (columns that definitely exist).
+      const { data, error: insertError } = await supabase
+        .from('supplies')
+        .insert({
+          user_id: user.id,
+          name: bcName.trim(),
+          brand: bcBrand.trim() || null,
+          category_id: null,
+          quantity,
+          unit: 'pieces',
+          expiration_date: expirationDate || null,
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        setError(`Failed to save: ${insertError.message}`)
+        return
+      }
+
+      // Best-effort: store the scanned identifiers so a future GTIN lookup /
+      // reorder match can use them. These columns are optional until
+      // docs/BARCODE_SCANNING.md is applied — a missing-column error here must
+      // never undo the core insert above.
+      const idPayload: Record<string, unknown> = {}
+      if (scanned.gtin) idPayload.barcode = scanned.gtin
+      if (scanned.lot) idPayload.lot_number = scanned.lot
+      if (Object.keys(idPayload).length > 0) {
+        const { error: idError } = await supabase
+          .from('supplies')
+          .update(idPayload)
+          .eq('id', data.id)
+        if (idError) {
+          console.warn(
+            'Barcode/lot not saved — run docs/BARCODE_SCANNING.md:',
+            idError.message
+          )
+        }
+      }
+
+      addProduct({
+        id: data.id,
+        name: data.name,
+        brand: data.brand || '',
+        category: 'unknown',
+        quantity: data.quantity,
+        remainingDays: 30, // Recomputed honestly by the store's withRunway()
+        lastScanned: new Date().toISOString().split('T')[0],
+        usageRatePerDay: 1,
+        expirationDate: data.expiration_date || null,
+      })
+
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save supply')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // --- Image (legacy mock) confirm ------------------------------------------
 
   const handleConfirm = async () => {
     if (!activeScan) return
@@ -131,12 +244,21 @@ export default function ScanPage() {
     }
   }
 
+  const scannedCodeLabel = scanned?.gtin || scanned?.raw || ''
+
   return (
     <div className="max-w-4xl mx-auto">
       <header className="mb-10">
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Add a supply</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Scan a supply</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">Add a supply</h1>
       </header>
+
+      {showScanner && (
+        <BarcodeScanner
+          onDetected={handleBarcodeDetected}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       <AnimatePresence mode="wait">
         {step === 'UPLOAD' && (
@@ -147,6 +269,27 @@ export default function ScanPage() {
             exit={{ opacity: 0, y: -16 }}
             className="space-y-6"
           >
+            {/* Primary, real path: scan the barcode */}
+            <button
+              onClick={() => { setError(null); setShowScanner(true) }}
+              className="w-full bg-surface border border-line rounded-3xl p-8 text-left transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <ScanBarcode className="w-8 h-8 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-ink mb-1">Scan the barcode</h3>
+                  <p className="text-muted text-sm">
+                    Point your camera at the barcode on the box or pharmacy label. If the
+                    label includes an expiration date, we&apos;ll read it for you.
+                  </p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-faint group-hover:text-primary transition-colors" />
+              </div>
+            </button>
+
+            {/* Secondary: photo of the label (existing flow) */}
             <div className="bg-surface border-2 border-dashed border-line rounded-3xl p-10 text-center transition-colors hover:border-primary/50 group">
               {preview ? (
                 <div className="relative inline-block">
@@ -161,11 +304,11 @@ export default function ScanPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform">
-                    <Upload className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center mb-5">
+                    <Upload className="w-7 h-7 text-muted" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2 text-ink">Add a photo of your supply</h3>
-                  <p className="text-muted text-sm mb-8">Works best with clear text on the box or vial.</p>
+                  <h3 className="text-lg font-semibold mb-1 text-ink">No barcode? Add a photo instead</h3>
+                  <p className="text-muted text-sm mb-6">Works best with clear text on the box or vial.</p>
 
                   <div className="flex flex-wrap justify-center gap-4">
                     <label className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink">
@@ -173,10 +316,11 @@ export default function ScanPage() {
                       Browse files
                       <input type="file" className="hidden" accept="image/*" onChange={onFileChange} />
                     </label>
-                    <button className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2 text-ink">
+                    <label className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink">
                       <Camera className="w-5 h-5" />
                       Use camera
-                    </button>
+                      <input type="file" className="hidden" accept="image/*" capture="environment" onChange={onFileChange} />
+                    </label>
                   </div>
                 </div>
               )}
@@ -197,6 +341,114 @@ export default function ScanPage() {
                 {error}
               </div>
             )}
+          </motion.div>
+        )}
+
+        {step === 'BARCODE_CONFIRM' && scanned && (
+          <motion.div
+            key="barcode-confirm"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="max-w-xl mx-auto"
+          >
+            <div className="bg-surface border border-line rounded-3xl p-8 shadow-sm space-y-6">
+              <div className="flex items-center gap-3 p-3 bg-success-soft border border-success/20 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-success">Barcode read</p>
+                  <p className="text-success/80 font-mono text-xs break-all">{scannedCodeLabel}</p>
+                </div>
+              </div>
+
+              {scanned.lot && (
+                <p className="flex items-center gap-2 text-xs text-muted">
+                  <Tag className="w-3.5 h-3.5" /> Lot {scanned.lot}
+                </p>
+              )}
+
+              <p className="text-sm text-muted">
+                We don&apos;t have a product directory to look this code up yet, so please
+                name it. Everything else we could read from the label is filled in below.
+              </p>
+
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="bc-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Product name</label>
+                  <input
+                    id="bc-name"
+                    type="text"
+                    autoFocus
+                    placeholder="e.g. Omnipod 5 Pods"
+                    value={bcName}
+                    onChange={(e) => setBcName(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bc-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
+                  <input
+                    id="bc-brand"
+                    type="text"
+                    placeholder="e.g. Insulet"
+                    value={bcBrand}
+                    onChange={(e) => setBcBrand(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="bc-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity</label>
+                    <input
+                      id="bc-quantity"
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="bc-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration</label>
+                    <input
+                      id="bc-expiration"
+                      type="date"
+                      value={expirationDate}
+                      onChange={(e) => { setExpirationDate(e.target.value); setExpiryFromBarcode(false) }}
+                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                    {expiryFromBarcode && (
+                      <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Read from the barcode
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={handleSaveBarcode}
+                  disabled={saving}
+                  className="w-full bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-4 rounded-2xl font-semibold text-lg transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Add to inventory
+                </button>
+                <button
+                  onClick={() => { setError(null); setScanned(null); setStep('UPLOAD'); setShowScanner(true) }}
+                  disabled={saving}
+                  className="w-full bg-transparent hover:bg-surface-2 disabled:opacity-50 text-muted py-3 rounded-xl font-semibold text-sm transition-colors"
+                >
+                  Scan a different barcode
+                </button>
+                {error && (
+                  <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">
+                    {error}
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.div>
         )}
 

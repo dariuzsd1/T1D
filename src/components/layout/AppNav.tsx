@@ -11,14 +11,24 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  Pill,
+  Users,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
+// Core destinations — shown in both the desktop sidebar and the mobile tab bar.
 const navItems = [
   { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Rotate', href: '/dashboard/site-tracker', icon: Map },
   { name: 'Add', href: '/scan', icon: ScanLine },
   { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
+]
+
+// Secondary destinations — desktop sidebar only, to keep the mobile bar to four
+// thumb-reachable items.
+const secondaryNav = [
+  { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
+  { name: 'Caregivers', href: '/dashboard/caregivers', icon: Users },
 ]
 
 export function AppNav() {
@@ -44,6 +54,28 @@ export function AppNav() {
 
           <nav className="space-y-1">
             {navItems.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-muted hover:text-ink hover:bg-surface-2'
+                  )}
+                >
+                  <item.icon className={cn('w-5 h-5', isActive ? 'text-white' : 'text-faint group-hover:text-primary')} />
+                  {item.name}
+                </Link>
+              )
+            })}
+
+            <div className="my-3 border-t border-line" />
+
+            {secondaryNav.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
