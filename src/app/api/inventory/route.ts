@@ -18,22 +18,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch user's supplies
+    // Select * so optional refill-cycle columns surface automatically once the
+    // migration in docs/REFILL_RULES_MIGRATION.md is applied — no code change
+    // needed. The client only receives the explicitly mapped fields below.
     const { data: supplies, error: suppliesError } = await supabase
       .from('supplies')
-      .select(
-        `
-        id,
-        name,
-        brand,
-        category_id,
-        quantity,
-        unit,
-        expiration_date,
-        created_at,
-        updated_at
-      `
-      )
+      .select('*')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
 
@@ -93,6 +83,9 @@ export async function GET(request: NextRequest) {
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         usageRatePerDay: supply.unit === 'pieces' ? 1 : 0.5,
         expirationDate: supply.expiration_date || null,
+        // Optional refill-cycle fields (undefined until the migration is applied).
+        refillIntervalDays: supply.refill_interval_days ?? null,
+        lastFilledDate: supply.last_filled_date ?? null,
       }
     })
 

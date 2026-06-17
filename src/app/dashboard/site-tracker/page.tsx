@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, RefreshCcw, Info, ChevronRight, Check } from 'lucide-react'
+import { MapPin, RefreshCcw, Info, ChevronRight, Check, Package } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/lib/store'
@@ -37,9 +37,23 @@ interface SiteView {
 }
 
 export default function SiteTrackerPage() {
-  const { siteLogs, addSiteLog } = useStore()
+  const { siteLogs, addSiteLog, inventory, setInventory, updateProduct } = useStore()
   const { showToast } = useToast()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Which supply a site change consumes (e.g. the pod/infusion set). '' = none.
+  const [linkedSupplyId, setLinkedSupplyId] = useState<string>('')
+
+  // Load inventory so the "also use one" supply picker works even when the user
+  // lands here directly (the store no longer persists across reloads).
+  useEffect(() => {
+    if (inventory.length > 0) return
+    fetch('/api/inventory')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => res?.data && setInventory(res.data))
+      .catch(() => {})
+  }, [inventory.length, setInventory])
+
+  const linkedSupply = inventory.find((p) => p.id === linkedSupplyId) ?? null
 
   // Build an honest view of each site from the real logs.
   const sites: SiteView[] = SITES.map((site) => {
@@ -82,15 +96,26 @@ export default function SiteTrackerPage() {
   })[0]
 
   const handleMarkUsed = (site: SiteView) => {
+    // One interaction: log the site, advance the rotation, and (if a supply is
+    // linked) decrement that pod/set so inventory stays honest (CLAUDE.md §7-V2).
     addSiteLog({
       id: crypto.randomUUID(),
       siteId: site.id,
       timestamp: new Date().toISOString(),
     })
-    showToast(
-      `${site.label} logged. Rest it ${REST_DAYS} days before reusing.`,
-      'success'
-    )
+
+    if (linkedSupply && linkedSupply.quantity > 0) {
+      updateProduct(linkedSupply.id, { quantity: linkedSupply.quantity - 1 })
+      showToast(
+        `${site.label} logged and one ${linkedSupply.name} used. Rest the site ${REST_DAYS} days.`,
+        'success'
+      )
+    } else {
+      showToast(
+        `${site.label} logged. Rest it ${REST_DAYS} days before reusing.`,
+        'success'
+      )
+    }
   }
 
   const statusLabel = (s: SiteStatus) =>
@@ -159,11 +184,33 @@ export default function SiteTrackerPage() {
                 </p>
               </div>
             </div>
+            {inventory.length > 0 && (
+              <div className="mb-4">
+                <label htmlFor="linked-supply" className="flex items-center gap-1.5 text-xs font-medium opacity-80 mb-2">
+                  <Package className="w-3.5 h-3.5" />
+                  Also use one of
+                </label>
+                <select
+                  id="linked-supply"
+                  value={linkedSupplyId}
+                  onChange={(e) => setLinkedSupplyId(e.target.value)}
+                  className="w-full bg-white text-ink rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+                >
+                  <option value="">Don&apos;t track a supply</option>
+                  {inventory.map((p) => (
+                    <option key={p.id} value={p.id} disabled={p.quantity <= 0}>
+                      {p.name}{p.quantity <= 0 ? ' (none left)' : ` (${p.quantity} left)`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button
               onClick={() => { setSelectedId(suggestedSite.id); handleMarkUsed(suggestedSite); }}
               className="w-full bg-white text-primary py-3.5 rounded-xl font-semibold text-sm hover:bg-surface-2 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
             >
-              Mark as used
+              {linkedSupply ? 'Log site & use one' : 'Mark as used'}
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

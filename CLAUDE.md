@@ -35,6 +35,20 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > mobile bottom-nav. **Still open:** FCM push (see `docs/PUSH_NOTIFICATIONS.md`,
 > needs your Firebase/Supabase setup) and the still-mocked scanner (Phase 2).
 > The two-halves description below is retained as historical context.
+>
+> **Phase 2 progress (2026-06-17):** The moat scaffolding is in, all code-only /
+> CI-safe. Built: the **insurance refill-window engine** (`src/lib/refill.ts`:
+> `assessRefill` → `gap` flags running out before insurance allows a refill);
+> **one-tap reorder deep-links** (`src/lib/suppliers.ts`, wired into the cards +
+> calendar as real hand-off links); the **calendar** now overlays run-out +
+> teal refill-eligible markers + gap warnings (data-gated); **1-tap site
+> rotation** (site-tracker "Mark as used" also decrements a linked supply).
+> Refill persistence needs a 2-min DB step — see
+> `docs/REFILL_RULES_MIGRATION.md` (the read path is already forward-compatible
+> via `select('*')`, so it lights up the moment the columns exist). **Blocked on
+> external access:** device auto-depletion (vendor API keys/OAuth), barcode/GTIN
+> scan (scanner dep + GTIN DB), prescription manager + caregiver share (schema +
+> RLS).
 
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,

@@ -19,8 +19,13 @@ export default function DashboardPage() {
 
   const editingProduct = inventory.find((p) => p.id === editingId) ?? null
 
-  const handleOrder = (name: string) =>
-    showToast(`Reorder for ${name} isn't connected yet — coming in a later update.`, 'info')
+  const handleOrder = (label: string) =>
+    showToast(
+      label === 'find a supplier'
+        ? 'Opening a supplier search in a new tab.'
+        : `Opening ${label}'s reorder page in a new tab.`,
+      'info'
+    )
   
   // Fetch inventory on mount
   useEffect(() => {

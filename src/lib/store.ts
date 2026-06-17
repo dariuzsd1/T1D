@@ -15,6 +15,10 @@ export interface Product {
   lastScanned: string;
   usageRatePerDay: number;
   expirationDate?: string | null;
+  // Insurance refill cycle (powers the refill-window engine, src/lib/refill.ts).
+  // Optional until the DB columns land — see docs/REFILL_RULES_MIGRATION.md.
+  refillIntervalDays?: number | null;
+  lastFilledDate?: string | null;
 }
 
 export interface ScanResult {

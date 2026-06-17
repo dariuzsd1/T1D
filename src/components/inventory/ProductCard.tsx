@@ -11,6 +11,7 @@ import {
   daysUntilExpiration,
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from "@/lib/depletion";
+import { reorderTargetFor } from "@/lib/suppliers";
 import { format } from "date-fns";
 
 interface ProductCardProps {
@@ -44,6 +45,7 @@ export function ProductCard({
 
   const reorderBy = reorderByDate(product.remainingDays, bufferDays)
   const expiryDays = daysUntilExpiration(product.expirationDate)
+  const reorder = reorderTargetFor(product)
 
   // One honest sentence: stock on hand · runway · when to reorder.
   const summary =
@@ -157,13 +159,17 @@ export function ProductCard({
             <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} />
           </div>
 
-          <button
-            onClick={() => onOrder?.(product.name)}
+          {/* Hand-off to the supplier's reorder page (not an automated order). */}
+          <a
+            href={reorder.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => onOrder?.(reorder.label)}
             className="w-full py-3 bg-surface-2 hover:bg-line border border-line rounded-xl text-xs font-semibold uppercase tracking-widest text-ink transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ShoppingCart className="w-4 h-4" />
-            Reorder
-          </button>
+            {reorder.isDirect ? `Reorder via ${reorder.label}` : 'Reorder — find a supplier'}
+          </a>
         </CardContent>
       </Card>
     </motion.div>
