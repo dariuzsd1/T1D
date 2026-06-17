@@ -76,12 +76,18 @@ export const useStore = create<T1DStore>()((set) => ({
     const supabase = createClient()
 
     try {
+      // Only send the columns that actually changed so an expiration edit
+      // doesn't clobber quantity (or vice-versa).
+      const payload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+      if (updates.quantity !== undefined) payload.quantity = updates.quantity
+      if (updates.expirationDate !== undefined)
+        payload.expiration_date = updates.expirationDate
+
       const { error } = await supabase
         .from('supplies')
-        .update({
-          quantity: updates.quantity,
-          updated_at: new Date().toISOString()
-        })
+        .update(payload)
         .eq('id', id)
 
       if (!error) {

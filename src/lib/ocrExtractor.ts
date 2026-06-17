@@ -43,12 +43,18 @@ const fuseOptions = {
 const brandFuse = new Fuse(BRAND_REFERENCE, fuseOptions);
 const unitFuse = new Fuse(UNIT_REFERENCE, fuseOptions);
 
+// DoS guards (M8). OCR of a supply box yields well under this; anything larger
+// is almost certainly junk/abuse, so cap before the per-word fuzzy search runs.
+const MAX_INPUT_CHARS = 5000;
+const MAX_WORDS = 400;
+
 export function extractEntities(rawText: string): OCRExtractionResult {
     const stage = "ENTITY_EXTRACTION";
 
     try {
-        let txt = rawText?.toLowerCase() || "";
-        
+        // Cap raw input length first so the regex passes below stay bounded.
+        let txt = (rawText ?? "").slice(0, MAX_INPUT_CHARS).toLowerCase();
+
         // ── PRE-PROCESSOR: Join single-character sequences (e.g., "D e x c o m" -> "Dexcom")
         txt = txt.replace(/(?:^|\s)([a-z0-9])(?:\s+([a-z0-9]))+(?:\s|$)/gi, (match) => {
             return match.replace(/\s+/g, "");
@@ -56,7 +62,8 @@ export function extractEntities(rawText: string): OCRExtractionResult {
 
         // Final sanitation
         txt = txt.replace(/[^a-z0-9\s]/g, " ");
-        const words = txt.split(/\s+/).filter(w => w.length >= 1);
+        // Cap the word count so the n-gram fuzzy search can't be made to run unbounded.
+        const words = txt.split(/\s+/).filter(w => w.length >= 1).slice(0, MAX_WORDS);
         
         const result: OCRExtractionResult = {
             status: "FAILURE",
@@ -117,12 +124,16 @@ export function extractEntities(rawText: string): OCRExtractionResult {
         }
 
         // ── 3. FINAL CONFIDENCE ───────────────────────────────────────────
+        // Report the honest match score (clamped to 0–100). We deliberately do
+        // NOT floor it at 90/70 — a weak fuzzy match must be allowed to read low
+        // so the user isn't told a guess is near-certain (M2, CLAUDE.md §9).
+        const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
         if (result.parsedData.brand && result.parsedData.quantity) {
             result.status = "SUCCESS";
-            result.confidence.total = Math.max(90, Math.round((1.1 - bestScore) * 100)); 
+            result.confidence.total = clamp((1.1 - bestScore) * 100);
         } else if (result.parsedData.brand) {
             result.status = "PARTIAL";
-            result.confidence.total = Math.max(70, Math.round((1.1 - bestScore) * 80));
+            result.confidence.total = clamp((1.1 - bestScore) * 80);
         }
 
         logger.log(stage, `Fuzzy Result: ${result.status} (Conf: ${result.confidence.total}%)`, "INFO");

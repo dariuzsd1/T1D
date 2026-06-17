@@ -25,6 +25,7 @@ export default function ScanPage() {
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [expirationDate, setExpirationDate] = useState('')
   const [saving, setSaving] = useState(false)
   
   const { setActiveScan, activeScan, setScanning, isScanning, addProduct } = useStore()
@@ -96,7 +97,7 @@ export default function ScanPage() {
           category_id: null,
           quantity: quantity,
           unit: 'pieces',
-          expiration_date: null
+          expiration_date: expirationDate || null
         })
         .select()
         .single()
@@ -113,9 +114,10 @@ export default function ScanPage() {
         brand: data.brand || '',
         category: 'unknown',
         quantity: data.quantity,
-        remainingDays: 30, // Default estimate
+        remainingDays: 30, // Recomputed honestly by the store's withRunway()
         lastScanned: new Date().toISOString().split('T')[0],
-        usageRatePerDay: 1
+        usageRatePerDay: 1,
+        expirationDate: data.expiration_date || null
       }
       
       addProduct(newProduct)
@@ -305,11 +307,13 @@ export default function ScanPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Replenishment Date</label>
-                    <input 
-                      type="date" 
-                      defaultValue={new Date().toISOString().split('T')[0]} 
-                      className="w-full bg-black border border-white/10 rounded-xl p-4 font-bold" 
+                    <label htmlFor="expiration" className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Expiration date (optional)</label>
+                    <input
+                      id="expiration"
+                      type="date"
+                      value={expirationDate}
+                      onChange={(e) => setExpirationDate(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-xl p-4 font-bold"
                     />
                   </div>
                 </div>

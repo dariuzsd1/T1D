@@ -16,8 +16,19 @@ export interface APIMatcherResult {
     matchLogs: string[];
 }
 
-// Simple In-Memory Match Cache
+// Bounded in-memory match cache. A plain Map would grow unbounded in a warm
+// serverless lambda (M1); we cap it and evict the oldest entry (FIFO) so memory
+// stays flat across requests.
+const MATCH_CACHE_MAX = 200;
 const matchCache = new Map<string, APIMatcherResult>();
+
+function cacheSet(key: string, value: APIMatcherResult) {
+    if (matchCache.size >= MATCH_CACHE_MAX) {
+        const oldest = matchCache.keys().next().value;
+        if (oldest !== undefined) matchCache.delete(oldest);
+    }
+    matchCache.set(key, value);
+}
 
 export const fdaDatabase = [
     { id: "1001", brand: "Insulet", name: "Omnipod Dash Pods", category: "patch_pump" },
@@ -97,7 +108,7 @@ export async function executeAPIMatch(extractionData: OCRExtractionResult): Prom
             } as APIMatcherResult;
         }, stage);
 
-        matchCache.set(query, result);
+        cacheSet(query, result);
         return result;
 
     } catch (err: any) {
