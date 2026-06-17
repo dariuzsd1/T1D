@@ -7,12 +7,15 @@ interface RefillStatusBarProps {
   /** The user's reserve. Status is measured against this, not against zero. */
   bufferDays?: number;
   totalDays?: number;
+  /** True when the runway rests on the fallback rate, not a user-entered one. */
+  estimated?: boolean;
 }
 
 export function RefillStatusBar({
   daysRemaining,
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
   totalDays = 30,
+  estimated = false,
 }: RefillStatusBarProps) {
   const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
 
@@ -50,8 +53,8 @@ export function RefillStatusBar({
           {current.label}
         </div>
         <div className="text-right">
-          <span className="text-2xl font-black tabular-nums text-ink">{daysRemaining}</span>
-          <span className="text-[10px] font-semibold text-muted uppercase ml-1">Days left</span>
+          <span className="text-2xl font-black tabular-nums text-ink">{estimated ? '~' : ''}{daysRemaining}</span>
+          <span className="text-[10px] font-semibold text-muted uppercase ml-1">{estimated ? 'Est. days left' : 'Days left'}</span>
         </div>
       </div>
 

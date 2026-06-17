@@ -21,6 +21,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [expirationDate, setExpirationDate] = useState(
     product.expirationDate ? product.expirationDate.slice(0, 10) : ''
   )
+  const [usageRate, setUsageRate] = useState<string>(
+    product.usageRatePerDay > 0 ? String(product.usageRatePerDay) : ''
+  )
   const [refillIntervalDays, setRefillIntervalDays] = useState<string>(
     product.refillIntervalDays != null ? String(product.refillIntervalDays) : ''
   )
@@ -44,6 +47,8 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
     try {
       await onUpdate(product.id, {
         quantity,
+        // 0 = "not set" → the runway falls back to a labelled estimate.
+        usageRatePerDay: usageRate ? parseFloat(usageRate) : 0,
         // Persist null when cleared so it actually removes the date.
         expirationDate: expirationDate || null,
         refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
@@ -98,6 +103,24 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               onChange={(e) => setQuantity(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
             />
+          </div>
+          <div>
+            <label htmlFor="edit-usage" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Daily usage (optional)</label>
+            <input
+              id="edit-usage"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="e.g. 0.33 for one pod every 3 days"
+              value={usageRate}
+              onChange={(e) => setUsageRate(e.target.value)}
+              className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+            />
+            <p className="text-xs text-faint mt-1.5">
+              {usageRate && parseFloat(usageRate) > 0
+                ? `Makes "days remaining" exact — about ${Math.floor(quantity / parseFloat(usageRate))} days at this rate.`
+                : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
+            </p>
           </div>
           <div>
             <label htmlFor="edit-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration date (optional)</label>

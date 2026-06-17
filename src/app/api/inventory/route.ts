@@ -73,6 +73,14 @@ export async function GET(request: NextRequest) {
         remainingDays = Math.min(remainingDays, daysUntilExpiration)
       }
 
+      // Use the user's real daily usage when they've set it; otherwise 0, which
+      // the client treats as "estimate" (depletion.ts falls back conservatively).
+      // We do NOT fabricate a rate from the unit anymore.
+      const realUsageRate =
+        supply.usage_rate_per_day != null && Number(supply.usage_rate_per_day) > 0
+          ? Number(supply.usage_rate_per_day)
+          : 0
+
       return {
         id: supply.id,
         brand: supply.brand || '',
@@ -81,7 +89,7 @@ export async function GET(request: NextRequest) {
         quantity: supply.quantity,
         remainingDays: Math.max(0, remainingDays),
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        usageRatePerDay: supply.unit === 'pieces' ? 1 : 0.5,
+        usageRatePerDay: realUsageRate,
         expirationDate: supply.expiration_date || null,
         // Optional refill-cycle fields (undefined until the migration is applied).
         refillIntervalDays: supply.refill_interval_days ?? null,

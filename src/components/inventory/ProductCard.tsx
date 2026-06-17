@@ -9,6 +9,7 @@ import {
   stockStatus,
   reorderByDate,
   daysUntilExpiration,
+  isRateEstimated,
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from "@/lib/depletion";
 import { reorderTargetFor } from "@/lib/suppliers";
@@ -47,11 +48,18 @@ export function ProductCard({
   const expiryDays = daysUntilExpiration(product.expirationDate)
   const reorder = reorderTargetFor(product)
 
+  // When the user hasn't set a real daily usage, the runway is a conservative
+  // estimate — say so plainly rather than presenting a guess as fact (CLAUDE.md §9).
+  const estimated = isRateEstimated(product.usageRatePerDay)
+
   // One honest sentence: stock on hand · runway · when to reorder.
+  const daysPhrase = estimated
+    ? `~${product.remainingDays} days (estimate)`
+    : `${product.remainingDays} days`
   const summary =
     status === 'out'
       ? 'Out of stock — reorder now'
-      : `${product.quantity} on hand · ~${product.remainingDays} days · reorder by ${format(reorderBy, 'EEE, MMM d')}`
+      : `${product.quantity} on hand · ${daysPhrase} · reorder by ${format(reorderBy, 'EEE, MMM d')}`
 
   const handleUseOne = async () => {
     if (product.quantity > 0) {
@@ -101,9 +109,19 @@ export function ProductCard({
           <div className="flex items-center justify-between mb-4">
             <div className="flex flex-col">
               <span className={cn("text-6xl font-black tabular-nums tracking-tighter leading-none", tone.number)}>
-                {product.remainingDays}
+                {estimated ? '~' : ''}{product.remainingDays}
               </span>
-              <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.2em] mt-1">Days remaining</span>
+              <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.2em] mt-1">
+                {estimated ? 'Est. days left' : 'Days remaining'}
+              </span>
+              {estimated && (
+                <button
+                  onClick={() => onEdit?.(product.id)}
+                  className="text-[11px] font-medium text-primary hover:underline mt-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                >
+                  Set daily usage for an exact count
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-2">
@@ -156,7 +174,7 @@ export function ProductCard({
           )}
 
           <div className="bg-surface-2 rounded-xl p-4 border border-line mb-6">
-            <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} />
+            <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} />
           </div>
 
           {/* Hand-off to the supplier's reorder page (not an automated order). */}

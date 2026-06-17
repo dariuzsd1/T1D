@@ -14,6 +14,14 @@
 
 export const DEFAULT_SAFETY_BUFFER_DAYS = 14
 
+/**
+ * Conservative fallback used ONLY when the user hasn't told us their real daily
+ * usage. One unit/day yields the shortest (safest) runway, so we under-promise
+ * rather than over-promise — but a runway built on this MUST be labelled an
+ * estimate in the UI (never shown as a known fact). See `isRateEstimated`.
+ */
+export const DEFAULT_USAGE_RATE_PER_DAY = 1
+
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 export interface RunwayInput {
@@ -22,11 +30,15 @@ export interface RunwayInput {
   expirationDate?: string | null
 }
 
+/** True when the runway rests on the fallback rate rather than a user-entered one. */
+export function isRateEstimated(usageRatePerDay?: number | null): boolean {
+  return !(typeof usageRatePerDay === 'number' && usageRatePerDay > 0)
+}
+
 /** Days of stock left, derived from units on hand and daily usage. */
 export function daysOfStock(quantity: number, usageRatePerDay: number): number {
-  // Guard divide-by-zero: an unknown/zero rate falls back to a conservative
-  // 1 unit/day, which yields the shortest (safest) runway rather than Infinity.
-  const usage = usageRatePerDay > 0 ? usageRatePerDay : 1
+  // An unknown/zero rate falls back to the conservative default rather than Infinity.
+  const usage = usageRatePerDay > 0 ? usageRatePerDay : DEFAULT_USAGE_RATE_PER_DAY
   return Math.max(0, Math.floor(quantity / usage))
 }
 

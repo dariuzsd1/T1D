@@ -13,19 +13,14 @@ export interface Product {
   quantity: number;
   remainingDays: number;
   lastScanned: string;
+  // The user's real daily usage. 0/absent means "not set yet" → the runway is a
+  // conservative ESTIMATE (see isRateEstimated in depletion.ts), labelled as such.
   usageRatePerDay: number;
   expirationDate?: string | null;
   // Insurance refill cycle (powers the refill-window engine, src/lib/refill.ts).
   // Optional until the DB columns land — see docs/REFILL_RULES_MIGRATION.md.
   refillIntervalDays?: number | null;
   lastFilledDate?: string | null;
-}
-
-export interface ScanResult {
-  product_name: string | null;
-  brand: string | null;
-  confidence: number;
-  alternatives: any[];
 }
 
 export interface SiteLog {
@@ -46,8 +41,6 @@ function withRunway(product: Product): Product {
 
 interface T1DStore {
   inventory: Product[];
-  activeScan: ScanResult | null;
-  isScanning: boolean;
   siteLogs: SiteLog[];
   safetyBufferDays: number;
 
@@ -56,8 +49,6 @@ interface T1DStore {
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
-  setActiveScan: (result: ScanResult | null) => void;
-  setScanning: (status: boolean) => void;
   addSiteLog: (log: SiteLog) => void;
   setSafetyBufferDays: (days: number) => void;
 }
@@ -67,8 +58,6 @@ interface T1DStore {
 // unencrypted in localStorage (where they'd survive logout) is an unnecessary risk.
 export const useStore = create<T1DStore>()((set) => ({
   inventory: [],
-  activeScan: null,
-  isScanning: false,
   siteLogs: [],
   safetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
 
@@ -102,28 +91,33 @@ export const useStore = create<T1DStore>()((set) => ({
         return
       }
 
-      // Refill-cycle columns are optional until docs/REFILL_RULES_MIGRATION.md is
-      // applied. Write them separately and best-effort so a "column does not
-      // exist" error can never break the core quantity/expiration save above.
+      // Optional columns (usage rate + refill cycle) are added by supabase/setup.sql.
+      // Write them separately and best-effort so a "column does not exist" error
+      // on an un-migrated DB can never break the core quantity/expiration save above.
       if (
+        updates.usageRatePerDay !== undefined ||
         updates.refillIntervalDays !== undefined ||
         updates.lastFilledDate !== undefined
       ) {
-        const refillPayload: Record<string, unknown> = {}
+        const optionalPayload: Record<string, unknown> = {}
+        if (updates.usageRatePerDay !== undefined)
+          // Store NULL (not 0) when cleared so it reads back as "estimate".
+          optionalPayload.usage_rate_per_day =
+            updates.usageRatePerDay > 0 ? updates.usageRatePerDay : null
         if (updates.refillIntervalDays !== undefined)
-          refillPayload.refill_interval_days = updates.refillIntervalDays
+          optionalPayload.refill_interval_days = updates.refillIntervalDays
         if (updates.lastFilledDate !== undefined)
-          refillPayload.last_filled_date = updates.lastFilledDate
+          optionalPayload.last_filled_date = updates.lastFilledDate
 
-        const { error: refillError } = await supabase
+        const { error: optionalError } = await supabase
           .from('supplies')
-          .update(refillPayload)
+          .update(optionalPayload)
           .eq('id', id)
 
-        if (refillError) {
+        if (optionalError) {
           console.warn(
-            'Refill cycle not saved — run docs/REFILL_RULES_MIGRATION.md:',
-            refillError.message
+            'Usage rate / refill cycle not saved — run supabase/setup.sql:',
+            optionalError.message
           )
         }
       }
@@ -157,8 +151,6 @@ export const useStore = create<T1DStore>()((set) => ({
     }
   },
 
-  setActiveScan: (activeScan) => set({ activeScan }),
-  setScanning: (isScanning) => set({ isScanning }),
   addSiteLog: (log) => set((state) => ({
     siteLogs: [log, ...state.siteLogs]
   })),
