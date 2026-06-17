@@ -1,14 +1,36 @@
 @import "tailwindcss";
 
-:root {
-  --background: #050505;
-  --foreground: #ffffff;
-  --blue-glow: rgba(37, 99, 235, 0.4);
+/*
+ * "Calm Clinical" design system (CLAUDE.md §6).
+ * Light-first, semantic color used sparingly, red reserved for true emergencies.
+ * Tokens below register Tailwind utilities: bg-canvas, text-ink, border-line,
+ * text-primary, bg-success-soft, etc.
+ */
+@theme {
+  --color-canvas: #f6f8fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef2f7;
+  --color-line: #dce3ec;
+
+  --color-ink: #16202e;
+  --color-muted: #51606f;
+  --color-faint: #6b7a89;
+
+  --color-primary: #1e6fe0;
+  --color-primary-deep: #134fa3;
+  --color-teal: #0e9384;
+
+  --color-success: #1f8f4e;
+  --color-success-soft: #e7f6ec;
+  --color-caution: #b26b00;
+  --color-caution-soft: #fbf1df;
+  --color-urgent: #c8341f;
+  --color-urgent-soft: #fbe9e6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+:root {
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
 }
 
 body {
@@ -18,11 +40,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Utilities */
-.glow-blue {
-  box-shadow: 0 0 20px var(--blue-glow);
-}
-
-.medical-gradient {
-  background: linear-gradient(180deg, #0D0D0D 0%, #050505 100%);
+/* Accessibility: honor the OS "reduce motion" setting (CLAUDE.md §6). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

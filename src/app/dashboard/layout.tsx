@@ -10,12 +10,13 @@ export default function DashboardLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="flex flex-col min-h-screen bg-[#050505] text-white">
+      <div className="flex flex-col min-h-screen bg-canvas text-ink">
         <RiskAlertBanner />
         <div className="flex flex-1">
           <AppNav />
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto p-8 lg:p-12">
+            {/* pb-28 leaves room for the mobile bottom nav + FAB on small screens */}
+            <div className="max-w-7xl mx-auto p-5 pb-28 sm:p-8 lg:p-12 lg:pb-12">
               {children}
             </div>
           </main>

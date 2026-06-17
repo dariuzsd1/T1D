@@ -21,20 +21,20 @@ export function RefillStatusBar({
   // Semantic color: red only for a true stockout; routine low stock is amber.
   const variants = {
     out: {
-      bar: "bg-red-500",
-      text: "text-red-400",
+      bar: "bg-urgent",
+      text: "text-urgent",
       icon: <AlertTriangle className="w-4 h-4" />,
       label: "Out — reorder now",
     },
     low: {
-      bar: "bg-amber-500",
-      text: "text-amber-400",
+      bar: "bg-caution",
+      text: "text-caution",
       icon: <Clock className="w-4 h-4" />,
       label: "Running low",
     },
     ok: {
-      bar: "bg-blue-600",
-      text: "text-blue-400",
+      bar: "bg-success",
+      text: "text-success",
       icon: <CheckCircle2 className="w-4 h-4" />,
       label: "Well stocked",
     },
@@ -50,12 +50,12 @@ export function RefillStatusBar({
           {current.label}
         </div>
         <div className="text-right">
-          <span className="text-2xl font-black tabular-nums">{daysRemaining}</span>
-          <span className="text-[10px] font-semibold text-gray-500 uppercase ml-1">Days left</span>
+          <span className="text-2xl font-black tabular-nums text-ink">{daysRemaining}</span>
+          <span className="text-[10px] font-semibold text-muted uppercase ml-1">Days left</span>
         </div>
       </div>
 
-      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+      <div className="h-2 w-full bg-surface-2 rounded-full overflow-hidden border border-line">
         <div
           className={cn("h-full transition-all duration-1000 ease-out rounded-full", current.bar)}
           style={{ width: `${percentage}%` }}

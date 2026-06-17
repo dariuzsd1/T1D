@@ -25,6 +25,17 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 
 ## 1. Current state (be honest about this)
 
+> **Status update 2026-06-17:** Phase 0 and (essentially) Phase 1 are now done.
+> Both broken pages compile and are restored; auth migrated to `@supabase/ssr`
+> with `getUser()` (middleware is now `src/proxy.ts` — Next 16 renamed it);
+> false compliance/openFDA claims removed; depletion math is honest
+> (`src/lib/depletion.ts`) with a safety buffer; OCR confidence floors + DoS cap
+> fixed; matchCache bounded; expiration capture + edit modal added; and the
+> **"Calm Clinical" light-first redesign (§6) is implemented app-wide** with a
+> mobile bottom-nav. **Still open:** FCM push (see `docs/PUSH_NOTIFICATIONS.md`,
+> needs your Firebase/Supabase setup) and the still-mocked scanner (Phase 2).
+> The two-halves description below is retained as historical context.
+
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,
   `durationEstimator.ts`) exposed via four API routes.

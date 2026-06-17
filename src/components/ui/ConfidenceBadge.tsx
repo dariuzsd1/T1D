@@ -13,19 +13,19 @@ export function ConfidenceBadge({ score, className }: ConfidenceBadgeProps) {
 
   const variants = {
     high: {
-      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      color: "text-success bg-success-soft border-success/20",
       icon: <ShieldCheck className="w-3.5 h-3.5" />,
-      text: "High Confidence",
+      text: "High confidence",
     },
     med: {
-      color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      color: "text-caution bg-caution-soft border-caution/20",
       icon: <Shield className="w-3.5 h-3.5" />,
-      text: "Manual Check Req.",
+      text: "Check manually",
     },
     low: {
-      color: "text-red-400 bg-red-500/10 border-red-500/20",
+      color: "text-urgent bg-urgent-soft border-urgent/20",
       icon: <ShieldAlert className="w-3.5 h-3.5" />,
-      text: "Uncertain Data",
+      text: "Uncertain",
     },
   };
 
@@ -33,7 +33,7 @@ export function ConfidenceBadge({ score, className }: ConfidenceBadgeProps) {
 
   return (
     <div className={cn(
-      "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+      "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide border",
       current.color,
       className
     )}>

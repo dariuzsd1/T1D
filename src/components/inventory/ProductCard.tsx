@@ -37,10 +37,10 @@ export function ProductCard({
   const status = stockStatus(product.remainingDays, bufferDays)
   const tone =
     status === 'out'
-      ? { number: 'text-red-500', iconBg: 'bg-red-500/20 border-red-500/40', icon: 'text-red-400', btn: 'bg-red-500 text-white' }
+      ? { number: 'text-urgent', iconBg: 'bg-urgent-soft border-urgent/30', icon: 'text-urgent', btn: 'bg-urgent text-white' }
       : status === 'low'
-      ? { number: 'text-amber-400', iconBg: 'bg-amber-500/15 border-amber-500/30', icon: 'text-amber-400', btn: 'bg-amber-500 text-white' }
-      : { number: 'text-white', iconBg: 'bg-blue-500/10 border-blue-500/20', icon: 'text-blue-400', btn: 'bg-blue-600 text-white' }
+      ? { number: 'text-caution', iconBg: 'bg-caution-soft border-caution/30', icon: 'text-caution', btn: 'bg-caution text-white' }
+      : { number: 'text-ink', iconBg: 'bg-primary/10 border-primary/20', icon: 'text-primary', btn: 'bg-primary text-white' }
 
   const reorderBy = reorderByDate(product.remainingDays, bufferDays)
   const expiryDays = daysUntilExpiration(product.expirationDate)
@@ -82,16 +82,16 @@ export function ProductCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="bg-[#0D0D0D] border-white/10 hover:border-blue-500/30 transition-all overflow-hidden group">
+      <Card className="bg-surface border-line hover:border-primary/30 transition-colors overflow-hidden group">
         <CardContent className="p-6">
           <div className="flex justify-between items-start mb-6">
             <div className="flex gap-4">
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border transition-colors", tone.iconBg)}>
+              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border", tone.iconBg)}>
                 <Package className={cn("w-6 h-6", tone.icon)} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white leading-tight">{product.name}</h3>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-1">{product.brand}</p>
+                <h3 className="text-lg font-bold text-ink leading-tight">{product.name}</h3>
+                <p className="text-xs font-semibold text-muted uppercase tracking-widest mt-1">{product.brand}</p>
               </div>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function ProductCard({
               <span className={cn("text-6xl font-black tabular-nums tracking-tighter leading-none", tone.number)}>
                 {product.remainingDays}
               </span>
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em] mt-1">Days remaining</span>
+              <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.2em] mt-1">Days remaining</span>
             </div>
 
             <div className="flex flex-col items-end gap-2">
@@ -109,7 +109,7 @@ export function ProductCard({
                 onClick={handleUseOne}
                 disabled={isUpdating || product.quantity === 0}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
                   tone.btn
                 )}
               >
@@ -117,10 +117,10 @@ export function ProductCard({
                 Use one
               </button>
 
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => onEdit?.(product.id)}
-                  className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                  className="p-2 hover:bg-surface-2 rounded-lg text-faint hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label={`Edit ${product.name}`}
                 >
                   <Edit3 className="w-4 h-4" />
@@ -128,7 +128,7 @@ export function ProductCard({
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                  className="p-2 hover:bg-urgent-soft rounded-lg text-faint hover:text-urgent transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
                   aria-label={`Delete ${product.name}`}
                 >
                   {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -138,13 +138,13 @@ export function ProductCard({
           </div>
 
           {/* Honest one-line summary: stock · runway · reorder-by */}
-          <p className="text-sm text-gray-400 font-medium mb-2">{summary}</p>
+          <p className="text-sm text-muted font-medium mb-2">{summary}</p>
 
           {/* Expiration + FEFO guidance (use oldest first) */}
           {expiryDays !== null && (
             <p className={cn(
               "flex items-center gap-1.5 text-xs font-medium mb-4",
-              expiryDays <= 0 ? "text-red-400" : expiryDays <= 30 ? "text-amber-400" : "text-gray-500"
+              expiryDays <= 0 ? "text-urgent" : expiryDays <= 30 ? "text-caution" : "text-faint"
             )}>
               <CalendarClock className="w-3.5 h-3.5" />
               {expiryDays <= 0
@@ -153,13 +153,13 @@ export function ProductCard({
             </p>
           )}
 
-          <div className="bg-black/40 rounded-xl p-4 border border-white/5 mb-6">
+          <div className="bg-surface-2 rounded-xl p-4 border border-line mb-6">
             <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} />
           </div>
 
           <button
             onClick={() => onOrder?.(product.name)}
-            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2 group-hover:border-blue-500/30"
+            className="w-full py-3 bg-surface-2 hover:bg-line border border-line rounded-xl text-xs font-semibold uppercase tracking-widest text-ink transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ShoppingCart className="w-4 h-4" />
             Reorder

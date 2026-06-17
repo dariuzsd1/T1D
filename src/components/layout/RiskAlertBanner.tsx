@@ -1,56 +1,64 @@
 'use client'
 
-import { useStore } from "@/lib/store";
-import { AlertTriangle, ArrowRight, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useStore } from '@/lib/store'
+import { stockStatus } from '@/lib/depletion'
+import { AlertTriangle, Clock, ArrowRight, X } from 'lucide-react'
+import { motion } from 'framer-motion'
+import Link from 'next/link'
+import { useState } from 'react'
 
 export function RiskAlertBanner() {
-  const { inventory } = useStore();
-  const [isVisible, setIsVisible] = useState(true);
-  
-  const criticalItems = inventory.filter(p => p.remainingDays < 3);
+  const { inventory, safetyBufferDays } = useStore()
+  const [dismissed, setDismissed] = useState(false)
 
-  if (criticalItems.length === 0 || !isVisible) return null;
+  const out = inventory.filter((p) => stockStatus(p.remainingDays, safetyBufferDays) === 'out')
+  const low = inventory.filter((p) => stockStatus(p.remainingDays, safetyBufferDays) === 'low')
+
+  if (dismissed || (out.length === 0 && low.length === 0)) return null
+
+  // Red is reserved for a true stockout; routine low-stock uses calm amber (§6).
+  const isUrgent = out.length > 0
+  const items = isUrgent ? out : low
+  const others = items.length - 1
+
+  const tone = isUrgent
+    ? 'bg-urgent-soft text-urgent border-urgent/30'
+    : 'bg-caution-soft text-caution border-caution/30'
+
+  const message = isUrgent
+    ? `You're out of ${items[0].name}${others > 0 ? ` and ${others} other item${others > 1 ? 's' : ''}` : ''} — reorder now.`
+    : `${items[0].name} is running low (${items[0].remainingDays} days left)${others > 0 ? `, plus ${others} other item${others > 1 ? 's' : ''}` : ''}.`
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      className="bg-red-600 text-white relative z-[100] border-b border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.3)]"
+      animate={{ height: 'auto', opacity: 1 }}
+      role="status"
+      className={`relative z-[100] border-b ${tone}`}
     >
-      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-black/20 rounded-lg flex items-center justify-center animate-pulse">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="font-black text-xs uppercase tracking-widest mr-2 underline decoration-black/30 underline-offset-4">Critical Shortage:</span>
-            <span className="text-sm font-bold tracking-tight">
-              {criticalItems[0].name} has only {criticalItems[0].remainingDays} days remaining. 
-              {criticalItems.length > 1 && ` (+${criticalItems.length - 1} other items)`}
-            </span>
-          </div>
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 py-2.5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          {isUrgent ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <Clock className="w-5 h-5 shrink-0" />}
+          <p className="text-sm font-medium truncate">{message}</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link 
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
             href="/dashboard"
-            className="bg-white text-red-600 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-50 transition-all leading-none"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-surface px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           >
-            Fix Now
-            <ArrowRight className="w-3 h-3" />
+            Review
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
-          <button 
-            onClick={() => setIsVisible(false)}
-            className="p-1 hover:bg-black/10 rounded-full transition-colors"
+          <button
+            onClick={() => setDismissed(true)}
+            aria-label="Dismiss alert"
+            className="rounded-full p-1.5 transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
     </motion.div>
-  );
+  )
 }

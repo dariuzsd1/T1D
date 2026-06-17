@@ -100,24 +100,20 @@ export default function SiteTrackerPage() {
     <div className="max-w-6xl mx-auto space-y-12">
       <header className="flex justify-between items-end">
         <div>
-          <h2 className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mb-2">Lipohypertrophy Prevention</h2>
-          <h1 className="text-4xl font-black tracking-tight">Injection Sites</h1>
+          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Keep sites healthy</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">Injection sites</h1>
         </div>
-        <button className="bg-white/5 border border-white/10 px-6 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all">
+        <button className="bg-surface border border-line px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-surface-2 text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <RefreshCcw className="w-5 h-5" />
-          Update History
+          Update history
         </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
         {/* Human Body Map */}
-        <div className="lg:col-span-2 relative flex justify-center bg-[#0D0D0D] border border-white/10 rounded-[40px] p-12 overflow-hidden min-h-[600px]">
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent" />
-          </div>
-
+        <div className="lg:col-span-2 relative flex justify-center bg-surface border border-line rounded-3xl p-10 overflow-hidden min-h-[520px] shadow-sm">
           <div className="relative w-full max-w-sm">
-            <svg viewBox="0 0 100 120" className="w-full h-full fill-white/5 stroke-white/10 stroke-[0.2]">
+            <svg viewBox="0 0 100 120" className="w-full h-full fill-surface-2 stroke-line stroke-[0.3]">
               <path d="M50 5 C55 5, 60 10, 60 15 C60 20, 55 25, 50 25 C45 25, 40 20, 40 15 C40 10, 45 5, 50 5
                 M40 25 L35 30 C30 35, 25 45, 25 55 L22 80 L28 80 L30 55 C32 50, 40 45, 50 45 C60 45, 68 50, 70 55 L72 80 L78 80 L75 55 C75 45, 70 35, 65 30 L60 25 Z
                 M40 80 L35 115 L45 115 L48 85 C49 83, 51 83, 52 85 L55 115 L65 115 L60 80 Z"
@@ -136,12 +132,12 @@ export default function SiteTrackerPage() {
                 <div className={cn(
                   "w-4 h-4 rounded-full border-2 transition-all",
                   site.id === suggestedSite.id
-                    ? "bg-blue-500 border-white shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse"
+                    ? "bg-primary border-surface shadow-md ring-2 ring-primary/30"
                     : site.status === 'resting'
-                      ? "bg-amber-500 border-white/40"
+                      ? "bg-caution border-surface"
                       : site.status === 'ready'
-                        ? "bg-emerald-500/70 border-white/40"
-                        : "bg-black border-white/20 group-hover:border-white group-hover:bg-blue-500/50"
+                        ? "bg-success border-surface"
+                        : "bg-surface-2 border-line group-hover:border-primary group-hover:bg-primary/40"
                 )} />
               </motion.button>
             ))}
@@ -150,24 +146,24 @@ export default function SiteTrackerPage() {
 
         {/* Info Sidebar */}
         <div className="space-y-6">
-          <div className="bg-blue-600 rounded-3xl p-8 shadow-[0_0_40px_rgba(37,99,235,0.2)]">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] mb-2 opacity-80">Next Suggested</h3>
+          <div className="bg-primary text-white rounded-3xl p-7 shadow-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] mb-3 opacity-80">Next suggested</h3>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
                 <MapPin className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-xl font-black">{suggestedSite.label}</h4>
-                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">
+                <h4 className="text-xl font-bold">{suggestedSite.label}</h4>
+                <p className="text-xs font-medium opacity-80">
                   {suggestedSite.status === 'never' ? 'Fresh site' : `Rested ${suggestedSite.lastUsedLabel}`}
                 </p>
               </div>
             </div>
             <button
               onClick={() => { setSelectedId(suggestedSite.id); handleMarkUsed(suggestedSite); }}
-              className="w-full bg-white text-blue-600 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2 leading-none"
+              className="w-full bg-white text-primary py-3.5 rounded-xl font-semibold text-sm hover:bg-surface-2 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
             >
-              Mark as Used
+              Mark as used
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -179,28 +175,28 @@ export default function SiteTrackerPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#0D0D0D] border border-white/10 rounded-3xl p-8"
+                className="bg-surface border border-line rounded-3xl p-7 shadow-sm"
               >
-                <h3 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">{selectedSite.label}</h3>
+                <h3 className="text-muted text-xs font-semibold uppercase tracking-widest mb-6">{selectedSite.label}</h3>
 
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400 font-medium">Status</span>
+                    <span className="text-muted font-medium">Status</span>
                     <span className={cn(
-                      "font-black flex items-center gap-2",
-                      selectedSite.status === 'resting' ? "text-amber-400" : "text-emerald-400"
+                      "font-semibold flex items-center gap-2",
+                      selectedSite.status === 'resting' ? "text-caution" : "text-success"
                     )}>
                       {selectedSite.status === 'ready' && <Check className="w-4 h-4" />}
                       {statusLabel(selectedSite.status)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400 font-medium">Last used</span>
-                    <span className="text-white font-bold">{selectedSite.lastUsedLabel}</span>
+                    <span className="text-muted font-medium">Last used</span>
+                    <span className="text-ink font-semibold">{selectedSite.lastUsedLabel}</span>
                   </div>
-                  <div className="pt-4 border-t border-white/5 flex gap-3">
-                    <Info className="w-4 h-4 text-gray-600 mt-1 shrink-0" />
-                    <p className="text-[10px] text-gray-500 leading-relaxed uppercase tracking-wider font-bold">
+                  <div className="pt-4 border-t border-line flex gap-3">
+                    <Info className="w-4 h-4 text-faint mt-0.5 shrink-0" />
+                    <p className="text-xs text-muted leading-relaxed">
                       {selectedSite.status === 'resting'
                         ? `Used recently — let it rest ${Math.max(0, REST_DAYS - (selectedSite.daysSince ?? 0))} more day(s) before reusing.`
                         : 'Rotate at least 1 inch from the previous injection.'}
@@ -209,7 +205,7 @@ export default function SiteTrackerPage() {
                 </div>
               </motion.div>
             ) : (
-              <div className="h-48 border border-white/5 rounded-3xl flex items-center justify-center text-center p-8 opacity-40 italic text-sm text-gray-600">
+              <div className="h-48 border border-line rounded-3xl flex items-center justify-center text-center p-8 text-sm text-faint">
                 Select a site on the map to view its history.
               </div>
             )}
