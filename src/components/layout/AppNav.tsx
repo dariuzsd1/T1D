@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Pill,
   Users,
+  Stethoscope,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -28,6 +29,7 @@ const navItems = [
 // thumb-reachable items.
 const secondaryNav = [
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
+  { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
   { name: 'Caregivers', href: '/dashboard/caregivers', icon: Users },
 ]
 

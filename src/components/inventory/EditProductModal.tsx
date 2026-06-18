@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import { Product } from '@/lib/store'
+import { useDialog } from '@/lib/useDialog'
 
 interface EditProductModalProps {
   product: Product
@@ -31,16 +32,12 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
     product.lastFilledDate ? product.lastFilledDate.slice(0, 10) : ''
   )
   const [saving, setSaving] = useState(false)
+  const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     firstFieldRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -63,13 +60,10 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <button
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-ink/40"
-      />
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink/40" />
 
       <motion.div
+        ref={dialogRef}
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         role="dialog"

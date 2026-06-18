@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import type { Prescription } from '@/lib/prescriptions'
+import { useDialog } from '@/lib/useDialog'
 
 interface PrescriptionModalProps {
   /** Existing prescription to edit, or null to create a new one. */
@@ -29,16 +30,12 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
   const [notes, setNotes] = useState(prescription?.notes ?? '')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     firstFieldRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [])
 
   const handleSave = async () => {
     if (!medicationName.trim()) {
@@ -74,9 +71,10 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-ink/40" />
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink/40" />
 
       <motion.div
+        ref={dialogRef}
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         role="dialog"

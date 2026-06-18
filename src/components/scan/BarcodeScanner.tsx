@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
+import { useDialog } from '@/lib/useDialog'
 
 interface BarcodeScannerProps {
   /** Fires once with the decoded value when a barcode is read. */
@@ -56,6 +57,9 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
     stopCamera()
     onClose()
   }, [stopCamera, onClose])
+
+  // Escape, focus trap, focus restore, and scroll lock for the scanner dialog.
+  const dialogRef = useDialog<HTMLDivElement>(handleClose)
 
   useEffect(() => {
     let cancelled = false
@@ -147,9 +151,10 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <button aria-label="Close scanner" onClick={handleClose} className="absolute inset-0 bg-ink/60" />
+      <div aria-hidden="true" onClick={handleClose} className="absolute inset-0 bg-ink/60" />
 
       <motion.div
+        ref={dialogRef}
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         role="dialog"

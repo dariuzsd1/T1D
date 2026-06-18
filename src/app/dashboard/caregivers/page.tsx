@@ -123,9 +123,10 @@ export default function CaregiversPage() {
           </div>
           <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-            Caregiver sharing needs its table and access rules created first. Run the SQL in{' '}
-            <span className="font-semibold text-ink">docs/PRESCRIPTIONS_CAREGIVERS_MIGRATION.md</span>{' '}
-            in your Supabase dashboard, then reload.
+            Caregiver sharing needs its table and access rules created first. Run{' '}
+            <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
+            in your Supabase SQL editor (see{' '}
+            <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>), then reload.
           </p>
           <button
             onClick={load}
