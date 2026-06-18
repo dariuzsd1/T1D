@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
         // Optional refill-cycle fields (null until the migration is applied).
         refillIntervalDays: supply.refill_interval_days ?? null,
         lastFilledDate: supply.last_filled_date ?? null,
+        // Cost & savings layer (null until copay is entered / column exists).
+        copay: supply.copay ?? null,
       }
     })
 

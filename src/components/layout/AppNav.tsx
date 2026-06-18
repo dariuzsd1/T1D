@@ -16,6 +16,7 @@ import {
   Users,
   Stethoscope,
   HeartPulse,
+  DollarSign,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -33,6 +34,7 @@ const navItems = [
 const secondaryNav = [
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
+  { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },
   { name: 'Caregivers', href: '/dashboard/caregivers', icon: Users },
   { name: 'Medical ID', href: '/dashboard/medical-id', icon: HeartPulse },
 ]

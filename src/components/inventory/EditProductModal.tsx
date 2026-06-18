@@ -31,6 +31,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [lastFilledDate, setLastFilledDate] = useState(
     product.lastFilledDate ? product.lastFilledDate.slice(0, 10) : ''
   )
+  const [copay, setCopay] = useState<string>(
+    product.copay != null ? String(product.copay) : ''
+  )
   const [saving, setSaving] = useState(false)
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLInputElement>(null)
@@ -50,6 +53,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         expirationDate: expirationDate || null,
         refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
         lastFilledDate: lastFilledDate || null,
+        copay: copay ? parseFloat(copay) : null,
       })
       onSaved?.(product.name)
       onClose()
@@ -155,7 +159,23 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
               </div>
+              <div>
+                <label htmlFor="edit-copay" className="block text-[11px] font-medium text-muted mb-1.5">Copay per refill ($)</label>
+                <input
+                  id="edit-copay"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 30"
+                  value={copay}
+                  onChange={(e) => setCopay(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+              </div>
             </div>
+            <p className="text-xs text-faint mt-2">
+              Copay + supply length power the Costs page&apos;s spending estimate.
+            </p>
           </div>
         </div>
 

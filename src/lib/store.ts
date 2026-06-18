@@ -21,6 +21,8 @@ export interface Product {
   // Optional until the DB columns land — see docs/REFILL_RULES_MIGRATION.md.
   refillIntervalDays?: number | null;
   lastFilledDate?: string | null;
+  // Out-of-pocket copay per refill (cost & savings layer, src/lib/cost.ts).
+  copay?: number | null;
 }
 
 export interface SiteLog {
@@ -97,7 +99,8 @@ export const useStore = create<T1DStore>()((set) => ({
       if (
         updates.usageRatePerDay !== undefined ||
         updates.refillIntervalDays !== undefined ||
-        updates.lastFilledDate !== undefined
+        updates.lastFilledDate !== undefined ||
+        updates.copay !== undefined
       ) {
         const optionalPayload: Record<string, unknown> = {}
         if (updates.usageRatePerDay !== undefined)
@@ -108,6 +111,9 @@ export const useStore = create<T1DStore>()((set) => ({
           optionalPayload.refill_interval_days = updates.refillIntervalDays
         if (updates.lastFilledDate !== undefined)
           optionalPayload.last_filled_date = updates.lastFilledDate
+        if (updates.copay !== undefined)
+          // NULL when cleared so it's simply not counted (never $0 fabricated).
+          optionalPayload.copay = updates.copay && updates.copay > 0 ? updates.copay : null
 
         const { error: optionalError } = await supabase
           .from('supplies')

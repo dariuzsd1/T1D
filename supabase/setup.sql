@@ -69,6 +69,9 @@ create table if not exists public.supplies (
   -- How many units the user goes through per day. NULL = not set yet; the app
   -- then shows an honest conservative *estimate* instead of a fabricated number.
   usage_rate_per_day numeric,
+  -- Out-of-pocket copay the user pays per refill (cost & savings layer). NULL =
+  -- not entered → simply not counted; we never guess a price.
+  copay numeric,
   -- Insurance refill-window engine (src/lib/refill.ts):
   refill_interval_days integer,
   last_filled_date     date,
@@ -83,6 +86,7 @@ create table if not exists public.supplies (
 alter table public.supplies
   add column if not exists model                text,
   add column if not exists usage_rate_per_day    numeric,
+  add column if not exists copay                 numeric,
   add column if not exists refill_interval_days integer,
   add column if not exists last_filled_date      date,
   add column if not exists barcode               text,
