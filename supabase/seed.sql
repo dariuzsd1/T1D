@@ -19,7 +19,7 @@
 do $$
 declare
   -- 👇 CHANGE THIS to the email you sign in with:
-  v_email text := 'maria.benkirane1@gmail.com';
+  v_email text := 'dariuzsd1@gmail.com';
   uid uuid;
   cat_pump uuid;
   cat_cgm  uuid;
