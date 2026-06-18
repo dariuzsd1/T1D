@@ -270,6 +270,73 @@ create policy "own prefs" on public.notification_prefs
 
 
 -- ============================================================================
+-- 8. MEDICAL ID  (emergency card — PHI). The user may OPT IN to expose a
+--    read-only copy via an unguessable link so a first responder can see it
+--    without logging in. Matches src/lib/medicalId.ts.
+-- ============================================================================
+create table if not exists public.medical_profiles (
+  user_id                 uuid primary key references auth.users(id) on delete cascade,
+  full_name               text,
+  date_of_birth           date,
+  blood_type              text,
+  diagnosis               text,
+  insulin_types           text,
+  devices                 text,
+  allergies               text,
+  emergency_contact_name  text,
+  emergency_contact_phone text,
+  doctor_name             text,
+  doctor_phone            text,
+  notes                   text,
+  is_public               boolean not null default false,
+  public_token            uuid not null default gen_random_uuid(),
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now()
+);
+
+alter table public.medical_profiles enable row level security;
+
+drop policy if exists "own medical profile" on public.medical_profiles;
+create policy "own medical profile" on public.medical_profiles
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop trigger if exists medical_profiles_set_updated_at on public.medical_profiles;
+create trigger medical_profiles_set_updated_at before update on public.medical_profiles
+  for each row execute function public.set_updated_at();
+
+-- There is intentionally NO anon SELECT policy on this table. Public read happens
+-- ONLY through this security-definer function, ONLY when the user opted in
+-- (is_public) AND the caller presents the exact unguessable token — so the table
+-- can't be enumerated. Date of birth is deliberately NOT returned.
+create or replace function public.get_public_medical_id(p_token uuid)
+returns table (
+  full_name               text,
+  blood_type              text,
+  diagnosis               text,
+  insulin_types           text,
+  devices                 text,
+  allergies               text,
+  emergency_contact_name  text,
+  emergency_contact_phone text,
+  doctor_name             text,
+  doctor_phone            text,
+  notes                   text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select full_name, blood_type, diagnosis, insulin_types, devices,
+         allergies, emergency_contact_name, emergency_contact_phone,
+         doctor_name, doctor_phone, notes
+  from public.medical_profiles
+  where public_token = p_token and is_public = true
+$$;
+
+grant execute on function public.get_public_medical_id(uuid) to anon, authenticated;
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

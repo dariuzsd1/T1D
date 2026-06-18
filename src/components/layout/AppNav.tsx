@@ -14,6 +14,7 @@ import {
   Pill,
   Users,
   Stethoscope,
+  HeartPulse,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -31,6 +32,7 @@ const secondaryNav = [
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
   { name: 'Caregivers', href: '/dashboard/caregivers', icon: Users },
+  { name: 'Medical ID', href: '/dashboard/medical-id', icon: HeartPulse },
 ]
 
 export function AppNav() {

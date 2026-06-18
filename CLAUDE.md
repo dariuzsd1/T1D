@@ -80,6 +80,22 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > `docs/PUSH_NOTIFICATIONS.md`, then deploy the **server** half (pg_cron → Edge
 > Function → FCM HTTP v1) that actually decides when to send. **Still blocked
 > external:** device auto-depletion (vendor API keys/OAuth).
+>
+> **Backend consolidated (2026-06-18):** the whole DB is now one idempotent,
+> non-destructive `supabase/setup.sql` + optional `supabase/seed.sql`, guided by
+> `docs/DATABASE_SETUP.md` (supersedes the piecemeal `docs/*_MIGRATION.md`). User
+> has run both — frontend is live with real data. An **Appointments** page was
+> also added (wires the dormant `Appointment` type).
+>
+> **Phase 2 — Emergency & Travel mode + Medical ID (2026-06-18):** new
+> `/dashboard/medical-id` (editor + live emergency card + travel/kit checklist +
+> TSA note; `src/lib/medicalId.ts`, table-missing-safe). Critical info is stored in
+> `medical_profiles` (RLS own-row). The user can OPT IN to a read-only **no-login**
+> card at `/id/<public_token>` (public route, outside the proxy matcher) so a first
+> responder can view it on a locked phone — served by the `get_public_medical_id`
+> **security-definer** function (no anon table SELECT; unguessable token; opt-in
+> `is_public` only; DOB withheld). Added to `setup.sql` → **user must re-run
+> `supabase/setup.sql`** (idempotent) to create the table + function. Nav link added.
 
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,
