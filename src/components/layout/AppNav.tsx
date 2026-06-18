@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,7 @@ import {
   Users,
   Stethoscope,
   HeartPulse,
+  MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -39,6 +41,21 @@ export function AppNav() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  // Highlight "More" when the active page lives behind it.
+  const moreActive =
+    secondaryNav.some((i) => pathname === i.href) || pathname === '/dashboard/settings'
+
+  // Close the mobile sheet on Escape.
+  useEffect(() => {
+    if (!moreOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [moreOpen])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -148,8 +165,81 @@ export function AppNav() {
               </Link>
             )
           })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="true"
+            aria-expanded={moreOpen}
+            className={cn(
+              'flex flex-col items-center justify-center gap-1 flex-1 min-h-[56px] py-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+              moreActive ? 'text-primary' : 'text-faint'
+            )}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            More
+          </button>
         </div>
       </nav>
+
+      {/* Mobile "More" sheet — surfaces the desktop-sidebar destinations on phones */}
+      {moreOpen && (
+        <div className="lg:hidden fixed inset-0 z-[110]">
+          <button
+            aria-label="Close menu"
+            onClick={() => setMoreOpen(false)}
+            className="absolute inset-0 bg-ink/40"
+          />
+          <div
+            role="menu"
+            aria-label="More"
+            className="absolute bottom-0 inset-x-0 bg-surface border-t border-line rounded-t-3xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-lg"
+          >
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line" />
+            <div className="space-y-1">
+              {secondaryNav.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    onClick={() => setMoreOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      isActive ? 'bg-primary text-white' : 'text-ink hover:bg-surface-2'
+                    )}
+                  >
+                    <item.icon className={cn('w-5 h-5', isActive ? 'text-white' : 'text-faint')} />
+                    {item.name}
+                  </Link>
+                )
+              })}
+              <Link
+                href="/dashboard/settings"
+                role="menuitem"
+                onClick={() => setMoreOpen(false)}
+                aria-current={pathname === '/dashboard/settings' ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                  pathname === '/dashboard/settings' ? 'bg-primary text-white' : 'text-ink hover:bg-surface-2'
+                )}
+              >
+                <Settings className={cn('w-5 h-5', pathname === '/dashboard/settings' ? 'text-white' : 'text-faint')} />
+                Settings
+              </Link>
+              <button
+                onClick={() => { setMoreOpen(false); handleLogout() }}
+                role="menuitem"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-muted hover:text-urgent hover:bg-urgent-soft w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
+              >
+                <LogOut className="w-5 h-5" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

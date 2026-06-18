@@ -326,11 +326,13 @@ language sql
 security definer
 set search_path = public
 as $$
-  select full_name, blood_type, diagnosis, insulin_types, devices,
-         allergies, emergency_contact_name, emergency_contact_phone,
-         doctor_name, doctor_phone, notes
-  from public.medical_profiles
-  where public_token = p_token and is_public = true
+  -- Columns are qualified with the `mp` alias so they don't collide with the
+  -- identically-named RETURNS TABLE output columns ("ambiguous column" error).
+  select mp.full_name, mp.blood_type, mp.diagnosis, mp.insulin_types, mp.devices,
+         mp.allergies, mp.emergency_contact_name, mp.emergency_contact_phone,
+         mp.doctor_name, mp.doctor_phone, mp.notes
+  from public.medical_profiles mp
+  where mp.public_token = p_token and mp.is_public = true
 $$;
 
 grant execute on function public.get_public_medical_id(uuid) to anon, authenticated;
