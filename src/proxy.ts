@@ -33,9 +33,18 @@ export async function proxy(request: NextRequest) {
 
   // getUser() validates the token against the Supabase Auth server — the
   // session cookie alone is spoofable, so never authorize on it (C5).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  //
+  // Resilience: if Supabase is unreachable (e.g. a paused free-tier project, or a
+  // transient network error), DON'T let that throw out of the middleware — that
+  // would 500 every matched route and make the whole site look dead. Degrade to
+  // "logged out" instead, so pages still render (protected ones bounce to login).
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch (err) {
+    console.error('proxy: Supabase auth check failed (treating as logged out):', err)
+  }
 
   const { pathname } = request.nextUrl
   const isProtected =

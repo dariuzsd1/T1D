@@ -103,8 +103,9 @@ export function PushToggle() {
         <Database className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
         <p>
           Almost there — the table that stores your device needs to be created once.
-          Run the <span className="font-semibold text-ink">fcm_tokens</span> step in{' '}
-          <span className="font-semibold text-ink">docs/PUSH_NOTIFICATIONS.md</span>, then reload and try again.
+          Run <span className="font-semibold text-ink">supabase/setup.sql</span> in your Supabase
+          dashboard (see <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>),
+          then reload and try again.
         </p>
       </div>
     )
