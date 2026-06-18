@@ -96,6 +96,23 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > **security-definer** function (no anon table SELECT; unguessable token; opt-in
 > `is_public` only; DOB withheld). Added to `setup.sql` → **user must re-run
 > `supabase/setup.sql`** (idempotent) to create the table + function. Nav link added.
+> Mobile **"More" sheet** added to AppNav so every secondary page is reachable on
+> phones (closes the long-standing mobile gap).
+>
+> **Phase 2 close-out — server-side + hardening (2026-06-18):** (1) The
+> `/api/inventory` route now derives runway from the **shared
+> `effectiveRunwayDays`** engine (depletion.ts) instead of the old dishonest
+> `default 30` + site-changes math — every surface (client, API, future Edge fn)
+> now agrees. (2) **CI now runs `npm test`** (vitest) on every push; added
+> `gs1.test.ts` to the existing depletion/refill suites. (3) Graceful
+> `not-found.tsx` (root `error.tsx` + `dashboard/loading.tsx` already existed). (4)
+> **Catalog groundwork** (intentionally light): `docs/PRODUCT_CATALOG.md` +
+> `data/diabetes_catalog.csv` — a reviewed reference of devices/insulin/glucagon/
+> supplies (GTINs intentionally blank until verified; honest defaults) to later
+> power barcode→product lookup and smart defaults; includes a note on a future
+> GUDID/openFDA auto-update bot (human-reviewed PRs, never auto-merge). Phase 2 is
+> effectively complete; remaining roadmap is blocked-on-vendor (device
+> auto-depletion, real supplier APIs) or the deferred FCM server half.
 
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,

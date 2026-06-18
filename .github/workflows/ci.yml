@@ -35,6 +35,10 @@ jobs:
       - name: Type-check (tsc --noEmit)
         run: npx tsc --noEmit
 
+      # Unit tests for the pure engines (depletion / refill / gs1). No env needed.
+      - name: Unit tests (vitest)
+        run: npm test
+
       # Full production build. Placeholder Supabase env vars keep module
       # evaluation from failing on the non-null `process.env.X!` reads.
       # These are throwaway CI values, NOT secrets.

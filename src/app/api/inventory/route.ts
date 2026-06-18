@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { effectiveRunwayDays } from '@/lib/depletion'
 
 /**
  * GET /api/inventory
@@ -35,51 +36,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch site changes to calculate remaining days
-    const { data: siteChanges, error: siteChangesError } = await supabase
-      .from('site_changes')
-      .select('supply_id, applied_date, expected_duration_days')
-      .eq('user_id', user.id)
-      .order('applied_date', { ascending: false })
-
-    if (siteChangesError) {
-      console.error('Supabase error:', siteChangesError)
-    }
-
-    // Map supplies to frontend format
+    // Map supplies to the frontend format, deriving runway from the SAME shared
+    // engine the client/Edge Function use (src/lib/depletion.ts) so every surface
+    // agrees. runway = sooner of (stock ÷ usage) and (shelf-life expiry). No more
+    // dishonest "default 30"; usage rate is the user's real value or 0 (which the
+    // engine treats as a conservative estimate, never a fabricated number).
     const inventory = supplies?.map((supply: any) => {
-      const releventSiteChange = siteChanges?.find(
-        (sc: any) => sc.supply_id === supply.id
-      )
-
-      let remainingDays = 30 // Default
-
-      if (releventSiteChange) {
-        const appliedDate = new Date(releventSiteChange.applied_date)
-        const daysElapsed = Math.floor(
-          (Date.now() - appliedDate.getTime()) / (1000 * 60 * 60 * 24)
-        )
-        remainingDays = Math.max(
-          0,
-          releventSiteChange.expected_duration_days - daysElapsed
-        )
-      }
-
-      if (supply.expiration_date) {
-        const expirationDate = new Date(supply.expiration_date)
-        const daysUntilExpiration = Math.floor(
-          (expirationDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-        )
-        remainingDays = Math.min(remainingDays, daysUntilExpiration)
-      }
-
-      // Use the user's real daily usage when they've set it; otherwise 0, which
-      // the client treats as "estimate" (depletion.ts falls back conservatively).
-      // We do NOT fabricate a rate from the unit anymore.
-      const realUsageRate =
+      const usageRatePerDay =
         supply.usage_rate_per_day != null && Number(supply.usage_rate_per_day) > 0
           ? Number(supply.usage_rate_per_day)
           : 0
+
+      const remainingDays = effectiveRunwayDays({
+        quantity: Number(supply.quantity) || 0,
+        usageRatePerDay,
+        expirationDate: supply.expiration_date,
+      })
 
       return {
         id: supply.id,
@@ -87,11 +59,11 @@ export async function GET(request: NextRequest) {
         name: supply.name,
         category: 'medical_supply', // Default; could map category_id to name
         quantity: supply.quantity,
-        remainingDays: Math.max(0, remainingDays),
+        remainingDays,
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        usageRatePerDay: realUsageRate,
+        usageRatePerDay,
         expirationDate: supply.expiration_date || null,
-        // Optional refill-cycle fields (undefined until the migration is applied).
+        // Optional refill-cycle fields (null until the migration is applied).
         refillIntervalDays: supply.refill_interval_days ?? null,
         lastFilledDate: supply.last_filled_date ?? null,
       }
