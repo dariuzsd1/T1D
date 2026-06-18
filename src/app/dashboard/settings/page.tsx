@@ -2,6 +2,7 @@
 
 import { useStore } from '@/lib/store'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
+import { PushToggle } from '@/components/PushToggle'
 import { Bell, ShieldCheck, ExternalLink, Truck } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
@@ -77,12 +78,7 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
-        <div className="rounded-2xl bg-surface-2 border border-line p-4 text-sm text-muted leading-relaxed">
-          This needs a one-time setup (a free Firebase project + a scheduled check
-          in Supabase). The full step-by-step is in the project&apos;s
-          <span className="font-semibold text-ink"> docs/PUSH_NOTIFICATIONS.md</span>.
-          Until that&apos;s connected, the app won&apos;t pretend to send alerts.
-        </div>
+        <PushToggle />
       </section>
 
       {/* Quick supplier links — real, useful now */}

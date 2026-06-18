@@ -63,9 +63,23 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > `prescriptions` + `caregiver_shares` with RLS, incl. cross-account caregiver-read
 > policies on supplies/prescriptions). New desktop sidebar links; mobile tab bar
 > kept to 4 core items. **Honest gaps documented:** caregiver "viewing-as" switch,
-> auto-invite emails, manage-role writes, GTIN→product directory. **Still blocked
-> on external access:** device auto-depletion (vendor API keys/OAuth), FCM push
-> (Firebase keys).
+> auto-invite emails, manage-role writes, GTIN→product directory.
+>
+> **Phase 2 batch 4 (2026-06-18) — FCM push CLIENT side DONE.** `firebase`
+> (^12.15.0) is now a committed dependency (installed on the user's second,
+> Node-capable machine; both package.json + package-lock.json are in the repo, so
+> `npm ci` is satisfied — the long-standing "zero new deps" constraint is lifted
+> for firebase specifically). Built: `src/lib/firebase/config.ts` (PUBLIC config +
+> VAPID key for project **t1-diabetes**, hardcoded by design — no analytics),
+> `src/lib/firebase/messaging.ts` (browser-guarded, dynamic-imports
+> `firebase/messaging` so it never evaluates during SSR), `public/firebase-messaging-sw.js`
+> (compat SW via gstatic 12.15.0 importScripts + notificationclick handler), and
+> `src/components/PushToggle.tsx` (permission → token → upsert into `fcm_tokens`
+> → foreground toasts; table-missing-safe; honest unsupported/denied states) wired
+> into the Settings page. **Still needs the user:** run the `fcm_tokens` SQL from
+> `docs/PUSH_NOTIFICATIONS.md`, then deploy the **server** half (pg_cron → Edge
+> Function → FCM HTTP v1) that actually decides when to send. **Still blocked
+> external:** device auto-depletion (vendor API keys/OAuth).
 
 The app is in **two halves that don't connect**:
 - A thoughtful "production pipeline" (`pipeline.ts`, `ocrExtractor.ts`, `apiMatcher.ts`,
