@@ -18,22 +18,27 @@ import {
   HeartPulse,
   DollarSign,
   Cpu,
+  Package,
+  ShoppingCart,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDialog } from '@/lib/useDialog'
 
-// Core destinations — shown in both the desktop sidebar and the mobile tab bar.
+// Core supply loop — see status, browse supplies, add one, reorder. Shown in
+// both the desktop sidebar and the mobile tab bar.
 const navItems = [
   { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Rotate', href: '/dashboard/site-tracker', icon: Map },
+  { name: 'Supplies', href: '/dashboard/supplies', icon: Package },
   { name: 'Add', href: '/scan', icon: ScanLine },
-  { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
+  { name: 'Reorder', href: '/dashboard/reorder', icon: ShoppingCart },
 ]
 
-// Secondary destinations — desktop sidebar only, to keep the mobile bar to four
-// thumb-reachable items.
+// Secondary destinations — desktop sidebar + mobile "More" sheet, to keep the
+// mobile bar to four thumb-reachable items.
 const secondaryNav = [
+  { name: 'Rotate sites', href: '/dashboard/site-tracker', icon: Map },
+  { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
   { name: 'Devices', href: '/dashboard/devices', icon: Cpu },
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },

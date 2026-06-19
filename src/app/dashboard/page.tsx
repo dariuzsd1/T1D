@@ -1,43 +1,28 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
-import { useStore } from "@/lib/store";
-import { ProductCard } from "@/components/inventory/ProductCard";
-import { EditProductModal } from "@/components/inventory/EditProductModal";
-import { stockStatus } from "@/lib/depletion";
-import { useToast } from "@/components/ui/Toast";
-import { Plus, TrendingDown, PackageCheck } from "lucide-react";
-import Link from "next/link";
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { useStore } from '@/lib/store'
+import { stockStatus } from '@/lib/depletion'
+import { useToast } from '@/components/ui/Toast'
+import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
+import {
+  Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight,
+} from 'lucide-react'
 
 export default function DashboardPage() {
-  const { inventory, setInventory, updateProduct, removeProduct, safetyBufferDays } = useStore();
-  const { showToast } = useToast();
+  const { inventory, setInventory, safetyBufferDays } = useStore()
+  const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const editingProduct = inventory.find((p) => p.id === editingId) ?? null
-
-  const handleOrder = (label: string) =>
-    showToast(
-      label === 'find a supplier'
-        ? 'Opening a supplier search in a new tab.'
-        : `Opening ${label}'s reorder page in a new tab.`,
-      'info'
-    )
-  
-  // Fetch inventory on mount
   useEffect(() => {
     const fetchInventory = async () => {
       try {
         setLoading(true)
         const response = await fetch('/api/inventory')
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
         const result = await response.json()
         setInventory(result.data || [])
         setError(null)
@@ -48,148 +33,201 @@ export default function DashboardPage() {
         setLoading(false)
       }
     }
-
     fetchInventory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  
-  // Most urgent first. "Needs attention" = anything that would dip below the
-  // user's safety buffer (their reserve), not just items at literal zero.
-  const sortedInventory = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays);
 
-  const needsAttention = sortedInventory.filter(p => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok');
-  const stableItems = sortedInventory.filter(p => stockStatus(p.remainingDays, safetyBufferDays) === 'ok');
+  const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
+  const needsAttention = sorted.filter(
+    (p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok'
+  )
+  const hasOut = needsAttention.some(
+    (p) => stockStatus(p.remainingDays, safetyBufferDays) === 'out'
+  )
+  const allGood = inventory.length > 0 && needsAttention.length === 0
+
+  const handleReorder = (label: string) =>
+    showToast(
+      label === 'find a supplier'
+        ? 'Opening a supplier search in a new tab.'
+        : `Opening ${label}'s reorder page in a new tab.`,
+      'info'
+    )
 
   return (
-    <div className="space-y-12" aria-busy={loading}>
-      {/* Header Section */}
-      <section className="flex justify-between items-end">
-        <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Your supplies</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Supply overview</h1>
-        </div>
-
-        <Link
-          href="/scan"
-          className="bg-primary hover:bg-primary-deep text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-        >
-          <Plus className="w-5 h-5" />
-          Add supply
-        </Link>
-      </section>
-
+    <div className="max-w-2xl mx-auto space-y-8" aria-busy={loading}>
       <p role="status" aria-live="polite" className="sr-only">
         {loading ? 'Loading supplies…' : ''}
       </p>
 
-      {/* Loading State */}
+      {/* Loading */}
       {loading && (
-        <div className="bg-surface border border-line rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-line rounded-3xl p-12 text-center">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-surface-2 rounded w-32 mx-auto" />
-            <div className="h-8 bg-surface-2 rounded w-24 mx-auto" />
+            <div className="h-4 bg-surface-2 rounded w-40 mx-auto" />
+            <div className="h-10 bg-surface-2 rounded w-28 mx-auto" />
           </div>
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error */}
       {error && !loading && (
-        <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-          <p className="text-urgent font-semibold mb-2">Failed to load inventory</p>
+        <div className="bg-urgent-soft border border-urgent/30 rounded-3xl p-6">
+          <p className="text-urgent font-semibold mb-1">Couldn&apos;t load your supplies</p>
           <p className="text-urgent/80 text-sm">{error}</p>
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty — onboarding */}
       {!loading && !error && inventory.length === 0 && (
-        <div className="bg-surface border border-line rounded-2xl p-12 text-center space-y-4">
-          <p className="text-muted font-medium">No supplies tracked yet</p>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-surface border border-line rounded-3xl p-10 text-center space-y-5"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Package className="w-8 h-8 text-primary" />
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">Let&apos;s get you set up</h1>
+            <p className="text-muted max-w-sm mx-auto leading-relaxed">
+              Add your first supply — a sensor, pod, reservoir, or vial — and we&apos;ll
+              track how long it lasts and tell you when to reorder.
+            </p>
+          </div>
           <Link
             href="/scan"
-            className="inline-block bg-primary hover:bg-primary-deep text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
-            <Plus className="w-4 h-4 inline mr-2" />
+            <Plus className="w-5 h-5" />
             Add your first supply
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Status hero — the one answer */}
+      {!loading && !error && inventory.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={
+            allGood
+              ? 'rounded-3xl p-8 bg-success-soft border border-success/20'
+              : hasOut
+              ? 'rounded-3xl p-8 bg-urgent-soft border border-urgent/20'
+              : 'rounded-3xl p-8 bg-caution-soft border border-caution/20'
+          }
+        >
+          <div className="flex items-start gap-4">
+            <div
+              className={
+                'w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ' +
+                (allGood ? 'bg-success/15' : hasOut ? 'bg-urgent/15' : 'bg-caution/15')
+              }
+            >
+              {allGood ? (
+                <CheckCircle2 className="w-7 h-7 text-success" />
+              ) : (
+                <AlertTriangle className={hasOut ? 'w-7 h-7 text-urgent' : 'w-7 h-7 text-caution'} />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h1
+                className={
+                  'text-2xl sm:text-3xl font-bold tracking-tight ' +
+                  (allGood ? 'text-success' : hasOut ? 'text-urgent' : 'text-caution')
+                }
+              >
+                {allGood
+                  ? "You're all set"
+                  : `${needsAttention.length} ${needsAttention.length === 1 ? 'supply needs' : 'supplies need'} attention`}
+              </h1>
+              <p className="text-muted mt-1.5 leading-relaxed">
+                {allGood
+                  ? `All ${inventory.length} supplies are above your ${safetyBufferDays}-day reserve.`
+                  : `Reorder soon to stay above your ${safetyBufferDays}-day reserve.`}
+              </p>
+            </div>
+          </div>
+        </motion.section>
+      )}
+
+      {/* Attention list — only what matters, with reorder right here */}
+      {!loading && needsAttention.length > 0 && (
+        <section className="space-y-3">
+          {needsAttention.map((item) => (
+            <SupplyStatusRow
+              key={item.id}
+              product={item}
+              bufferDays={safetyBufferDays}
+              onReorder={handleReorder}
+            />
+          ))}
+        </section>
+      )}
+
+      {/* Navigation cards — calm entry points to detail */}
+      {!loading && !error && inventory.length > 0 && (
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <NavCard
+            href="/dashboard/supplies"
+            icon={<Package className="w-5 h-5 text-primary" />}
+            title="All supplies"
+            sub={`${inventory.length} tracked`}
+          />
+          <NavCard
+            href="/dashboard/reorder"
+            icon={<ShoppingCart className="w-5 h-5 text-primary" />}
+            title="Reorder"
+            sub={
+              needsAttention.length > 0
+                ? `${needsAttention.length} to reorder`
+                : 'Nothing needed'
+            }
+          />
+        </section>
+      )}
+
+      {/* Add supply — always available */}
+      {!loading && !error && inventory.length > 0 && (
+        <div className="flex justify-center pt-2">
+          <Link
+            href="/scan"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-3 py-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add a supply
           </Link>
         </div>
       )}
-
-      {/* Stats Summary */}
-      {!loading && <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-caution-soft border border-caution/20 rounded-2xl p-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-            <TrendingDown className="w-24 h-24 text-caution" />
-          </div>
-          <p className="text-caution text-[11px] font-semibold uppercase tracking-widest leading-none mb-4">Reorder soon</p>
-          <h3 className="text-5xl font-black text-ink tabular-nums">{needsAttention.length}</h3>
-          <p className="text-sm text-caution/90 font-medium mt-2">
-            {needsAttention.length > 0
-              ? `Would drop below your ${safetyBufferDays}-day reserve`
-              : `Everything is comfortably stocked`}
-          </p>
-        </div>
-        <div className="bg-surface border border-line rounded-2xl p-6 relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-            <PackageCheck className="w-24 h-24 text-primary" />
-          </div>
-          <p className="text-muted text-[11px] font-semibold uppercase tracking-widest leading-none mb-4">Tracked supplies</p>
-          <h3 className="text-5xl font-black text-ink tabular-nums">{inventory.length}</h3>
-          <p className="text-sm text-muted font-medium mt-2">Items you're keeping an eye on</p>
-        </div>
-      </section>}
-
-      {/* NEEDS ATTENTION */}
-      {!loading && needsAttention.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-caution rounded-full" />
-            <h2 className="text-base font-semibold tracking-wide text-caution">Reorder soon</h2>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-            {needsAttention.map((item) => (
-              <ProductCard
-                key={item.id}
-                product={item}
-                bufferDays={safetyBufferDays}
-                onUpdate={updateProduct}
-                onDelete={removeProduct}
-                onOrder={handleOrder}
-                onEdit={setEditingId}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* STABLE SECTION */}
-      {!loading && stableItems.length > 0 && (
-        <section className="space-y-6 pt-12 border-t border-line">
-          <h2 className="text-base font-semibold tracking-wide text-muted">Well stocked</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-            {stableItems.map((item) => (
-              <ProductCard
-                key={item.id}
-                product={item}
-                bufferDays={safetyBufferDays}
-                onUpdate={updateProduct}
-                onDelete={removeProduct}
-                onOrder={handleOrder}
-                onEdit={setEditingId}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <AnimatePresence>
-        {editingProduct && (
-          <EditProductModal
-            product={editingProduct}
-            onClose={() => setEditingId(null)}
-            onUpdate={updateProduct}
-            onSaved={(name) => showToast(`Updated ${name}.`, 'success')}
-          />
-        )}
-      </AnimatePresence>
     </div>
-  );
+  )
+}
+
+function NavCard({
+  href,
+  icon,
+  title,
+  sub,
+}: {
+  href: string
+  icon: React.ReactNode
+  title: string
+  sub: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-4 bg-surface border border-line rounded-2xl p-5 hover:border-primary/40 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-ink">{title}</p>
+        <p className="text-sm text-muted">{sub}</p>
+      </div>
+      <ChevronRight className="w-5 h-5 text-faint group-hover:text-primary transition-colors" />
+    </Link>
+  )
 }
