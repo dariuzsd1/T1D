@@ -462,6 +462,51 @@ create policy "products public read" on public.products
 
 
 -- ============================================================================
+-- 11. PROFILES  (Phase 5 — display name for each user; auto-created on signup)
+-- ============================================================================
+create table if not exists public.profiles (
+  id           uuid primary key references auth.users(id) on delete cascade,
+  display_name text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "own profile" on public.profiles;
+create policy "own profile" on public.profiles
+  for all using (auth.uid() = id) with check (auth.uid() = id);
+
+drop trigger if exists profiles_set_updated_at on public.profiles;
+create trigger profiles_set_updated_at before update on public.profiles
+  for each row execute function public.set_updated_at();
+
+-- Auto-create a profile row whenever a new user is created (magic link,
+-- password sign-up, or OAuth). ON CONFLICT DO NOTHING makes it safe for
+-- existing accounts that already have rows.
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id)
+  values (new.id)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill a profile row for any user that signed up before this table existed.
+-- Safe to re-run; ON CONFLICT prevents duplicates.
+insert into public.profiles (id)
+select id from auth.users
+on conflict (id) do nothing;
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================
