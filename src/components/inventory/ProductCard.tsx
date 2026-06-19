@@ -124,7 +124,7 @@ export function ProductCard({
               </span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[11px] text-muted">
-                  {estimated ? 'Usage rate not set' : `${product.usageRatePerDay}/day`}
+                  {estimated ? 'Usage rate not set' : `${Math.round(product.usageRatePerDay * 10) / 10}/day`}
                 </span>
                 <span className="text-[11px] text-muted" aria-hidden="true">·</span>
                 <button
