@@ -102,6 +102,14 @@ export function ProductCard({
               <div>
                 <h3 className="text-lg font-bold text-ink leading-tight">{product.name}</h3>
                 <p className="text-xs font-semibold text-muted uppercase tracking-widest mt-1">{product.brand}</p>
+                <span className={cn(
+                  "inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1.5",
+                  estimated
+                    ? "bg-caution-soft text-caution border border-caution/30"
+                    : "bg-success-soft text-success border border-success/30"
+                )}>
+                  {estimated ? 'Estimate' : 'Tracked'}
+                </span>
               </div>
             </div>
           </div>
@@ -114,22 +122,30 @@ export function ProductCard({
               <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.2em] mt-1">
                 {estimated ? 'Est. days left' : 'Days remaining'}
               </span>
-              {estimated && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[11px] text-muted">
+                  {estimated ? 'Usage rate not set' : `${product.usageRatePerDay}/day`}
+                </span>
+                <span className="text-[11px] text-muted" aria-hidden="true">·</span>
                 <button
                   onClick={() => onEdit?.(product.id)}
-                  className="text-[11px] font-medium text-primary hover:underline mt-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                  aria-label={estimated
+                    ? `Set usage rate for ${product.name}`
+                    : `Edit usage rate for ${product.name}`}
+                  className="text-[11px] text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
                 >
-                  Set daily usage for an exact count
+                  {estimated ? 'Set rate' : 'Edit'}
                 </button>
-              )}
+              </div>
             </div>
 
             <div className="flex flex-col items-end gap-2">
               <button
                 onClick={handleUseOne}
                 disabled={isUpdating || product.quantity === 0}
+                aria-label={`Use one ${product.name}`}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
+                  "flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
                   tone.btn
                 )}
               >
@@ -137,10 +153,10 @@ export function ProductCard({
                 Use one
               </button>
 
-              <div className="flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100 transition-opacity">
                 <button
                   onClick={() => onEdit?.(product.id)}
-                  className="p-2 hover:bg-surface-2 rounded-lg text-faint hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-surface-2 rounded-lg text-faint hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label={`Edit ${product.name}`}
                 >
                   <Edit3 className="w-4 h-4" />
@@ -148,7 +164,7 @@ export function ProductCard({
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="p-2 hover:bg-urgent-soft rounded-lg text-faint hover:text-urgent transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
+                  className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-urgent-soft rounded-lg text-faint hover:text-urgent transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
                   aria-label={`Delete ${product.name}`}
                 >
                   {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -164,7 +180,7 @@ export function ProductCard({
           {expiryDays !== null && (
             <p className={cn(
               "flex items-center gap-1.5 text-xs font-medium mb-4",
-              expiryDays <= 0 ? "text-urgent" : expiryDays <= 30 ? "text-caution" : "text-faint"
+              expiryDays <= 0 ? "text-urgent" : expiryDays <= 30 ? "text-caution" : "text-muted"
             )}>
               <CalendarClock className="w-3.5 h-3.5" />
               {expiryDays <= 0

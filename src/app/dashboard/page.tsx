@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const stableItems = sortedInventory.filter(p => stockStatus(p.remainingDays, safetyBufferDays) === 'ok');
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12" aria-busy={loading}>
       {/* Header Section */}
       <section className="flex justify-between items-end">
         <div>
@@ -76,6 +76,10 @@ export default function DashboardPage() {
           Add supply
         </Link>
       </section>
+
+      <p role="status" aria-live="polite" className="sr-only">
+        {loading ? 'Loading supplies…' : ''}
+      </p>
 
       {/* Loading State */}
       {loading && (

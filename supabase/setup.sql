@@ -343,6 +343,41 @@ grant execute on function public.get_public_medical_id(uuid) to anon, authentica
 
 
 -- ============================================================================
+-- 10. PRODUCTS  (diabetes-supply reference catalog — not PHI, public read)
+--     Populated from data/diabetes_catalog.csv via Supabase dashboard CSV import
+--     or scripts/load_catalog.py. GTINs filled by scripts/enrich_gtins.py.
+--     Powers barcode→product lookup in /api/scan/lookup + scan/page.tsx.
+-- ============================================================================
+create table if not exists public.products (
+  id                           uuid primary key default gen_random_uuid(),
+  category                     text,
+  brand                        text,
+  product_name                 text not null,
+  common_names                 text,
+  gtin                         text unique,
+  unit                         text,
+  units_per_box                integer,
+  typical_usage_per_day        numeric,
+  default_refill_interval_days integer,
+  rx_required                  boolean default false,
+  notes                        text,
+  source_url                   text,
+  last_verified                date,
+  created_at                   timestamptz not null default now()
+);
+
+-- Partial index: only rows with a real GTIN need to be looked up by GTIN.
+create index if not exists products_gtin_idx on public.products(gtin) where gtin is not null;
+
+alter table public.products enable row level security;
+
+-- Reference data only — no PHI. Any authenticated user may read; no user writes.
+drop policy if exists "products public read" on public.products;
+create policy "products public read" on public.products
+  for select using (true);
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

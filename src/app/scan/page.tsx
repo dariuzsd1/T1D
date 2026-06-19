@@ -13,15 +13,17 @@ import {
   Loader2,
   Tag,
   PencilLine,
+  LayoutGrid,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
+import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 
-// Two honest intake paths only: scan a real barcode, or type the details yourself.
+// Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
-type ScanStep = 'UPLOAD' | 'MANUAL' | 'BARCODE_CONFIRM'
+type ScanStep = 'UPLOAD' | 'MANUAL' | 'BARCODE_CONFIRM' | 'CATALOG_CONFIRM'
 
 export default function ScanPage() {
   const [step, setStep] = useState<ScanStep>('UPLOAD')
@@ -37,10 +39,13 @@ export default function ScanPage() {
 
   // Barcode flow
   const [showScanner, setShowScanner] = useState(false)
+  const [showCatalog, setShowCatalog] = useState(false)
   const [scanned, setScanned] = useState<Gs1Parsed | null>(null)
   const [expiryFromBarcode, setExpiryFromBarcode] = useState(false)
   const [bcName, setBcName] = useState('')
   const [bcBrand, setBcBrand] = useState('')
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null)
+  const [catalogMatch, setCatalogMatch] = useState(false)
 
   const { addProduct } = useStore()
   const router = useRouter()
@@ -105,7 +110,7 @@ export default function ScanPage() {
       id: data.id,
       name: data.name,
       brand: data.brand || '',
-      category: 'unknown',
+      category: catalogCategory ?? 'unknown',
       quantity: data.quantity,
       remainingDays: 30, // Recomputed honestly by the store's withRunway()
       lastScanned: new Date().toISOString().split('T')[0],
@@ -113,6 +118,38 @@ export default function ScanPage() {
       expirationDate: data.expiration_date || null,
     })
     return true
+  }
+
+  // --- Catalog browse --------------------------------------------------------
+
+  const handleCatalogSelect = (item: CatalogItem) => {
+    setBcName(item.product_name)
+    setBcBrand(item.brand ?? '')
+    setCatalogCategory(item.category ?? null)
+    setQuantity(item.units_per_box ?? 1)
+    setExpirationDate('')
+    setExpiryFromBarcode(false)
+    setCatalogMatch(true)
+    setShowCatalog(false)
+    setError(null)
+    setStep('CATALOG_CONFIRM')
+  }
+
+  const handleSaveCatalog = async () => {
+    if (!bcName.trim()) {
+      setError('Please enter the product name.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const ok = await saveSupply({ name: bcName, brand: bcBrand })
+      if (ok) router.push('/dashboard')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save supply')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // --- Manual entry ----------------------------------------------------------
@@ -145,7 +182,7 @@ export default function ScanPage() {
 
   // --- Barcode capture -------------------------------------------------------
 
-  const handleBarcodeDetected = (rawValue: string) => {
+  const handleBarcodeDetected = async (rawValue: string) => {
     const parsed = parseGs1(rawValue)
     setScanned(parsed)
     setShowScanner(false)
@@ -163,6 +200,30 @@ export default function ScanPage() {
     setQuantity(1)
     setBcName('')
     setBcBrand('')
+    setCatalogCategory(null)
+    setCatalogMatch(false)
+
+    // Look up the GTIN in the products catalog. Pre-fill name/brand/quantity if
+    // found — every field stays editable. A miss is not an error; fall through
+    // to manual entry.
+    if (parsed.gtin) {
+      try {
+        const res = await fetch(`/api/scan/lookup?gtin=${encodeURIComponent(parsed.gtin)}`)
+        if (res.ok) {
+          const product = await res.json()
+          if (product) {
+            setBcName(product.product_name)
+            if (product.brand) setBcBrand(product.brand)
+            if (product.units_per_box) setQuantity(product.units_per_box)
+            setCatalogCategory(product.category ?? null)
+            setCatalogMatch(true)
+          }
+        }
+      } catch {
+        // Catalog lookup is best-effort — a network error must never block the user.
+      }
+    }
+
     setStep('BARCODE_CONFIRM')
   }
 
@@ -200,6 +261,13 @@ export default function ScanPage() {
         <BarcodeScanner
           onDetected={handleBarcodeDetected}
           onClose={() => setShowScanner(false)}
+        />
+      )}
+
+      {showCatalog && (
+        <CatalogBrowser
+          onSelect={handleCatalogSelect}
+          onClose={() => setShowCatalog(false)}
         />
       )}
 
@@ -280,6 +348,21 @@ export default function ScanPage() {
                 </div>
               </div>
             </div>
+
+            {/* Third path: browse the catalog by category */}
+            <button
+              onClick={() => { setError(null); setShowCatalog(true) }}
+              className="w-full flex items-center gap-4 bg-surface border border-line rounded-3xl p-6 text-left hover:border-primary/40 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <div className="w-12 h-12 bg-surface-2 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <LayoutGrid className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-ink">Browse the supply catalog</p>
+                <p className="text-muted text-sm">Find your product by category and tap to add it.</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-faint group-hover:text-primary transition-colors" />
+            </button>
 
             {error && (
               <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">
@@ -382,6 +465,102 @@ export default function ScanPage() {
           </motion.div>
         )}
 
+        {step === 'CATALOG_CONFIRM' && (
+          <motion.div
+            key="catalog-confirm"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="max-w-xl mx-auto"
+          >
+            <div className="bg-surface border border-line rounded-3xl p-8 shadow-sm space-y-6">
+              <div className="flex items-center gap-3 p-3 bg-success-soft border border-success/20 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                <p className="text-sm font-semibold text-success">Selected from catalog</p>
+              </div>
+
+              <p className="text-sm text-muted">
+                Review and edit if anything looks off — all fields are editable.
+              </p>
+
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="cat-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Product name</label>
+                  <input
+                    id="cat-name"
+                    type="text"
+                    autoFocus
+                    value={bcName}
+                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false) }}
+                    className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                  {catalogMatch && (
+                    <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Matched from catalog
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="cat-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
+                  <input
+                    id="cat-brand"
+                    type="text"
+                    value={bcBrand}
+                    onChange={(e) => setBcBrand(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="cat-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity</label>
+                    <input
+                      id="cat-quantity"
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cat-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration (optional)</label>
+                    <input
+                      id="cat-expiration"
+                      type="date"
+                      value={expirationDate}
+                      onChange={(e) => setExpirationDate(e.target.value)}
+                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={handleSaveCatalog}
+                  disabled={saving}
+                  className="w-full bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-4 rounded-2xl font-semibold text-lg transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Add to inventory
+                </button>
+                <button
+                  onClick={() => { setError(null); setShowCatalog(true) }}
+                  disabled={saving}
+                  className="w-full bg-transparent hover:bg-surface-2 disabled:opacity-50 text-muted py-3 rounded-xl font-semibold text-sm transition-colors"
+                >
+                  Back to catalog
+                </button>
+                {error && (
+                  <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">
+                    {error}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {step === 'BARCODE_CONFIRM' && scanned && (
           <motion.div
             key="barcode-confirm"
@@ -405,10 +584,16 @@ export default function ScanPage() {
                 </p>
               )}
 
-              <p className="text-sm text-muted">
-                We don&apos;t have a product directory to look this code up yet, so please
-                name it. Everything else we could read from the label is filled in below.
-              </p>
+              {catalogMatch ? (
+                <p className="text-sm text-muted">
+                  Matched in the product catalog. Review and edit if anything looks off — all fields are editable.
+                </p>
+              ) : (
+                <p className="text-sm text-muted">
+                  This code isn&apos;t in our catalog yet. Enter the product name and we&apos;ll save it
+                  with everything else we read from the label.
+                </p>
+              )}
 
               <div className="space-y-5">
                 <div>
@@ -419,9 +604,14 @@ export default function ScanPage() {
                     autoFocus
                     placeholder="e.g. Omnipod 5 Pods"
                     value={bcName}
-                    onChange={(e) => setBcName(e.target.value)}
+                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false) }}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
+                  {catalogMatch && (
+                    <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Matched from catalog
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="bc-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
