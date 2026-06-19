@@ -17,6 +17,7 @@ import {
   Stethoscope,
   HeartPulse,
   DollarSign,
+  Cpu,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -33,6 +34,7 @@ const navItems = [
 // Secondary destinations — desktop sidebar only, to keep the mobile bar to four
 // thumb-reachable items.
 const secondaryNav = [
+  { name: 'Devices', href: '/dashboard/devices', icon: Cpu },
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
   { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },

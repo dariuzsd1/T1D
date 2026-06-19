@@ -343,6 +343,45 @@ grant execute on function public.get_public_medical_id(uuid) to anon, authentica
 
 
 -- ============================================================================
+-- 9. MEDICAL DEVICES  (pumps / CGMs the user owns — PHI). Consumable supplies
+--    link to a device via supplies.device_id, so a pump can show its
+--    reservoirs / sensors / infusion sets together. Matches src/lib/devices.ts.
+-- ============================================================================
+create table if not exists public.medical_devices (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  brand       text not null,
+  model       text,
+  kind        text not null default 'pump' check (kind in ('pump','cgm','pen','meter')),
+  nickname    text,
+  started_on  date,
+  notes       text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists medical_devices_user_id_idx on public.medical_devices(user_id);
+
+alter table public.medical_devices enable row level security;
+
+drop policy if exists "own devices" on public.medical_devices;
+create policy "own devices" on public.medical_devices
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop trigger if exists medical_devices_set_updated_at on public.medical_devices;
+create trigger medical_devices_set_updated_at before update on public.medical_devices
+  for each row execute function public.set_updated_at();
+
+-- Link a consumable supply to the device it feeds (nullable — most supplies are
+-- standalone). on delete set null so removing a device never deletes its supplies.
+-- Created here (after medical_devices exists) so the FK resolves on a fresh run.
+alter table public.supplies
+  add column if not exists device_id uuid references public.medical_devices(id) on delete set null;
+
+create index if not exists supplies_device_id_idx on public.supplies(device_id);
+
+
+-- ============================================================================
 -- 10. PRODUCTS  (diabetes-supply reference catalog — not PHI, public read)
 --     Populated from data/diabetes_catalog.csv via Supabase dashboard CSV import
 --     or scripts/load_catalog.py. GTINs filled by scripts/enrich_gtins.py.

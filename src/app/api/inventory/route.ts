@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
         lastFilledDate: supply.last_filled_date ?? null,
         // Cost & savings layer (null until copay is entered / column exists).
         copay: supply.copay ?? null,
+        // Device this consumable feeds (null until linked / column exists).
+        deviceId: supply.device_id ?? null,
       }
     })
 

@@ -23,6 +23,9 @@ export interface Product {
   lastFilledDate?: string | null;
   // Out-of-pocket copay per refill (cost & savings layer, src/lib/cost.ts).
   copay?: number | null;
+  // The device this consumable feeds (pump/CGM), if any. Optional until the
+  // device_id column lands via supabase/setup.sql — see src/lib/devices.ts.
+  deviceId?: string | null;
 }
 
 export interface SiteLog {
@@ -100,7 +103,8 @@ export const useStore = create<T1DStore>()((set) => ({
         updates.usageRatePerDay !== undefined ||
         updates.refillIntervalDays !== undefined ||
         updates.lastFilledDate !== undefined ||
-        updates.copay !== undefined
+        updates.copay !== undefined ||
+        updates.deviceId !== undefined
       ) {
         const optionalPayload: Record<string, unknown> = {}
         if (updates.usageRatePerDay !== undefined)
@@ -114,6 +118,9 @@ export const useStore = create<T1DStore>()((set) => ({
         if (updates.copay !== undefined)
           // NULL when cleared so it's simply not counted (never $0 fabricated).
           optionalPayload.copay = updates.copay && updates.copay > 0 ? updates.copay : null
+        if (updates.deviceId !== undefined)
+          // NULL when unlinked. Best-effort like the others (column may be pre-migration).
+          optionalPayload.device_id = updates.deviceId || null
 
         const { error: optionalError } = await supabase
           .from('supplies')

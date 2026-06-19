@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import { Product } from '@/lib/store'
 import { useDialog } from '@/lib/useDialog'
+import { createClient } from '@/lib/supabase/client'
+import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
 
 interface EditProductModalProps {
   product: Product
@@ -34,12 +36,27 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [copay, setCopay] = useState<string>(
     product.copay != null ? String(product.copay) : ''
   )
+  const [deviceId, setDeviceId] = useState<string>(product.deviceId ?? '')
+  const [devices, setDevices] = useState<MedicalDevice[]>([])
   const [saving, setSaving] = useState(false)
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     firstFieldRef.current?.focus()
+  }, [])
+
+  // Load the user's devices so this supply can be linked to a pump/CGM.
+  // Best-effort: if the table doesn't exist yet, the picker simply stays empty.
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('medical_devices')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) setDevices((data as MedicalDeviceRow[]).map(rowToDevice))
+      })
   }, [])
 
   const handleSave = async () => {
@@ -54,6 +71,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
         lastFilledDate: lastFilledDate || null,
         copay: copay ? parseFloat(copay) : null,
+        deviceId: deviceId || null,
       })
       onSaved?.(product.name)
       onClose()
@@ -130,6 +148,25 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
             />
           </div>
+
+          {/* Link this supply to a device (pump/CGM) so it shows on the Devices
+              page. Only shown once the user has added at least one device. */}
+          {devices.length > 0 && (
+            <div>
+              <label htmlFor="edit-device" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Part of a device (optional)</label>
+              <select
+                id="edit-device"
+                value={deviceId}
+                onChange={(e) => setDeviceId(e.target.value)}
+                className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+              >
+                <option value="">Not linked to a device</option>
+                {devices.map(d => (
+                  <option key={d.id} value={d.id}>{deviceLabel(d)}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Refill cycle — powers the insurance refill-window engine. Saving
               requires the columns from docs/REFILL_RULES_MIGRATION.md. */}
