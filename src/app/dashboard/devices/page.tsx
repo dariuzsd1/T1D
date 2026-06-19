@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
   Cpu, Plus, Activity, Zap, Pen, TestTube2, ShoppingCart,
-  Loader2, X, Trash2, Database, Package,
+  Loader2, X, Trash2, Database, Package, Upload, Info,
+  CheckCircle, AlertTriangle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +22,11 @@ import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  parseCareLink, EVENT_KIND_LABEL, KIND_SUPPLY_KEYWORDS,
+  formatShortDate,
+  type CareLinkSummary, type CareLinkEventKind,
+} from '@/lib/carelink'
 
 const KIND_ICON: Record<DeviceKind, LucideIcon> = {
   pump: Zap,
@@ -190,6 +196,11 @@ export default function DevicesPage() {
         </div>
       )}
 
+      {/* CareLink import — always visible once devices are set up */}
+      {!needsSetup && (
+        <CareLinkImportSection inventory={inventory} onApplied={load} />
+      )}
+
       {showAdd && userId && (
         <AddDeviceModal
           userId={userId}
@@ -229,6 +240,271 @@ function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: 
         <ShoppingCart className="w-4 h-4" />
       </a>
     </li>
+  )
+}
+
+// ── CareLink Import ───────────────────────────────────────────────────────────
+
+/**
+ * "Connect Medtronic" card — honest about the lack of a live sync API, offers
+ * CSV import instead. Parsed client-side; user reviews before anything is saved.
+ */
+function CareLinkImportSection({
+  inventory,
+  onApplied,
+}: {
+  inventory: Product[]
+  onApplied: () => void
+}) {
+  const { updateProduct } = useStore()
+  const { showToast } = useToast()
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const [summary, setSummary] = useState<CareLinkSummary | null>(null)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied] = useState(false)
+
+  // Per-kind: which supply ID the user has mapped this event kind to ('' = skip)
+  const [mappings, setMappings] = useState<Partial<Record<CareLinkEventKind, string>>>({})
+
+  const autoMatch = (kind: CareLinkEventKind): string => {
+    const kw = KIND_SUPPLY_KEYWORDS[kind]
+    const match = inventory.find(p =>
+      kw.some(k =>
+        p.name.toLowerCase().includes(k) || (p.brand ?? '').toLowerCase().includes(k)
+      )
+    )
+    return match?.id ?? ''
+  }
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSummary(null)
+    setParseError(null)
+    setApplied(false)
+
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const result = parseCareLink(text)
+      if (result.format === 'unknown') {
+        setParseError(
+          "This file doesn't look like a CareLink Personal CSV export. " +
+          "Export from carelink.medtronic.com → Reports → Export, then try again."
+        )
+        return
+      }
+      if (result.recognized.length === 0) {
+        setParseError(
+          `The file was read (${result.dataRows} rows) but no reservoir, sensor, ` +
+          `or site-change events were found. Make sure you're exporting a date range that ` +
+          `includes pump/CGM activity.`
+        )
+        return
+      }
+      // Auto-match supply picker defaults
+      const initial: Partial<Record<CareLinkEventKind, string>> = {}
+      for (const k of result.recognized) {
+        initial[k.kind] = autoMatch(k.kind)
+      }
+      setMappings(initial)
+      setSummary(result)
+    }
+    reader.onerror = () => setParseError('Could not read the file.')
+    reader.readAsText(file)
+
+    // Reset the input so the same file can be re-selected after a discard
+    e.target.value = ''
+  }
+
+  const handleApply = async () => {
+    if (!summary) return
+    setApplying(true)
+    let applied = 0
+
+    for (const kindSummary of summary.recognized) {
+      const supplyId = mappings[kindSummary.kind]
+      if (!supplyId) continue // user chose "Skip"
+
+      const product = inventory.find(p => p.id === supplyId)
+      if (!product) continue
+
+      const next = Math.max(0, product.quantity - kindSummary.count)
+      await updateProduct(supplyId, { quantity: next })
+      applied++
+    }
+
+    setApplying(false)
+    setSummary(null)
+    setApplied(true)
+    onApplied()
+
+    if (applied > 0) {
+      showToast(`Applied ${applied} CareLink change${applied === 1 ? '' : 's'}.`, 'success')
+    } else {
+      showToast('No supplies were updated — all event types were set to Skip.', 'info')
+    }
+  }
+
+  const handleDiscard = () => {
+    setSummary(null)
+    setParseError(null)
+    setApplied(false)
+  }
+
+  return (
+    <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-5">
+      {/* Card header */}
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Cpu className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-ink">Medtronic CareLink data</h3>
+          <p className="text-sm text-muted mt-0.5 leading-relaxed">
+            Medtronic doesn&apos;t offer a live sync API for third-party apps, so this
+            app can&apos;t auto-connect to CareLink. Instead, export your own data and
+            import it here — you&apos;ll always review changes before anything is saved.
+          </p>
+        </div>
+      </div>
+
+      {/* Honest note */}
+      <div className="flex gap-2.5 rounded-2xl bg-surface-2 border border-line p-3.5 text-xs text-muted leading-relaxed">
+        <Info className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
+        <p>
+          To export: sign in to{' '}
+          <span className="font-semibold text-ink">carelink.medtronic.com</span> →
+          Reports → select a date range → Export CSV. Then upload it below.
+        </p>
+      </div>
+
+      {/* Success state */}
+      {applied && !summary && (
+        <div className="flex items-center gap-3 rounded-2xl bg-success-soft border border-success/20 p-4 text-sm text-success font-semibold">
+          <CheckCircle className="w-5 h-5 shrink-0" />
+          Changes applied. Your inventory is updated.
+          <button
+            onClick={() => setApplied(false)}
+            className="ml-auto text-xs underline text-success/70 hover:text-success"
+          >
+            Import another
+          </button>
+        </div>
+      )}
+
+      {/* File picker (hidden when a summary is showing) */}
+      {!summary && !applied && (
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFile}
+            className="sr-only"
+            aria-label="Upload CareLink CSV export"
+            id="carelink-file-input"
+          />
+          <label
+            htmlFor="carelink-file-input"
+            className="inline-flex items-center gap-2 cursor-pointer bg-surface border border-line hover:border-primary/40 hover:bg-primary/5 text-ink font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors focus-within:ring-2 focus-within:ring-primary"
+          >
+            <Upload className="w-4 h-4" />
+            Choose CareLink CSV export
+          </label>
+          {parseError && (
+            <div className="mt-3 flex gap-2.5 rounded-2xl bg-caution-soft border border-caution/20 p-3.5 text-xs text-caution leading-relaxed">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>{parseError}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Review table */}
+      {summary && (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-ink">
+            Review before applying — nothing is saved until you click &quot;Apply&quot;
+          </p>
+
+          <div className="rounded-2xl border border-line overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-surface-2 border-b border-line">
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Event</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Count</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Date range</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Apply to supply</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {summary.recognized.map(k => {
+                  const selectedId = mappings[k.kind] ?? ''
+                  const selectedProduct = inventory.find(p => p.id === selectedId)
+                  const nextQty = selectedProduct
+                    ? Math.max(0, selectedProduct.quantity - k.count)
+                    : null
+
+                  return (
+                    <tr key={k.kind}>
+                      <td className="px-4 py-3 font-semibold text-ink">
+                        {EVENT_KIND_LABEL[k.kind]}
+                      </td>
+                      <td className="px-4 py-3 text-muted tabular-nums">
+                        {k.count}
+                      </td>
+                      <td className="px-4 py-3 text-muted whitespace-nowrap">
+                        {k.firstDate === k.lastDate
+                          ? formatShortDate(k.firstDate)
+                          : `${formatShortDate(k.firstDate)} – ${formatShortDate(k.lastDate)}`}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={selectedId}
+                          onChange={e => setMappings(prev => ({ ...prev, [k.kind]: e.target.value }))}
+                          className="w-full max-w-[200px] rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          aria-label={`Supply for ${EVENT_KIND_LABEL[k.kind]}`}
+                        >
+                          <option value="">— Skip —</option>
+                          {inventory.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.quantity} on hand)
+                            </option>
+                          ))}
+                        </select>
+                        {nextQty !== null && (
+                          <p className="text-xs text-muted mt-1">
+                            {selectedProduct!.quantity} → <strong className="text-ink">{nextQty}</strong>
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-faint">
+            {summary.skippedRows} row{summary.skippedRows === 1 ? '' : 's'} skipped
+            (glucose readings, boluses, and other events not shown above).
+          </p>
+
+          <div className="flex gap-3">
+            <Button onClick={handleApply} disabled={applying}>
+              {applying && <Loader2 className="w-4 h-4 animate-spin" />}
+              {applying ? 'Applying…' : 'Apply changes'}
+            </Button>
+            <Button variant="ghost" onClick={handleDiscard} disabled={applying}>
+              Discard
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
