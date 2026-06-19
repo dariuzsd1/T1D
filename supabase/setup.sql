@@ -216,6 +216,51 @@ create policy "caregiver can view shared prescriptions" on public.prescriptions
   );
 
 
+-- Add owner_email to caregiver_shares so a caregiver can see whose data they
+-- are viewing (Phase 3). Owner inserts their own email at invite time.
+alter table public.caregiver_shares
+  add column if not exists owner_email text;
+
+-- Manage-role write access (Phase 3): caregivers with role='manage' can UPDATE
+-- and DELETE the patient's supplies, and UPDATE site_changes. The existing SELECT
+-- policies already let any accepted caregiver read those rows.
+drop policy if exists "caregiver can manage shared supplies" on public.supplies;
+create policy "caregiver can manage shared supplies" on public.supplies
+  for update using (
+    exists (
+      select 1 from public.caregiver_shares cs
+      where cs.owner_id = supplies.user_id
+        and cs.role = 'manage'
+        and cs.status = 'accepted'
+        and lower(cs.caregiver_email) = lower(auth.jwt() ->> 'email')
+    )
+  );
+
+drop policy if exists "caregiver can delete shared supplies" on public.supplies;
+create policy "caregiver can delete shared supplies" on public.supplies
+  for delete using (
+    exists (
+      select 1 from public.caregiver_shares cs
+      where cs.owner_id = supplies.user_id
+        and cs.role = 'manage'
+        and cs.status = 'accepted'
+        and lower(cs.caregiver_email) = lower(auth.jwt() ->> 'email')
+    )
+  );
+
+drop policy if exists "caregiver can manage shared site changes" on public.site_changes;
+create policy "caregiver can manage shared site changes" on public.site_changes
+  for update using (
+    exists (
+      select 1 from public.caregiver_shares cs
+      where cs.owner_id = site_changes.user_id
+        and cs.role = 'manage'
+        and cs.status = 'accepted'
+        and lower(cs.caregiver_email) = lower(auth.jwt() ->> 'email')
+    )
+  );
+
+
 -- ============================================================================
 -- 6. APPOINTMENTS  (endo/visit cadence — PHI; type exists in database.ts, no UI yet)
 -- ============================================================================
