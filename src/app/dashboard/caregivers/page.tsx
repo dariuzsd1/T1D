@@ -13,6 +13,7 @@ import { stockStatus, isRateEstimated } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { Badge } from '@/components/ui/badge'
+import { BackButton } from '@/components/ui/BackButton'
 import { Button } from '@/components/ui/button'
 import type { Product } from '@/lib/store'
 import {
@@ -123,6 +124,7 @@ export default function CaregiversPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
+      <BackButton />
       <header>
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Caregivers</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">Caregiver access</h1>

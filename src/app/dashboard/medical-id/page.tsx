@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { BackButton } from '@/components/ui/BackButton'
 import { isMissingTableError } from '@/lib/prescriptions'
 import {
   type MedicalProfile, rowToProfile, profileToRow, emptyProfile,
@@ -113,6 +114,7 @@ export default function MedicalIdPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      <BackButton />
       <header>
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Emergency</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">Medical ID</h1>

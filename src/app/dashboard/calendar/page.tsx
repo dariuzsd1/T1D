@@ -11,6 +11,7 @@ import {
   CalendarCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
 import { stockStatus, type StockStatus } from '@/lib/depletion'
 import { assessRefill } from '@/lib/refill'
@@ -72,6 +73,7 @@ export default function CalendarPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10">
+      <BackButton />
       <header className="flex justify-between items-end">
         <div>
           <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Refill forecast</h2>

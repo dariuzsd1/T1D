@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/components/ui/Toast'
+import { BackButton } from '@/components/ui/BackButton'
 
 // Static body-map positions only. We never hardcode "lastUsed" or a health
 // verdict here — those are derived from real site logs below (CLAUDE.md §9:
@@ -123,6 +124,7 @@ export default function SiteTrackerPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-12">
+      <BackButton />
       <header className="flex justify-between items-end">
         <div>
           <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Keep sites healthy</h2>

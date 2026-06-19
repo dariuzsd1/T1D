@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
+import { BackButton } from '@/components/ui/BackButton'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
@@ -252,6 +253,7 @@ export default function ScanPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <BackButton fallbackHref="/dashboard" label="Dashboard" />
       <header className="mb-10">
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Add a supply</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">Add a supply</h1>

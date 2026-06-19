@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { DollarSign, TrendingDown, PiggyBank, Info, CalendarClock } from 'lucide-react'
 import type { Product } from '@/lib/store'
 import { annualCost, isYearEndStockUpWindow, formatUsd } from '@/lib/cost'
+import { BackButton } from '@/components/ui/BackButton'
 
 export default function CostsPage() {
   const [items, setItems] = useState<Product[]>([])
@@ -42,6 +43,7 @@ export default function CostsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      <BackButton />
       <header>
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Costs</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">Your out-of-pocket</h1>

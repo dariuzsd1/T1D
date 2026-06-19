@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Pill, Plus, Pencil, Trash2, Database, CalendarClock, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { BackButton } from '@/components/ui/BackButton'
 import { PrescriptionModal } from '@/components/prescriptions/PrescriptionModal'
 import {
   type Prescription,
@@ -99,6 +100,7 @@ export default function PrescriptionsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      <BackButton />
       <header className="flex items-end justify-between">
         <div>
           <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Prescriptions</h2>

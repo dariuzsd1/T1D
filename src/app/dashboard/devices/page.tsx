@@ -22,6 +22,7 @@ import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { BackButton } from '@/components/ui/BackButton'
 import {
   parseCareLink, EVENT_KIND_LABEL, KIND_SUPPLY_KEYWORDS,
   formatShortDate,
@@ -80,6 +81,7 @@ export default function DevicesPage() {
 
   return (
     <div className="space-y-10" aria-busy={loading}>
+      <BackButton />
       <section className="flex justify-between items-end gap-4">
         <div>
           <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Your devices</h2>

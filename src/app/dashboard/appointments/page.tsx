@@ -6,6 +6,7 @@ import { Stethoscope, Plus, Pencil, Trash2, Database, RefreshCw, Clock } from 'l
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { BackButton } from '@/components/ui/BackButton'
 import { AppointmentModal } from '@/components/appointments/AppointmentModal'
 import {
   type Appointment,
@@ -115,6 +116,7 @@ export default function AppointmentsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      <BackButton />
       <header className="flex items-end justify-between">
         <div>
           <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Appointments</h2>

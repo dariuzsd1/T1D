@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { PushToggle } from '@/components/PushToggle'
+import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
 import {
@@ -19,6 +20,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
+      <BackButton />
       <header>
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Settings</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">Preferences</h1>
