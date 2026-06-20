@@ -207,6 +207,28 @@ export const en = {
     'The most useful alerts reach you when the app is closed (“Refill-eligible Thursday — tap to reorder”).',
   'settings.suppliersTitle': 'Supplier shortcuts',
   'settings.suppliersBody': 'Jump to a distributor to place or check on an order.',
+
+  // ── account management (Phase C) ──
+  'account.changeEmail': 'Change email',
+  'account.newEmail': 'New email address',
+  'account.sendEmailChange': 'Send confirmation',
+  'account.emailChangeSent': 'Confirmation sent — check BOTH your old and new inboxes to finish.',
+  'account.exportTitle': 'Export my data',
+  'account.exportBody': 'Download everything in your account as a single JSON file.',
+  'account.exportBtn': 'Download my data',
+  'account.exportDone': 'Your data was downloaded.',
+  'account.exportErr': "Couldn't export your data. Please try again.",
+  'account.dangerTitle': 'Delete account',
+  'account.dangerBody':
+    'Permanently delete your account and all your data — supplies, prescriptions, medical ID, sharing, everything. This cannot be undone.',
+  'account.deleteBtn': 'Delete my account',
+  'account.deleteConfirmTitle': 'Delete your account?',
+  'account.deleteConfirmBody':
+    'This permanently erases everything and cannot be undone. Type DELETE to confirm.',
+  'account.deleteConfirmWord': 'DELETE',
+  'account.deleteConfirmPlaceholder': 'Type DELETE',
+  'account.deleteConfirmBtn': 'Permanently delete',
+  'account.deleteErr': "Couldn't delete your account. Please try again.",
 } as const
 
 export type TKey = keyof typeof en
@@ -413,4 +435,27 @@ export const fr: Record<TKey, string> = {
     "Les alertes les plus utiles vous parviennent même lorsque l’application est fermée (« Renouvellement possible jeudi — appuyez pour recommander »).",
   'settings.suppliersTitle': 'Raccourcis fournisseurs',
   'settings.suppliersBody': 'Accédez à un distributeur pour passer ou suivre une commande.',
+
+  // ── account management (Phase C) ──
+  'account.changeEmail': "Changer d’e-mail",
+  'account.newEmail': 'Nouvelle adresse e-mail',
+  'account.sendEmailChange': 'Envoyer la confirmation',
+  'account.emailChangeSent':
+    "Confirmation envoyée — vérifiez vos DEUX boîtes (ancienne et nouvelle) pour terminer.",
+  'account.exportTitle': 'Exporter mes données',
+  'account.exportBody': "Téléchargez tout le contenu de votre compte dans un seul fichier JSON.",
+  'account.exportBtn': 'Télécharger mes données',
+  'account.exportDone': 'Vos données ont été téléchargées.',
+  'account.exportErr': "Impossible d’exporter vos données. Veuillez réessayer.",
+  'account.dangerTitle': 'Supprimer le compte',
+  'account.dangerBody':
+    "Supprimez définitivement votre compte et toutes vos données — fournitures, ordonnances, fiche médicale, partages, tout. Cette action est irréversible.",
+  'account.deleteBtn': 'Supprimer mon compte',
+  'account.deleteConfirmTitle': 'Supprimer votre compte ?',
+  'account.deleteConfirmBody':
+    "Cela efface tout définitivement et ne peut pas être annulé. Tapez SUPPRIMER pour confirmer.",
+  'account.deleteConfirmWord': 'SUPPRIMER',
+  'account.deleteConfirmPlaceholder': 'Tapez SUPPRIMER',
+  'account.deleteConfirmBtn': 'Supprimer définitivement',
+  'account.deleteErr': "Impossible de supprimer votre compte. Veuillez réessayer.",
 }

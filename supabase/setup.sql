@@ -554,6 +554,33 @@ create policy "avatar owner delete" on storage.objects
 
 
 -- ============================================================================
+-- 13. DELETE OWN ACCOUNT  (account management — irreversible)
+--     A SECURITY DEFINER function so a signed-in user can delete THEIR OWN auth
+--     account. Every PHI table references auth.users with ON DELETE CASCADE, so
+--     deleting the auth row wipes all of the user's data (supplies, prescriptions,
+--     medical profile, shares, profile, avatars rows, etc.). Runs as the function
+--     owner (has rights on auth.users); the auth.uid() guard means a caller can
+--     only ever delete themselves.
+-- ============================================================================
+create or replace function public.delete_own_account()
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_own_account() from public, anon;
+grant execute on function public.delete_own_account() to authenticated;
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

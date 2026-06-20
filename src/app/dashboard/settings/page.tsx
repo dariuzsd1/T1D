@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import Link from 'next/link'
@@ -11,11 +12,16 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
 import { useI18n } from '@/lib/i18n'
+import { useDialog } from '@/lib/useDialog'
 import { useProfile } from '@/components/profile/ProfileProvider'
 import { Avatar } from '@/components/profile/Avatar'
 import {
+  buildExportDocument, exportFilename, gatherUserData, downloadJson,
+} from '@/lib/dataExport'
+import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
   Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
+  Mail, Download, Trash2, AlertTriangle, X,
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
@@ -177,6 +183,13 @@ function AccountSection() {
 
   const [signingOut, setSigningOut] = useState(false)
 
+  // Phase C — account management
+  const [newEmail, setNewEmail] = useState('')
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailMsg, setEmailMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
@@ -234,6 +247,43 @@ function AccountSection() {
     setSigningOut(true)
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const next = newEmail.trim()
+    if (!next) return
+    setEmailSaving(true); setEmailMsg(null)
+    const { error } = await supabase.auth.updateUser(
+      { email: next },
+      { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings` }
+    )
+    setEmailSaving(false)
+    if (error) {
+      setEmailMsg({ type: 'error', text: error.message })
+    } else {
+      setNewEmail('')
+      setEmailMsg({ type: 'success', text: t('account.emailChangeSent') })
+    }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('signed out')
+      const tables = await gatherUserData(supabase, user.id)
+      const doc = buildExportDocument(
+        { id: user.id, email: user.email ?? null },
+        tables,
+        new Date().toISOString()
+      )
+      downloadJson(doc, exportFilename())
+    } catch (err) {
+      console.error('export failed:', err)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -353,18 +403,192 @@ function AccountSection() {
           )}
         </div>
 
+        {/* Change email */}
+        <form onSubmit={handleChangeEmail} className="border-t border-line pt-5">
+          <label htmlFor="acc-email" className="block text-sm font-medium text-muted mb-1.5">
+            {t('account.changeEmail')}
+          </label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Mail className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                id="acc-email"
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder={t('account.newEmail')}
+                className="w-full min-h-[44px] rounded-xl border border-line bg-surface pl-9 pr-3 text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={emailSaving || !newEmail.trim()}
+              className="min-h-[44px] px-4 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary whitespace-nowrap"
+            >
+              {emailSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('account.sendEmailChange')}
+            </button>
+          </div>
+          {emailMsg && (
+            <p className={`mt-1.5 text-xs flex items-start gap-1 ${emailMsg.type === 'success' ? 'text-success' : 'text-urgent'}`}>
+              {emailMsg.type === 'success' ? <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+              {emailMsg.text}
+            </p>
+          )}
+        </form>
+
+        {/* Export my data */}
+        <div className="border-t border-line pt-5">
+          <p className="text-sm font-medium text-ink">{t('account.exportTitle')}</p>
+          <p className="text-xs text-muted mt-0.5 mb-3">{t('account.exportBody')}</p>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line border border-line text-ink px-4 min-h-[44px] rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {t('account.exportBtn')}
+          </button>
+        </div>
+
         {/* Sign out */}
-        <div className="pt-2 border-t border-line">
+        <div className="pt-5 border-t border-line">
           <button
             onClick={handleSignOut}
             disabled={signingOut}
-            className="flex items-center gap-2 text-sm font-semibold text-urgent hover:text-urgent/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent rounded"
+            className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-primary disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
           >
             {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
             {t('settings.signOut')}
           </button>
         </div>
+
+        {/* Danger zone — delete account */}
+        <div className="pt-5 border-t border-line">
+          <div className="flex items-start gap-3 rounded-2xl bg-urgent-soft border border-urgent/20 p-4">
+            <AlertTriangle className="w-5 h-5 text-urgent shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-urgent">{t('account.dangerTitle')}</p>
+              <p className="text-xs text-urgent/80 mt-0.5 leading-relaxed">{t('account.dangerBody')}</p>
+              <button
+                onClick={() => setShowDelete(true)}
+                className="mt-3 inline-flex items-center gap-2 bg-urgent text-white px-4 min-h-[44px] rounded-xl font-semibold text-sm hover:bg-urgent/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-urgent"
+              >
+                <Trash2 className="w-4 h-4" />
+                {t('account.deleteBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showDelete && (
+          <DeleteAccountDialog
+            onClose={() => setShowDelete(false)}
+            onConfirmed={async () => { await supabase.auth.signOut(); router.push('/login') }}
+          />
+        )}
+      </AnimatePresence>
     </section>
+  )
+}
+
+/** Typed-confirmation dialog for irreversible account deletion. */
+function DeleteAccountDialog({
+  onClose,
+  onConfirmed,
+}: {
+  onClose: () => void
+  onConfirmed: () => Promise<void>
+}) {
+  const supabase = useMemo(() => createClient(), [])
+  const { t } = useI18n()
+  const dialogRef = useDialog<HTMLDivElement>(onClose)
+  const [confirmText, setConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const requiredWord = t('account.deleteConfirmWord')
+  const canDelete = confirmText.trim().toUpperCase() === requiredWord.toUpperCase()
+
+  const handleDelete = async () => {
+    if (!canDelete) return
+    setDeleting(true); setError(null)
+    const { error: rpcErr } = await supabase.rpc('delete_own_account')
+    if (rpcErr) {
+      setDeleting(false)
+      setError(t('account.deleteErr'))
+      return
+    }
+    await onConfirmed()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink/40" />
+      <motion.div
+        ref={dialogRef}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-account-title"
+        className="relative w-full sm:max-w-md bg-surface border border-line rounded-t-3xl sm:rounded-3xl shadow-xl p-6"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-urgent-soft flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-urgent" />
+            </div>
+            <h2 id="delete-account-title" className="text-lg font-bold text-ink">
+              {t('account.deleteConfirmTitle')}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label={t('common.cancel')}
+            className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-sm text-muted leading-relaxed mb-4">{t('account.deleteConfirmBody')}</p>
+
+        <input
+          type="text"
+          value={confirmText}
+          onChange={e => setConfirmText(e.target.value)}
+          placeholder={t('account.deleteConfirmPlaceholder')}
+          aria-label={t('account.deleteConfirmPlaceholder')}
+          className="w-full min-h-[44px] rounded-xl border border-line bg-surface px-3 text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-urgent focus:border-urgent transition-all"
+        />
+
+        {error && (
+          <p className="mt-2 text-xs text-urgent flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" /> {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={handleDelete}
+            disabled={!canDelete || deleting}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-urgent text-white px-4 min-h-[44px] rounded-xl font-semibold text-sm hover:bg-urgent/90 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-urgent"
+          >
+            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {t('account.deleteConfirmBtn')}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={deleting}
+            className="px-4 min-h-[44px] rounded-xl text-sm font-semibold text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </motion.div>
+    </div>
   )
 }
