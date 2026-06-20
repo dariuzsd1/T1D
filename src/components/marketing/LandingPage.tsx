@@ -6,6 +6,8 @@ import {
   Map,
   Users,
   HeartPulse,
+  HeartHandshake,
+  Package,
   Bell,
   PackageCheck,
 } from "lucide-react"
@@ -69,7 +71,7 @@ export function LandingPage() {
             T1D Hub tracks your pods, sensors, reservoirs, and insulin — and tells you when to
             reorder, before you run low. Built for families living with type 1 diabetes.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+          <div className="flex justify-center mt-9">
             <Link
               href="/login"
               className="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep text-white px-7 py-3.5 rounded-xl font-semibold text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
@@ -77,17 +79,58 @@ export function LandingPage() {
               Get started
               <ArrowRight className="w-5 h-5" />
             </Link>
+          </div>
+        </section>
+
+        {/* Two paths — choose your experience */}
+        <section className="max-w-6xl mx-auto w-full px-5 sm:px-8 pb-4">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-[0.2em] text-muted mb-6">
+            Two ways to use T1D Hub
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Patient path */}
             <Link
               href="/login"
-              className="inline-flex items-center justify-center gap-2 bg-surface border border-line hover:bg-surface-2 text-ink px-7 py-3.5 rounded-xl font-semibold text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="group bg-surface border border-line rounded-2xl p-7 hover:border-primary/40 transition-colors flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              Sign in
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <Package className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight">I manage my own supplies</h3>
+              <p className="text-muted mt-2 leading-relaxed flex-1">
+                Track your pods, sensors, reservoirs and insulin, and know exactly when to reorder —
+                before you run low.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-primary font-semibold mt-5 group-hover:gap-2.5 transition-all">
+                Get started <ArrowRight className="w-4 h-4" />
+              </span>
+            </Link>
+
+            {/* Caregiver path */}
+            <Link
+              href="/login?next=/dashboard/family"
+              className="group bg-surface border border-line rounded-2xl p-7 hover:border-teal/40 transition-colors flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-teal/10 flex items-center justify-center mb-4">
+                <HeartHandshake className="w-6 h-6 text-teal" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight">I care for someone with diabetes</h3>
+              <p className="text-muted mt-2 leading-relaxed flex-1">
+                Keep a calm eye on a loved one&apos;s supplies, and help them reorder before they run
+                low — with the access they choose to give you.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-teal font-semibold mt-5 group-hover:gap-2.5 transition-all">
+                Get started <ArrowRight className="w-4 h-4" />
+              </span>
             </Link>
           </div>
         </section>
 
         {/* Features */}
-        <section className="max-w-6xl mx-auto w-full px-5 sm:px-8 pb-20">
+        <section className="max-w-6xl mx-auto w-full px-5 sm:px-8 pt-12 pb-20">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-[0.2em] text-muted mb-6">
+            What you get
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <div

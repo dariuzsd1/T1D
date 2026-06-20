@@ -13,6 +13,20 @@ type View = 'signin' | 'signup' | 'magic' | 'forgot'
 
 interface Msg { type: 'success' | 'error'; text: string }
 
+/**
+ * Where to land after auth. Read from the `?next=` query param (set by the
+ * landing page's two paths), defaulting to /dashboard. Guarded against
+ * open-redirects: must be a same-site absolute path, never an external URL.
+ */
+function getNextPath(): string {
+  if (typeof window === 'undefined') return '/dashboard'
+  const next = new URLSearchParams(window.location.search).get('next')
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.includes('://')) {
+    return next
+  }
+  return '/dashboard'
+}
+
 function PasswordInput({
   id, value, onChange, placeholder, autoComplete,
 }: {
@@ -93,7 +107,7 @@ export default function LoginPage() {
     if (error) {
       setMsg({ type: 'error', text: error.message })
     } else {
-      router.push('/dashboard')
+      router.push(getNextPath())
     }
   }
 
@@ -109,11 +123,12 @@ export default function LoginPage() {
       return
     }
     setLoading(true); clearMsg()
+    const next = getNextPath()
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
     setLoading(false)
@@ -124,7 +139,7 @@ export default function LoginPage() {
     // If email confirmation is required, session is null — show a prompt.
     // If disabled in Supabase dashboard, session is set and we can navigate.
     if (data.session) {
-      router.push('/dashboard')
+      router.push(next)
     } else {
       setMsg({
         type: 'success',
@@ -140,7 +155,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(getNextPath())}`,
       },
     })
     setLoading(false)

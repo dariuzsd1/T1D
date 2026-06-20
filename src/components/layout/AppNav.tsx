@@ -13,13 +13,14 @@ import {
   LogOut,
   ShieldCheck,
   Pill,
-  Users,
   Stethoscope,
   HeartPulse,
   DollarSign,
   Cpu,
   Package,
   ShoppingCart,
+  HeartHandshake,
+  Share2,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -37,13 +38,14 @@ const navItems = [
 // Secondary destinations — desktop sidebar + mobile "More" sheet, to keep the
 // mobile bar to four thumb-reachable items.
 const secondaryNav = [
+  { name: 'People I care for', href: '/dashboard/family', icon: HeartHandshake },
+  { name: 'Sharing', href: '/dashboard/caregivers', icon: Share2 },
   { name: 'Rotate sites', href: '/dashboard/site-tracker', icon: Map },
   { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
   { name: 'Devices', href: '/dashboard/devices', icon: Cpu },
   { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
   { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },
-  { name: 'Caregivers', href: '/dashboard/caregivers', icon: Users },
   { name: 'Medical ID', href: '/dashboard/medical-id', icon: HeartPulse },
 ]
 
