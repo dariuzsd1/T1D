@@ -1,17 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
-  HeartHandshake, ShieldCheck, Eye, Loader2, CheckCircle2,
+  HeartHandshake, ShieldCheck, ChevronRight, Loader2, CheckCircle2,
   AlertTriangle, Database, RefreshCw,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { isMissingTableError } from '@/lib/prescriptions'
 import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { BackButton } from '@/components/ui/BackButton'
-import { Button } from '@/components/ui/button'
-import { ViewPatientModal } from '@/components/caregivers/ViewPatientModal'
 import {
   type SharedWithMe, type CaregiverShareRow,
   rowToSharedWithMe, ROLE_LABEL,
@@ -33,7 +32,6 @@ export default function FamilyPage() {
   const [loading, setLoading] = useState(true)
   const [needsMigration, setNeedsMigration] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [viewing, setViewing] = useState<SharedWithMe | null>(null)
 
   // Fetch one patient's inventory and reduce it to a calm "N need attention" count.
   const loadStatus = useCallback(async (ownerId: string) => {
@@ -181,10 +179,13 @@ export default function FamilyPage() {
                       {ROLE_LABEL[s.role]}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary" onClick={() => setViewing(s)}>
-                    <Eye className="w-4 h-4" />
+                  <Link
+                    href={`/dashboard/family/${s.ownerId}`}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-sm min-h-[36px] px-3 py-1.5 bg-surface-2 text-ink border border-line hover:bg-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary shrink-0"
+                  >
                     View supplies
-                  </Button>
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
 
                 {/* Calm status line */}
@@ -218,16 +219,6 @@ export default function FamilyPage() {
           })}
         </section>
       )}
-
-      <AnimatePresence>
-        {viewing && (
-          <ViewPatientModal
-            shared={viewing}
-            onClose={() => setViewing(null)}
-            onChanged={() => loadStatus(viewing.ownerId)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
