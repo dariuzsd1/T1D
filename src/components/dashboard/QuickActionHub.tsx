@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus, Package, Scan, RefreshCcw } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/components/ui/Toast'
+import { logActivity } from '@/lib/activity'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,6 +20,7 @@ export function QuickActionHub() {
       showToast(`No ${label} in your inventory yet.`, 'info')
     } else if (item.quantity > 0) {
       await updateProduct(item.id, { quantity: item.quantity - 1 })
+      void logActivity('supply_used', item.name)
       showToast(`Logged one ${item.name}. ${item.quantity - 1} left.`, 'success')
     } else {
       showToast(`You're out of ${item.name}.`, 'caution')

@@ -229,6 +229,20 @@ export const en = {
   'account.deleteConfirmPlaceholder': 'Type DELETE',
   'account.deleteConfirmBtn': 'Permanently delete',
   'account.deleteErr': "Couldn't delete your account. Please try again.",
+
+  // ── activity feed (Phase E) ──
+  'activity.title': 'Recent activity',
+  'activity.empty': 'Nothing yet — your recent actions will show up here.',
+  'activity.supplyAdded': 'Added {detail}',
+  'activity.supplyUsed': 'Used one {detail}',
+  'activity.supplyRestocked': 'Restocked {detail}',
+
+  // ── analytics consent (Phase E) ──
+  'analytics.title': 'Help improve the app',
+  'analytics.body':
+    'Share anonymous usage (which screens you open) to help improve T1D Hub. No health data, supply names, or personal info is ever included. Off by default — change anytime.',
+  'analytics.on': 'On',
+  'analytics.off': 'Off',
 } as const
 
 export type TKey = keyof typeof en
@@ -458,4 +472,18 @@ export const fr: Record<TKey, string> = {
   'account.deleteConfirmPlaceholder': 'Tapez SUPPRIMER',
   'account.deleteConfirmBtn': 'Supprimer définitivement',
   'account.deleteErr': "Impossible de supprimer votre compte. Veuillez réessayer.",
+
+  // ── activity feed (Phase E) ──
+  'activity.title': 'Activité récente',
+  'activity.empty': "Rien pour l’instant — vos actions récentes apparaîtront ici.",
+  'activity.supplyAdded': 'Ajout de {detail}',
+  'activity.supplyUsed': "Utilisation d’un(e) {detail}",
+  'activity.supplyRestocked': 'Réapprovisionnement de {detail}',
+
+  // ── analytics consent (Phase E) ──
+  'analytics.title': "Aider à améliorer l’application",
+  'analytics.body':
+    "Partagez des statistiques d’usage anonymes (les écrans que vous ouvrez) pour aider à améliorer T1D Hub. Aucune donnée de santé, nom de fourniture ou information personnelle n’est jamais inclus. Désactivé par défaut — modifiable à tout moment.",
+  'analytics.on': 'Activé',
+  'analytics.off': 'Désactivé',
 }

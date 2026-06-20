@@ -21,7 +21,7 @@ import {
 import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
   Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
-  Mail, Download, Trash2, AlertTriangle, X,
+  Mail, Download, Trash2, AlertTriangle, X, BarChart3,
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
@@ -131,6 +131,9 @@ export default function SettingsPage() {
         <PushToggle />
       </section>
 
+      {/* Privacy-first usage analytics — opt-in */}
+      <AnalyticsConsent />
+
       {/* Quick supplier links — real, useful now */}
       <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
         <div className="flex items-start gap-3 mb-4">
@@ -158,6 +161,54 @@ export default function SettingsPage() {
         </div>
       </section>
     </div>
+  )
+}
+
+// ── Analytics consent (opt-in, default off) ────────────────────────────────────
+
+function AnalyticsConsent() {
+  const { t } = useI18n()
+  const { profile, refresh } = useProfile()
+  const supabase = useMemo(() => createClient(), [])
+  const [saving, setSaving] = useState(false)
+  const optedIn = !!profile?.analyticsOptIn
+
+  const toggle = async () => {
+    if (!profile) return
+    setSaving(true)
+    await supabase.from('profiles').update({ analytics_opt_in: !optedIn }).eq('id', profile.id)
+    await refresh()
+    setSaving(false)
+  }
+
+  return (
+    <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <BarChart3 className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-ink">{t('analytics.title')}</h3>
+            <p className="text-sm text-muted">{t('analytics.body')}</p>
+          </div>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={saving || !profile}
+          role="switch"
+          aria-checked={optedIn}
+          className={
+            'shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
+            (optedIn
+              ? 'bg-primary text-white border-primary'
+              : 'bg-surface-2 text-muted border-line hover:text-ink')
+          }
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : optedIn ? t('analytics.on') : t('analytics.off')}
+        </button>
+      </div>
+    </section>
   )
 }
 

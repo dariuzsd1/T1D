@@ -480,6 +480,8 @@ alter table public.profiles add column if not exists timezone       text;
 alter table public.profiles add column if not exists theme          text default 'system';
 alter table public.profiles add column if not exists locale         text;
 alter table public.profiles add column if not exists safety_buffer_days integer;
+-- Usage analytics consent (Phase E). Default FALSE — opt-in only for a health app.
+alter table public.profiles add column if not exists analytics_opt_in boolean not null default false;
 
 alter table public.profiles enable row level security;
 
@@ -579,6 +581,52 @@ $$;
 
 revoke all on function public.delete_own_account() from public, anon;
 grant execute on function public.delete_own_account() to authenticated;
+
+
+-- ============================================================================
+-- 14. ACTIVITY LOG  (the user's own recent actions — shown back to them).
+--     user_id defaults to auth.uid() so inserts don't need to pass it; RLS
+--     keeps it strictly own-row. May reference supply names (it's their data).
+-- ============================================================================
+create table if not exists public.activity_log (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  action     text not null,
+  detail     text,
+  created_at timestamptz not null default now()
+);
+create index if not exists activity_log_user_idx on public.activity_log(user_id, created_at desc);
+alter table public.activity_log enable row level security;
+drop policy if exists "own activity" on public.activity_log;
+create policy "own activity" on public.activity_log
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 15. ANALYTICS EVENTS  (privacy-first usage analytics — OPT-IN only).
+--     Coarse, non-PHI events (event name + time only). Written solely when the
+--     user has profiles.analytics_opt_in = true (enforced in app + this policy).
+-- ============================================================================
+create table if not exists public.analytics_events (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  event      text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists analytics_events_user_idx on public.analytics_events(user_id, created_at desc);
+alter table public.analytics_events enable row level security;
+-- Insert only when this user has opted in; read own rows.
+drop policy if exists "analytics insert if opted in" on public.analytics_events;
+create policy "analytics insert if opted in" on public.analytics_events
+  for insert with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.analytics_opt_in = true
+    )
+  );
+drop policy if exists "own analytics read" on public.analytics_events;
+create policy "own analytics read" on public.analytics_events
+  for select using (auth.uid() = user_id);
 
 
 -- ============================================================================

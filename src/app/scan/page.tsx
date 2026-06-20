@@ -18,6 +18,7 @@ import {
 import { useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
 import { BackButton } from '@/components/ui/BackButton'
+import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
@@ -118,6 +119,7 @@ export default function ScanPage() {
       usageRatePerDay: 0, // Unknown until the user sets it → shown as an estimate.
       expirationDate: data.expiration_date || null,
     })
+    void logActivity('supply_added', data.name)
     return true
   }
 

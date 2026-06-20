@@ -8,7 +8,9 @@ import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/components/profile/ProfileProvider'
 import { Avatar } from '@/components/profile/Avatar'
 import { BackButton } from '@/components/ui/BackButton'
-import { HeartPulse, Cpu, Loader2, Upload, Trash2, ChevronRight } from 'lucide-react'
+import { fetchRecentActivity, ACTIVITY_LABEL, type ActivityEntry, type ActivityAction } from '@/lib/activity'
+import { formatDistanceToNow } from 'date-fns'
+import { HeartPulse, Cpu, Loader2, Upload, Trash2, ChevronRight, Clock } from 'lucide-react'
 
 /** Downscale an image file to a square JPEG blob (≈256px) before upload. */
 async function toAvatarBlob(file: File): Promise<Blob> {
@@ -54,6 +56,10 @@ export default function ProfilePage() {
       seeded.current = true
     }
   }, [profile])
+
+  // Recent activity feed.
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  useEffect(() => { fetchRecentActivity(10).then(setActivity) }, [])
 
   // Common time zones, when the browser exposes them; else fall back to a text input.
   const zones = useMemo<string[]>(() => {
@@ -259,6 +265,31 @@ export default function ProfilePage() {
           title={t('profile.medicalCardTitle')} body={t('profile.medicalCardBody')} cta={t('profile.manage')} />
         <CrossLink href="/dashboard/devices" icon={<Cpu className="w-5 h-5 text-primary" />}
           title={t('profile.devicesCardTitle')} body={t('profile.devicesCardBody')} cta={t('profile.manage')} />
+      </section>
+
+      {/* Recent activity */}
+      <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+        <h3 className="font-semibold text-ink flex items-center gap-2 mb-4">
+          <Clock className="w-5 h-5 text-muted" /> {t('activity.title')}
+        </h3>
+        {activity.length === 0 ? (
+          <p className="text-sm text-muted">{t('activity.empty')}</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {activity.map((a) => {
+              const labelKey = ACTIVITY_LABEL[a.action as ActivityAction]
+              const text = labelKey ? t(labelKey, { detail: a.detail ?? '' }) : `${a.action} ${a.detail ?? ''}`
+              return (
+                <li key={a.id} className="flex items-center justify-between gap-3 py-3">
+                  <span className="text-sm text-ink truncate">{text}</span>
+                  <span className="text-xs text-faint shrink-0">
+                    {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </section>
     </div>
   )

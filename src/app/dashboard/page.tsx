@@ -7,6 +7,8 @@ import { useStore } from '@/lib/store'
 import { stockStatus } from '@/lib/depletion'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/components/profile/ProfileProvider'
+import { trackEvent } from '@/lib/analytics'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import {
   Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight,
@@ -16,8 +18,14 @@ export default function DashboardPage() {
   const { inventory, setInventory, safetyBufferDays } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
+  const { profile } = useProfile()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Privacy-first analytics: only fires once the profile confirms opt-in.
+  useEffect(() => {
+    if (profile?.analyticsOptIn) void trackEvent('opened_dashboard', true)
+  }, [profile?.analyticsOptIn])
 
   useEffect(() => {
     const fetchInventory = async () => {

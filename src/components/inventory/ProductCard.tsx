@@ -18,6 +18,7 @@ import {
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from "@/lib/depletion";
 import { reorderTargetFor } from "@/lib/suppliers";
+import { logActivity } from "@/lib/activity";
 import { format } from "date-fns";
 
 interface ProductCardProps {
@@ -77,6 +78,7 @@ export function ProductCard({
       setIsUpdating(true)
       try {
         await onUpdate?.(product.id, { quantity: product.quantity - 1 })
+        void logActivity('supply_used', product.name)
       } catch (err) {
         console.error('Failed to update:', err)
       } finally {

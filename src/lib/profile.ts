@@ -9,6 +9,7 @@ export interface Profile {
   theme: string | null
   locale: string | null
   safetyBufferDays: number | null
+  analyticsOptIn: boolean
   avatarPath: string | null
   createdAt: string
 }
@@ -22,6 +23,7 @@ export interface ProfileRow {
   theme: string | null
   locale: string | null
   safety_buffer_days: number | null
+  analytics_opt_in: boolean | null
   avatar_path: string | null
   created_at: string
   updated_at: string
@@ -37,6 +39,7 @@ export function rowToProfile(r: ProfileRow): Profile {
     theme: r.theme ?? null,
     locale: r.locale ?? null,
     safetyBufferDays: r.safety_buffer_days ?? null,
+    analyticsOptIn: r.analytics_opt_in ?? false,
     avatarPath: r.avatar_path ?? null,
     createdAt: r.created_at,
   }
