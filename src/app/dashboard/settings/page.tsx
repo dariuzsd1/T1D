@@ -6,28 +6,47 @@ import { useStore } from '@/lib/store'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { PushToggle } from '@/components/PushToggle'
 import { BackButton } from '@/components/ui/BackButton'
+import { LanguageToggle } from '@/components/ui/LanguageToggle'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
+import { useI18n } from '@/lib/i18n'
 import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
-  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut,
+  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
 
 export default function SettingsPage() {
   const { safetyBufferDays, setSafetyBufferDays } = useStore()
+  const { t } = useI18n()
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
       <BackButton />
       <header>
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Settings</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Preferences</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('settings.kicker')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('settings.title')}</h1>
       </header>
 
       {/* Account — always first */}
       <AccountSection />
+
+      {/* Language */}
+      <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Languages className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-ink">{t('settings.language')}</h3>
+              <p className="text-sm text-muted">{t('settings.languageBody')}</p>
+            </div>
+          </div>
+          <LanguageToggle />
+        </div>
+      </section>
 
       {/* Safety buffer — real, works now, persists locally */}
       <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
@@ -36,19 +55,17 @@ export default function SettingsPage() {
             <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-ink">Safety buffer</h3>
-            <p className="text-sm text-muted">
-              Flag a supply as &ldquo;reorder soon&rdquo; while you still have this many days of reserve left — so you&apos;re never racing to zero.
-            </p>
+            <h3 className="font-semibold text-ink">{t('settings.bufferTitle')}</h3>
+            <p className="text-sm text-muted">{t('settings.bufferBody')}</p>
           </div>
         </div>
 
         <div className="flex items-end gap-4 mb-5">
           <div className="text-5xl font-black tabular-nums text-ink">{safetyBufferDays}</div>
-          <div className="text-sm font-medium text-muted pb-2">days of reserve</div>
+          <div className="text-sm font-medium text-muted pb-2">{t('settings.daysReserve')}</div>
         </div>
 
-        <label htmlFor="buffer-range" className="sr-only">Safety buffer in days</label>
+        <label htmlFor="buffer-range" className="sr-only">{t('settings.bufferTitle')}</label>
         <input
           id="buffer-range"
           type="range"
@@ -71,7 +88,7 @@ export default function SettingsPage() {
                   : 'px-4 py-2 rounded-xl text-sm font-semibold bg-surface-2 text-muted hover:text-ink transition-colors'
               }
             >
-              {d} days
+              {d} {t('settings.daysUnit')}
             </button>
           ))}
         </div>
@@ -84,10 +101,8 @@ export default function SettingsPage() {
             <Bell className="w-5 h-5 text-caution" />
           </div>
           <div>
-            <h3 className="font-semibold text-ink">Push notifications</h3>
-            <p className="text-sm text-muted">
-              The most useful alerts reach you when the app is closed (&ldquo;Refill-eligible Thursday — tap to reorder&rdquo;).
-            </p>
+            <h3 className="font-semibold text-ink">{t('settings.pushTitle')}</h3>
+            <p className="text-sm text-muted">{t('settings.pushBody')}</p>
           </div>
         </div>
         <PushToggle />
@@ -100,8 +115,8 @@ export default function SettingsPage() {
             <Truck className="w-5 h-5 text-teal" />
           </div>
           <div>
-            <h3 className="font-semibold text-ink">Supplier shortcuts</h3>
-            <p className="text-sm text-muted">Jump to a distributor to place or check on an order.</p>
+            <h3 className="font-semibold text-ink">{t('settings.suppliersTitle')}</h3>
+            <p className="text-sm text-muted">{t('settings.suppliersBody')}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -128,6 +143,7 @@ export default function SettingsPage() {
 function AccountSection() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
+  const { t } = useI18n()
 
   const [email, setEmail] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -176,22 +192,22 @@ function AccountSection() {
       setNameMsg({ type: 'error', text: error.message })
     } else {
       setProfile(prev => prev ? { ...prev, displayName: displayName.trim() || null } : null)
-      setNameMsg({ type: 'success', text: 'Name saved.' })
+      setNameMsg({ type: 'success', text: t('settings.nameSaved') })
       setTimeout(() => setNameMsg(null), 3000)
     }
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newPw !== confirmPw) { setPwMsg({ type: 'error', text: 'Passwords don\'t match.' }); return }
-    if (newPw.length < 8) { setPwMsg({ type: 'error', text: 'At least 8 characters.' }); return }
+    if (newPw !== confirmPw) { setPwMsg({ type: 'error', text: t('login.errMismatch') }); return }
+    if (newPw.length < 8) { setPwMsg({ type: 'error', text: t('login.min8') }); return }
     setPwSaving(true); setPwMsg(null)
     const { error } = await supabase.auth.updateUser({ password: newPw })
     setPwSaving(false)
     if (error) {
       setPwMsg({ type: 'error', text: error.message })
     } else {
-      setPwMsg({ type: 'success', text: 'Password updated.' })
+      setPwMsg({ type: 'success', text: t('settings.pwUpdated') })
       setNewPw(''); setConfirmPw(''); setShowPwForm(false)
       setTimeout(() => setPwMsg(null), 3000)
     }
@@ -210,7 +226,7 @@ function AccountSection() {
           <User className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold text-ink">Account</h3>
+          <h3 className="font-semibold text-ink">{t('settings.account')}</h3>
           <p className="text-sm text-muted">
             {email ?? <span className="inline-block w-32 h-3.5 bg-surface-2 rounded animate-pulse" />}
           </p>
@@ -221,7 +237,7 @@ function AccountSection() {
         {/* Display name */}
         <div>
           <label htmlFor="display-name" className="block text-sm font-medium text-muted mb-1.5">
-            Display name <span className="text-faint font-normal">(optional)</span>
+            {t('settings.displayName')} <span className="text-faint font-normal">{t('settings.optional')}</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -238,7 +254,7 @@ function AccountSection() {
               disabled={nameSaving}
               className="min-h-[44px] px-4 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              {nameSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+              {nameSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.save')}
             </button>
           </div>
           {nameMsg && (
@@ -258,18 +274,18 @@ function AccountSection() {
               onClick={() => { setShowPwForm(true); setPwMsg(null) }}
               className="flex items-center gap-2 text-sm font-semibold text-ink hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
             >
-              <Lock className="w-4 h-4" /> Set / change password
+              <Lock className="w-4 h-4" /> {t('settings.setChangePw')}
             </button>
           ) : (
             <form onSubmit={handleChangePassword} className="space-y-3 bg-surface-2 rounded-2xl p-4 border border-line">
-              <p className="text-sm font-semibold text-ink">Set a new password</p>
-              {(['New password', 'Confirm new password'] as const).map((label, i) => {
+              <p className="text-sm font-semibold text-ink">{t('reset.title')}</p>
+              {(['settings.newPw', 'settings.confirmNewPw'] as const).map((labelKey, i) => {
                 const isNew = i === 0
                 const val = isNew ? newPw : confirmPw
                 const setVal = isNew ? setNewPw : setConfirmPw
                 return (
-                  <div key={label}>
-                    <label className="block text-xs font-medium text-muted mb-1">{label}</label>
+                  <div key={labelKey}>
+                    <label className="block text-xs font-medium text-muted mb-1">{t(labelKey)}</label>
                     <div className="relative">
                       <input
                         type={showPw ? 'text' : 'password'}
@@ -284,7 +300,7 @@ function AccountSection() {
                         <button
                           type="button"
                           onClick={() => setShowPw(s => !s)}
-                          aria-label={showPw ? 'Hide' : 'Show'}
+                          aria-label={showPw ? t('login.hidePassword') : t('login.showPassword')}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                         >
                           {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -306,14 +322,14 @@ function AccountSection() {
                   disabled={pwSaving}
                   className="min-h-[40px] px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update password'}
+                  {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.updatePw')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowPwForm(false); setNewPw(''); setConfirmPw(''); setPwMsg(null) }}
                   className="min-h-[40px] px-4 rounded-xl text-sm font-semibold text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>
@@ -328,7 +344,7 @@ function AccountSection() {
             className="flex items-center gap-2 text-sm font-semibold text-urgent hover:text-urgent/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent rounded"
           >
             {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-            Sign out
+            {t('settings.signOut')}
           </button>
         </div>
       </div>

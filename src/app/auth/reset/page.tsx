@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldCheck, Loader2, AlertCircle, Lock, Eye, EyeOff,
 } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * /auth/reset — set a new password after clicking a password-reset email link.
@@ -25,6 +26,7 @@ import {
 export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -36,11 +38,11 @@ export default function ResetPasswordPage() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) {
-      setMsg({ type: 'error', text: 'Passwords don\'t match.' })
+      setMsg({ type: 'error', text: t('login.errMismatch') })
       return
     }
     if (password.length < 8) {
-      setMsg({ type: 'error', text: 'Password must be at least 8 characters.' })
+      setMsg({ type: 'error', text: t('login.errMin8') })
       return
     }
     setLoading(true)
@@ -50,7 +52,7 @@ export default function ResetPasswordPage() {
     if (error) {
       setMsg({ type: 'error', text: error.message })
     } else {
-      setMsg({ type: 'success', text: 'Password updated! Taking you to your dashboard…' })
+      setMsg({ type: 'success', text: t('reset.success') })
       setTimeout(() => router.push('/dashboard'), 1500)
     }
   }
@@ -67,15 +69,13 @@ export default function ResetPasswordPage() {
             <ShieldCheck className="w-7 h-7 text-primary" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-center mb-1 tracking-tight">Set a new password</h1>
-        <p className="text-muted text-center text-sm mb-7">
-          Choose a strong password for your T1D Supply Hub account.
-        </p>
+        <h1 className="text-2xl font-bold text-center mb-1 tracking-tight">{t('reset.title')}</h1>
+        <p className="text-muted text-center text-sm mb-7">{t('reset.sub')}</p>
 
         <form onSubmit={handleReset} className="space-y-4">
           <div>
             <label htmlFor="rp-pw" className="block text-sm font-medium text-muted mb-2 ml-1">
-              New password
+              {t('reset.newPw')}
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
@@ -92,18 +92,18 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowPw(s => !s)}
-                aria-label={showPw ? 'Hide password' : 'Show password'}
+                aria-label={showPw ? t('login.hidePassword') : t('login.showPassword')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-faint hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
               >
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-xs text-faint mt-1.5 ml-1">At least 8 characters.</p>
+            <p className="text-xs text-faint mt-1.5 ml-1">{t('login.min8')}</p>
           </div>
 
           <div>
             <label htmlFor="rp-confirm" className="block text-sm font-medium text-muted mb-2 ml-1">
-              Confirm new password
+              {t('reset.confirmPw')}
             </label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirm(s => !s)}
-                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                aria-label={showConfirm ? t('login.hidePassword') : t('login.showPassword')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-faint hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
               >
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -133,7 +133,7 @@ export default function ResetPasswordPage() {
             disabled={loading}
             className="w-full bg-primary hover:bg-primary-deep text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Set new password'}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('reset.submit')}
           </button>
 
           <AnimatePresence>

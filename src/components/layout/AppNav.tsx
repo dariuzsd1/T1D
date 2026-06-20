@@ -25,34 +25,37 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 
 // Core supply loop — see status, browse supplies, add one, reorder. Shown in
-// both the desktop sidebar and the mobile tab bar.
-const navItems = [
-  { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Supplies', href: '/dashboard/supplies', icon: Package },
-  { name: 'Add', href: '/scan', icon: ScanLine },
-  { name: 'Reorder', href: '/dashboard/reorder', icon: ShoppingCart },
+// both the desktop sidebar and the mobile tab bar. `key` is resolved with t().
+const navItems: { key: TKey; href: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'nav.home', href: '/dashboard', icon: LayoutDashboard },
+  { key: 'nav.supplies', href: '/dashboard/supplies', icon: Package },
+  { key: 'nav.add', href: '/scan', icon: ScanLine },
+  { key: 'nav.reorder', href: '/dashboard/reorder', icon: ShoppingCart },
 ]
 
 // Secondary destinations — desktop sidebar + mobile "More" sheet, to keep the
 // mobile bar to four thumb-reachable items.
-const secondaryNav = [
-  { name: 'People I care for', href: '/dashboard/family', icon: HeartHandshake },
-  { name: 'Sharing', href: '/dashboard/caregivers', icon: Share2 },
-  { name: 'Rotate sites', href: '/dashboard/site-tracker', icon: Map },
-  { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
-  { name: 'Devices', href: '/dashboard/devices', icon: Cpu },
-  { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: Pill },
-  { name: 'Appointments', href: '/dashboard/appointments', icon: Stethoscope },
-  { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },
-  { name: 'Medical ID', href: '/dashboard/medical-id', icon: HeartPulse },
+const secondaryNav: { key: TKey; href: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'nav.peopleICareFor', href: '/dashboard/family', icon: HeartHandshake },
+  { key: 'nav.sharing', href: '/dashboard/caregivers', icon: Share2 },
+  { key: 'nav.rotateSites', href: '/dashboard/site-tracker', icon: Map },
+  { key: 'nav.calendar', href: '/dashboard/calendar', icon: CalendarDays },
+  { key: 'nav.devices', href: '/dashboard/devices', icon: Cpu },
+  { key: 'nav.prescriptions', href: '/dashboard/prescriptions', icon: Pill },
+  { key: 'nav.appointments', href: '/dashboard/appointments', icon: Stethoscope },
+  { key: 'nav.costs', href: '/dashboard/costs', icon: DollarSign },
+  { key: 'nav.medicalId', href: '/dashboard/medical-id', icon: HeartPulse },
 ]
 
 export function AppNav() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
   const [moreOpen, setMoreOpen] = useState(false)
 
   // Highlight "More" when the active page lives behind it.
@@ -91,7 +94,7 @@ export function AppNav() {
                   )}
                 >
                   <item.icon className={cn('w-5 h-5', isActive ? 'text-white' : 'text-faint group-hover:text-primary')} />
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               )
             })}
@@ -113,7 +116,7 @@ export function AppNav() {
                   )}
                 >
                   <item.icon className={cn('w-5 h-5', isActive ? 'text-white' : 'text-faint group-hover:text-primary')} />
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               )
             })}
@@ -132,14 +135,14 @@ export function AppNav() {
             )}
           >
             <Settings className="w-5 h-5" />
-            Settings
+            {t('nav.settings')}
           </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-muted hover:text-urgent hover:bg-urgent-soft w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
           >
             <LogOut className="w-5 h-5" />
-            Sign out
+            {t('nav.signOut')}
           </button>
         </div>
       </aside>
@@ -163,7 +166,7 @@ export function AppNav() {
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                {item.name}
+                {t(item.key)}
               </Link>
             )
           })}
@@ -178,7 +181,7 @@ export function AppNav() {
             )}
           >
             <MoreHorizontal className="w-5 h-5" />
-            More
+            {t('nav.more')}
           </button>
         </div>
       </nav>
@@ -210,6 +213,7 @@ interface MoreSheetProps {
 
 function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
   const ref = useDialog<HTMLDivElement>(onClose)
+  const { t } = useI18n()
 
   return (
     <div
@@ -236,7 +240,7 @@ function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
               )}
             >
               <item.icon className={cn('w-5 h-5', isActive ? 'text-white' : 'text-faint')} />
-              {item.name}
+              {t(item.key)}
             </Link>
           )
         })}
@@ -250,14 +254,14 @@ function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
           )}
         >
           <Settings className={cn('w-5 h-5', pathname === '/dashboard/settings' ? 'text-white' : 'text-faint')} />
-          Settings
+          {t('nav.settings')}
         </Link>
         <button
           onClick={() => { onClose(); onLogout() }}
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-muted hover:text-urgent hover:bg-urgent-soft w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
         >
           <LogOut className="w-5 h-5" />
-          Sign out
+          {t('nav.signOut')}
         </button>
       </div>
     </div>

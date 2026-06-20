@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store'
 import { stockStatus } from '@/lib/depletion'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { BackButton } from '@/components/ui/BackButton'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
@@ -14,6 +15,7 @@ import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
 export default function ReorderPage() {
   const { inventory, setInventory, safetyBufferDays } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,8 +45,8 @@ export default function ReorderPage() {
   const handleReorder = (label: string) =>
     showToast(
       label === 'find a supplier'
-        ? 'Opening a supplier search in a new tab.'
-        : `Opening ${label}'s reorder page in a new tab.`,
+        ? t('toast.openingSearch')
+        : t('toast.openingSupplier', { label }),
       'info'
     )
 
@@ -53,11 +55,10 @@ export default function ReorderPage() {
       <BackButton />
 
       <header>
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Reorder</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">What to reorder</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('reorder.kicker')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('reorder.title')}</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
-          Only the supplies that would dip below your {safetyBufferDays}-day reserve. Each
-          button opens the supplier&apos;s reorder page — we never place an order for you.
+          {t('reorder.intro', { buffer: safetyBufferDays })}
         </p>
       </header>
 
@@ -79,15 +80,13 @@ export default function ReorderPage() {
           <div className="w-14 h-14 rounded-2xl bg-success/15 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-7 h-7 text-success" />
           </div>
-          <p className="text-lg font-bold text-success">Nothing to reorder</p>
-          <p className="text-muted text-sm max-w-xs mx-auto">
-            Everything you track is comfortably above your reserve. Check back when something runs low.
-          </p>
+          <p className="text-lg font-bold text-success">{t('reorder.nothingTitle')}</p>
+          <p className="text-muted text-sm max-w-xs mx-auto">{t('reorder.nothingBody')}</p>
           <Link
             href="/dashboard/supplies"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-2 py-1"
           >
-            View all supplies
+            {t('reorder.viewAll')}
           </Link>
         </motion.div>
       )}
@@ -113,8 +112,8 @@ export default function ReorderPage() {
             <Truck className="w-5 h-5 text-teal" />
           </div>
           <div>
-            <h3 className="font-semibold text-ink">Distributor shortcuts</h3>
-            <p className="text-sm text-muted">Place or check on an order with a major DME supplier.</p>
+            <h3 className="font-semibold text-ink">{t('reorder.distributorsTitle')}</h3>
+            <p className="text-sm text-muted">{t('reorder.distributorsBody')}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">

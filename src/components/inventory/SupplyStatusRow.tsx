@@ -5,6 +5,7 @@ import { stockStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/
 import { reorderTargetFor } from '@/lib/suppliers'
 import { ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * A calm, single-line view of one supply — status dot, name, one plain-language
@@ -21,6 +22,7 @@ export function SupplyStatusRow({
   bufferDays?: number
   onReorder?: (label: string) => void
 }) {
+  const { t } = useI18n()
   const status = stockStatus(product.remainingDays, bufferDays)
   const estimated = isRateEstimated(product.usageRatePerDay)
   const reorder = reorderTargetFor(product)
@@ -28,13 +30,14 @@ export function SupplyStatusRow({
   const dot =
     status === 'out' ? 'bg-urgent' : status === 'low' ? 'bg-caution' : 'bg-success'
   const statusLabel =
-    status === 'out' ? 'Out of stock' : status === 'low' ? 'Reorder soon' : 'Well stocked'
+    status === 'out' ? t('row.outOfStock') : status === 'low' ? t('row.reorderSoon') : t('row.wellStocked')
 
   // One honest line: how long it lasts (or "out now"), never a data dump.
-  const daysLine =
-    status === 'out'
-      ? 'None on hand'
-      : `${estimated ? '~' : ''}${product.remainingDays} days left`
+  const daysLabel = t(
+    product.remainingDays === 1 ? 'row.daysLeftOne' : 'row.daysLeftOther',
+    { count: `${estimated ? '~' : ''}${product.remainingDays}` }
+  )
+  const daysLine = status === 'out' ? t('row.noneOnHand') : daysLabel
 
   return (
     <div className="flex items-center gap-4 bg-surface border border-line rounded-2xl p-4">
@@ -65,7 +68,7 @@ export function SupplyStatusRow({
         )}
       >
         <ShoppingCart className="w-4 h-4" />
-        <span className="hidden sm:inline">Reorder</span>
+        <span className="hidden sm:inline">{t('row.reorder')}</span>
       </a>
     </div>
   )

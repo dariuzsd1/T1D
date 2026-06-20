@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { stockStatus } from '@/lib/depletion'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import {
   Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight,
@@ -14,6 +15,7 @@ import {
 export default function DashboardPage() {
   const { inventory, setInventory, safetyBufferDays } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,8 +51,8 @@ export default function DashboardPage() {
   const handleReorder = (label: string) =>
     showToast(
       label === 'find a supplier'
-        ? 'Opening a supplier search in a new tab.'
-        : `Opening ${label}'s reorder page in a new tab.`,
+        ? t('toast.openingSearch')
+        : t('toast.openingSupplier', { label }),
       'info'
     )
 
@@ -73,7 +75,7 @@ export default function DashboardPage() {
       {/* Error */}
       {error && !loading && (
         <div className="bg-urgent-soft border border-urgent/30 rounded-3xl p-6">
-          <p className="text-urgent font-semibold mb-1">Couldn&apos;t load your supplies</p>
+          <p className="text-urgent font-semibold mb-1">{t('home.errTitle')}</p>
           <p className="text-urgent/80 text-sm">{error}</p>
         </div>
       )}
@@ -89,18 +91,15 @@ export default function DashboardPage() {
             <Package className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight text-ink">Let&apos;s get you set up</h1>
-            <p className="text-muted max-w-sm mx-auto leading-relaxed">
-              Add your first supply — a sensor, pod, reservoir, or vial — and we&apos;ll
-              track how long it lasts and tell you when to reorder.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-ink">{t('home.emptyTitle')}</h1>
+            <p className="text-muted max-w-sm mx-auto leading-relaxed">{t('home.emptyBody')}</p>
           </div>
           <Link
             href="/scan"
             className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             <Plus className="w-5 h-5" />
-            Add your first supply
+            {t('home.addFirst')}
           </Link>
         </motion.div>
       )}
@@ -139,13 +138,19 @@ export default function DashboardPage() {
                 }
               >
                 {allGood
-                  ? "You're all set"
-                  : `${needsAttention.length} ${needsAttention.length === 1 ? 'supply needs' : 'supplies need'} attention`}
+                  ? t('home.allSet')
+                  : t(
+                      needsAttention.length === 1 ? 'home.needAttentionOne' : 'home.needAttentionOther',
+                      { count: needsAttention.length }
+                    )}
               </h1>
               <p className="text-muted mt-1.5 leading-relaxed">
                 {allGood
-                  ? `All ${inventory.length} supplies are above your ${safetyBufferDays}-day reserve.`
-                  : `Reorder soon to stay above your ${safetyBufferDays}-day reserve.`}
+                  ? t(
+                      inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
+                      { count: inventory.length, buffer: safetyBufferDays }
+                    )
+                  : t('home.needSub', { buffer: safetyBufferDays })}
               </p>
             </div>
           </div>
@@ -172,17 +177,23 @@ export default function DashboardPage() {
           <NavCard
             href="/dashboard/supplies"
             icon={<Package className="w-5 h-5 text-primary" />}
-            title="All supplies"
-            sub={`${inventory.length} tracked`}
+            title={t('home.cardAllSupplies')}
+            sub={t(
+              inventory.length === 1 ? 'home.cardTrackedOne' : 'home.cardTrackedOther',
+              { count: inventory.length }
+            )}
           />
           <NavCard
             href="/dashboard/reorder"
             icon={<ShoppingCart className="w-5 h-5 text-primary" />}
-            title="Reorder"
+            title={t('home.cardReorder')}
             sub={
               needsAttention.length > 0
-                ? `${needsAttention.length} to reorder`
-                : 'Nothing needed'
+                ? t(
+                    needsAttention.length === 1 ? 'home.cardToReorderOne' : 'home.cardToReorderOther',
+                    { count: needsAttention.length }
+                  )
+                : t('home.nothingNeeded')
             }
           />
         </section>
@@ -196,7 +207,7 @@ export default function DashboardPage() {
             className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-3 py-2"
           >
             <Plus className="w-4 h-4" />
-            Add a supply
+            {t('home.addSupply')}
           </Link>
         </div>
       )}

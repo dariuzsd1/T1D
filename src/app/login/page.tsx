@@ -8,6 +8,8 @@ import {
   Mail, ArrowRight, ShieldCheck, AlertCircle, Loader2,
   Lock, Eye, EyeOff, UserPlus, LogIn, ChevronLeft,
 } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
+import { LanguageToggle } from '@/components/ui/LanguageToggle'
 
 type View = 'signin' | 'signup' | 'magic' | 'forgot'
 
@@ -36,6 +38,7 @@ function PasswordInput({
   placeholder?: string
   autoComplete?: string
 }) {
+  const { t } = useI18n()
   const [show, setShow] = useState(false)
   return (
     <div className="relative">
@@ -53,7 +56,7 @@ function PasswordInput({
       <button
         type="button"
         onClick={() => setShow(s => !s)}
-        aria-label={show ? 'Hide password' : 'Show password'}
+        aria-label={show ? t('login.hidePassword') : t('login.showPassword')}
         className="absolute right-4 top-1/2 -translate-y-1/2 text-faint hover:text-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
       >
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -86,6 +89,7 @@ function StatusMsg({ msg }: { msg: Msg }) {
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
 
   const [view, setView] = useState<View>('signin')
   const [email, setEmail] = useState('')
@@ -115,11 +119,11 @@ export default function LoginPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) {
-      setMsg({ type: 'error', text: 'Passwords don\'t match.' })
+      setMsg({ type: 'error', text: t('login.errMismatch') })
       return
     }
     if (password.length < 8) {
-      setMsg({ type: 'error', text: 'Password must be at least 8 characters.' })
+      setMsg({ type: 'error', text: t('login.errMin8') })
       return
     }
     setLoading(true); clearMsg()
@@ -141,10 +145,7 @@ export default function LoginPage() {
     if (data.session) {
       router.push(next)
     } else {
-      setMsg({
-        type: 'success',
-        text: 'Account created! Check your inbox and click the confirmation link to finish signing in.',
-      })
+      setMsg({ type: 'success', text: t('login.createdConfirm') })
     }
   }
 
@@ -162,7 +163,7 @@ export default function LoginPage() {
     if (error) {
       setMsg({ type: 'error', text: error.message })
     } else {
-      setMsg({ type: 'success', text: 'Magic link sent! Check your inbox.' })
+      setMsg({ type: 'success', text: t('login.magicSent') })
     }
   }
 
@@ -178,15 +179,22 @@ export default function LoginPage() {
     if (error) {
       setMsg({ type: 'error', text: error.message })
     } else {
-      setMsg({
-        type: 'success',
-        text: 'Password reset link sent! Check your inbox — the link expires in 1 hour.',
-      })
+      setMsg({ type: 'success', text: t('login.resetSent') })
     }
   }
 
+  const subtitle =
+    view === 'signup' ? t('login.subSignup') :
+    view === 'forgot' ? t('login.subForgot') :
+    view === 'magic' ? t('login.subMagic') :
+    t('login.subSignin')
+
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md flex justify-end mb-4">
+        <LanguageToggle />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -199,12 +207,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h1 className="text-3xl font-bold text-center mb-1 tracking-tight">T1D Supply Hub</h1>
-        <p className="text-muted text-center text-sm mb-7">
-          {view === 'signup' ? 'Create your account' :
-           view === 'forgot' ? 'Reset your password' :
-           view === 'magic' ? 'Passwordless sign-in' :
-           'Sign in to your account'}
-        </p>
+        <p className="text-muted text-center text-sm mb-7">{subtitle}</p>
 
         {/* Tab row — only for signin / signup */}
         {(view === 'signin' || view === 'signup') && (
@@ -217,7 +220,7 @@ export default function LoginPage() {
                   : 'text-muted hover:text-ink'
               }`}
             >
-              <LogIn className="w-4 h-4" /> Sign in
+              <LogIn className="w-4 h-4" /> {t('login.signinTab')}
             </button>
             <button
               onClick={() => switchView('signup')}
@@ -227,7 +230,7 @@ export default function LoginPage() {
                   : 'text-muted hover:text-ink'
               }`}
             >
-              <UserPlus className="w-4 h-4" /> Create account
+              <UserPlus className="w-4 h-4" /> {t('login.createTab')}
             </button>
           </div>
         )}
@@ -238,7 +241,7 @@ export default function LoginPage() {
             onClick={() => switchView('signin')}
             className="flex items-center gap-1 text-sm text-muted hover:text-ink mb-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
           >
-            <ChevronLeft className="w-4 h-4" /> Back to sign in
+            <ChevronLeft className="w-4 h-4" /> {t('login.backToSignIn')}
           </button>
         )}
 
@@ -254,7 +257,7 @@ export default function LoginPage() {
               className="space-y-4"
             >
               <div>
-                <label htmlFor="si-email" className="block text-sm font-medium text-muted mb-2 ml-1">Email</label>
+                <label htmlFor="si-email" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.emailLabel')}</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
                   <input
@@ -271,13 +274,13 @@ export default function LoginPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2 ml-1">
-                  <label htmlFor="si-pw" className="text-sm font-medium text-muted">Password</label>
+                  <label htmlFor="si-pw" className="text-sm font-medium text-muted">{t('login.passwordLabel')}</label>
                   <button
                     type="button"
                     onClick={() => switchView('forgot')}
                     className="text-xs text-primary hover:text-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                   >
-                    Forgot password?
+                    {t('login.forgotLink')}
                   </button>
                 </div>
                 <PasswordInput
@@ -294,7 +297,7 @@ export default function LoginPage() {
               >
                 {loading
                   ? <Loader2 className="w-5 h-5 animate-spin" />
-                  : <><ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /> Sign in</>}
+                  : <><ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /> {t('login.signInBtn')}</>}
               </button>
               <AnimatePresence>{msg && <StatusMsg msg={msg} />}</AnimatePresence>
               <div className="border-t border-line pt-4 text-center">
@@ -303,7 +306,7 @@ export default function LoginPage() {
                   onClick={() => switchView('magic')}
                   className="text-sm text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                 >
-                  Email me a link instead
+                  {t('login.emailMeLink')}
                 </button>
               </div>
             </motion.form>
@@ -320,7 +323,7 @@ export default function LoginPage() {
               className="space-y-4"
             >
               <div>
-                <label htmlFor="su-email" className="block text-sm font-medium text-muted mb-2 ml-1">Email</label>
+                <label htmlFor="su-email" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.emailLabel')}</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
                   <input
@@ -336,22 +339,22 @@ export default function LoginPage() {
                 </div>
               </div>
               <div>
-                <label htmlFor="su-pw" className="block text-sm font-medium text-muted mb-2 ml-1">Password</label>
+                <label htmlFor="su-pw" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.passwordLabel')}</label>
                 <PasswordInput
                   id="su-pw"
                   value={password}
                   onChange={setPassword}
                   autoComplete="new-password"
                 />
-                <p className="text-xs text-faint mt-1.5 ml-1">At least 8 characters.</p>
+                <p className="text-xs text-faint mt-1.5 ml-1">{t('login.min8')}</p>
               </div>
               <div>
-                <label htmlFor="su-confirm" className="block text-sm font-medium text-muted mb-2 ml-1">Confirm password</label>
+                <label htmlFor="su-confirm" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.confirmLabel')}</label>
                 <PasswordInput
                   id="su-confirm"
                   value={confirm}
                   onChange={setConfirm}
-                  placeholder="Repeat your password"
+                  placeholder={t('login.confirmPlaceholder')}
                   autoComplete="new-password"
                 />
               </div>
@@ -362,7 +365,7 @@ export default function LoginPage() {
               >
                 {loading
                   ? <Loader2 className="w-5 h-5 animate-spin" />
-                  : <><UserPlus className="w-5 h-5" /> Create account</>}
+                  : <><UserPlus className="w-5 h-5" /> {t('login.createBtn')}</>}
               </button>
               <AnimatePresence>{msg && <StatusMsg msg={msg} />}</AnimatePresence>
             </motion.form>
@@ -378,11 +381,9 @@ export default function LoginPage() {
               onSubmit={handleMagicLink}
               className="space-y-4"
             >
-              <p className="text-sm text-muted -mt-2">
-                We&apos;ll email you a one-time sign-in link — no password needed.
-              </p>
+              <p className="text-sm text-muted -mt-2">{t('login.magicIntro')}</p>
               <div>
-                <label htmlFor="ml-email" className="block text-sm font-medium text-muted mb-2 ml-1">Email</label>
+                <label htmlFor="ml-email" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.emailLabel')}</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
                   <input
@@ -404,7 +405,7 @@ export default function LoginPage() {
               >
                 {loading
                   ? <Loader2 className="w-5 h-5 animate-spin" />
-                  : <>Send magic link <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>}
+                  : <>{t('login.sendMagic')} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>}
               </button>
               <AnimatePresence>{msg && <StatusMsg msg={msg} />}</AnimatePresence>
             </motion.form>
@@ -420,11 +421,9 @@ export default function LoginPage() {
               onSubmit={handleForgot}
               className="space-y-4"
             >
-              <p className="text-sm text-muted -mt-2">
-                Enter your email and we&apos;ll send a link to reset your password.
-              </p>
+              <p className="text-sm text-muted -mt-2">{t('login.forgotIntro')}</p>
               <div>
-                <label htmlFor="fp-email" className="block text-sm font-medium text-muted mb-2 ml-1">Email</label>
+                <label htmlFor="fp-email" className="block text-sm font-medium text-muted mb-2 ml-1">{t('login.emailLabel')}</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-faint pointer-events-none" />
                   <input
@@ -446,7 +445,7 @@ export default function LoginPage() {
               >
                 {loading
                   ? <Loader2 className="w-5 h-5 animate-spin" />
-                  : 'Send reset link'}
+                  : t('login.sendReset')}
               </button>
               <AnimatePresence>{msg && <StatusMsg msg={msg} />}</AnimatePresence>
             </motion.form>
@@ -455,9 +454,9 @@ export default function LoginPage() {
       </motion.div>
 
       <div className="mt-6 flex gap-4 text-faint text-xs">
-        <span>Encrypted in transit</span>
+        <span>{t('login.footerEncrypted')}</span>
         <span className="w-1 h-1 bg-line rounded-full my-auto" />
-        <span>Your data stays yours</span>
+        <span>{t('login.footerYours')}</span>
       </div>
     </div>
   )
