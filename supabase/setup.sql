@@ -479,6 +479,7 @@ alter table public.profiles add column if not exists pronouns       text;
 alter table public.profiles add column if not exists timezone       text;
 alter table public.profiles add column if not exists theme          text default 'system';
 alter table public.profiles add column if not exists locale         text;
+alter table public.profiles add column if not exists safety_buffer_days integer;
 
 alter table public.profiles enable row level security;
 

@@ -4,6 +4,7 @@ import { QuickActionHub } from "@/components/dashboard/QuickActionHub";
 import { ToastProvider } from "@/components/ui/Toast";
 import { PreferencesHydrator } from "@/components/PreferencesHydrator";
 import { ProfileProvider } from "@/components/profile/ProfileProvider";
+import { PreferenceSync } from "@/components/profile/PreferenceSync";
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
     <ToastProvider>
       <ProfileProvider>
       <PreferencesHydrator />
+      <PreferenceSync />
       <div className="flex flex-col min-h-screen bg-canvas text-ink">
         <RiskAlertBanner />
         <div className="flex flex-1">

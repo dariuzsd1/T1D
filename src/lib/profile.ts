@@ -8,6 +8,7 @@ export interface Profile {
   timezone: string | null
   theme: string | null
   locale: string | null
+  safetyBufferDays: number | null
   avatarPath: string | null
   createdAt: string
 }
@@ -20,6 +21,7 @@ export interface ProfileRow {
   timezone: string | null
   theme: string | null
   locale: string | null
+  safety_buffer_days: number | null
   avatar_path: string | null
   created_at: string
   updated_at: string
@@ -34,6 +36,7 @@ export function rowToProfile(r: ProfileRow): Profile {
     timezone: r.timezone ?? null,
     theme: r.theme ?? null,
     locale: r.locale ?? null,
+    safetyBufferDays: r.safety_buffer_days ?? null,
     avatarPath: r.avatar_path ?? null,
     createdAt: r.created_at,
   }
