@@ -21,12 +21,16 @@ import {
   ShoppingCart,
   HeartHandshake,
   Share2,
+  User,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { TKey } from '@/lib/i18n/dictionaries'
+import { useProfile } from '@/components/profile/ProfileProvider'
+import { Avatar } from '@/components/profile/Avatar'
+import { userLabel } from '@/lib/profile'
 
 // Core supply loop — see status, browse supplies, add one, reorder. Shown in
 // both the desktop sidebar and the mobile tab bar. `key` is resolved with t().
@@ -40,6 +44,7 @@ const navItems: { key: TKey; href: string; icon: typeof LayoutDashboard }[] = [
 // Secondary destinations — desktop sidebar + mobile "More" sheet, to keep the
 // mobile bar to four thumb-reachable items.
 const secondaryNav: { key: TKey; href: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'nav.profile', href: '/dashboard/profile', icon: User },
   { key: 'nav.peopleICareFor', href: '/dashboard/family', icon: HeartHandshake },
   { key: 'nav.sharing', href: '/dashboard/caregivers', icon: Share2 },
   { key: 'nav.rotateSites', href: '/dashboard/site-tracker', icon: Map },
@@ -56,6 +61,7 @@ export function AppNav() {
   const router = useRouter()
   const supabase = createClient()
   const { t } = useI18n()
+  const { profile, email } = useProfile()
   const [moreOpen, setMoreOpen] = useState(false)
 
   // Highlight "More" when the active page lives behind it.
@@ -124,6 +130,19 @@ export function AppNav() {
         </div>
 
         <div className="mt-auto p-6 space-y-1">
+          <Link
+            href="/dashboard/profile"
+            aria-current={pathname === '/dashboard/profile' ? 'page' : undefined}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary mb-1',
+              pathname === '/dashboard/profile'
+                ? 'bg-primary/10 text-ink'
+                : 'text-ink hover:bg-surface-2'
+            )}
+          >
+            <Avatar profile={profile} email={email} size={32} />
+            <span className="truncate">{userLabel(profile, email)}</span>
+          </Link>
           <Link
             href="/dashboard/settings"
             aria-current={pathname === '/dashboard/settings' ? 'page' : undefined}
@@ -214,6 +233,7 @@ interface MoreSheetProps {
 function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
   const ref = useDialog<HTMLDivElement>(onClose)
   const { t } = useI18n()
+  const { profile, email } = useProfile()
 
   return (
     <div
@@ -225,6 +245,17 @@ function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
       className="absolute bottom-0 inset-x-0 bg-surface border-t border-line rounded-t-3xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-lg focus:outline-none"
     >
       <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line" />
+
+      {/* Profile header */}
+      <Link
+        href="/dashboard/profile"
+        onClick={onClose}
+        className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Avatar profile={profile} email={email} size={40} />
+        <span className="font-semibold text-ink truncate">{userLabel(profile, email)}</span>
+      </Link>
+
       <div className="space-y-1">
         {secondaryNav.map((item) => {
           const isActive = pathname === item.href

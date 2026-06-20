@@ -3,6 +3,7 @@ import { RiskAlertBanner } from "@/components/layout/RiskAlertBanner";
 import { QuickActionHub } from "@/components/dashboard/QuickActionHub";
 import { ToastProvider } from "@/components/ui/Toast";
 import { PreferencesHydrator } from "@/components/PreferencesHydrator";
+import { ProfileProvider } from "@/components/profile/ProfileProvider";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +12,7 @@ export default function DashboardLayout({
 }) {
   return (
     <ToastProvider>
+      <ProfileProvider>
       <PreferencesHydrator />
       <div className="flex flex-col min-h-screen bg-canvas text-ink">
         <RiskAlertBanner />
@@ -25,6 +27,7 @@ export default function DashboardLayout({
         </div>
         <QuickActionHub />
       </div>
+      </ProfileProvider>
     </ToastProvider>
   );
 }

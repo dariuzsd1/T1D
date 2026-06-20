@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
+import Link from 'next/link'
 import { PushToggle } from '@/components/PushToggle'
 import { BackButton } from '@/components/ui/BackButton'
 import { LanguageToggle } from '@/components/ui/LanguageToggle'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/components/profile/ProfileProvider'
+import { Avatar } from '@/components/profile/Avatar'
 import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
   Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
@@ -20,6 +23,7 @@ const BUFFER_PRESETS = [7, 14, 21, 30]
 export default function SettingsPage() {
   const { safetyBufferDays, setSafetyBufferDays } = useStore()
   const { t } = useI18n()
+  const { profile, email } = useProfile()
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
@@ -28,6 +32,19 @@ export default function SettingsPage() {
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('settings.kicker')}</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">{t('settings.title')}</h1>
       </header>
+
+      {/* Profile shortcut */}
+      <Link
+        href="/dashboard/profile"
+        className="flex items-center gap-4 bg-surface border border-line rounded-3xl p-5 shadow-sm hover:border-primary/40 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Avatar profile={profile} email={email} size={48} />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-ink truncate">{userLabel(profile, email)}</p>
+          <p className="text-sm text-muted truncate">{email ?? ''}</p>
+        </div>
+        <span className="text-sm font-semibold text-primary">{t('nav.profile')}</span>
+      </Link>
 
       {/* Account — always first */}
       <AccountSection />
