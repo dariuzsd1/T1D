@@ -471,6 +471,15 @@ create table if not exists public.profiles (
   updated_at   timestamptz not null default now()
 );
 
+-- Personalization fields (account-personalization feature). Identity + prefs
+-- only — clinical details live in medical_profiles / medical_devices, never here.
+alter table public.profiles add column if not exists avatar_path    text;
+alter table public.profiles add column if not exists preferred_name text;
+alter table public.profiles add column if not exists pronouns       text;
+alter table public.profiles add column if not exists timezone       text;
+alter table public.profiles add column if not exists theme          text default 'system';
+alter table public.profiles add column if not exists locale         text;
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "own profile" on public.profiles;
@@ -504,6 +513,44 @@ create trigger on_auth_user_created
 insert into public.profiles (id)
 select id from auth.users
 on conflict (id) do nothing;
+
+
+-- ============================================================================
+-- 12. AVATARS  (profile pictures — NOT PHI). A public Storage bucket so the
+--     image can be shown without a signed URL; writes are restricted to the
+--     owner's own folder (avatars/<user_id>/...). Created here in SQL so there
+--     is no manual dashboard step (Storage is enabled by default).
+-- ============================================================================
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+-- Public read of avatars (they contain no PHI).
+drop policy if exists "avatar public read" on storage.objects;
+create policy "avatar public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+-- A user may write only within their own top-level folder: avatars/<uid>/...
+drop policy if exists "avatar owner insert" on storage.objects;
+create policy "avatar owner insert" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatar owner update" on storage.objects;
+create policy "avatar owner update" on storage.objects
+  for update using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatar owner delete" on storage.objects;
+create policy "avatar owner delete" on storage.objects
+  for delete using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 
 -- ============================================================================
