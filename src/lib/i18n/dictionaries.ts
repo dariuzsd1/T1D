@@ -2,8 +2,9 @@
  * UI string dictionaries for the in-app language toggle.
  *
  * `en` is the source of truth; `fr` must cover exactly the same keys (enforced by
- * the `Record<TKey, string>` type below). French is written for *meaning*, not
- * word-for-word — idiomatic phrasing a native speaker would use.
+ * the `Record<TKey, string>` type below). French is written for meaning, not
+ * word-for-word: idiomatic phrasing a native speaker would use. House rules for
+ * the French copy: no serial (Oxford) comma, and no em-dashes anywhere.
  *
  * Interpolation: use `{name}` placeholders, filled by `t(key, { name })`.
  * Counts that change wording use explicit `…One` / `…Other` key pairs.
@@ -16,7 +17,7 @@ export const en = {
   'common.cancel': 'Cancel',
   'common.back': 'Back',
   'common.email': 'Email',
-  'common.reload': "I've run it — reload",
+  'common.reload': "I've run it, reload",
 
   // ── nav ──
   'nav.home': 'Home',
@@ -42,31 +43,31 @@ export const en = {
   'landing.badge': 'Daily safety support for type 1 diabetes',
   'landing.heroTitle': 'Never run out of diabetes supplies again.',
   'landing.heroSub':
-    'T1D Hub tracks your pods, sensors, reservoirs, and insulin — and tells you when to reorder, before you run low. Built for families living with type 1 diabetes.',
+    'T1D Hub tracks your pods, sensors, reservoirs, and insulin, then tells you when to reorder, before you run low. Built for families living with type 1 diabetes.',
   'landing.getStarted': 'Get started',
   'landing.twoWays': 'Two ways to use T1D Hub',
   'landing.patientTitle': 'I manage my own supplies',
   'landing.patientBody':
-    'Track your pods, sensors, reservoirs and insulin, and know exactly when to reorder — before you run low.',
+    'Track your pods, sensors, reservoirs and insulin, and know exactly when to reorder, before you run low.',
   'landing.caregiverTitle': 'I care for someone with diabetes',
   'landing.caregiverBody':
-    "Keep a calm eye on a loved one's supplies, and help them reorder before they run low — with the access they choose to give you.",
+    "Keep a calm eye on a loved one's supplies, and help them reorder before they run low, with the access they choose to give you.",
   'landing.whatYouGet': 'What you get',
   'landing.feat1Title': 'Proactive reorder timing',
   'landing.feat1Body':
-    'See exactly when to reorder each supply — measured against your safety buffer and insurance refill window, not just when you hit zero.',
+    'See exactly when to reorder each supply, measured against your safety buffer and insurance refill window, not just when you hit zero.',
   'landing.feat2Title': 'Site rotation tracking',
   'landing.feat2Body':
     'Log infusion and injection sites on a body map so you rotate properly and give each spot time to rest.',
   'landing.feat3Title': 'Caregiver sharing',
   'landing.feat3Body':
-    'Invite a parent or partner to view — and optionally help manage — supplies, so no one runs low unnoticed.',
+    'Invite a parent or partner to view (and optionally help manage) your supplies, so no one runs low unnoticed.',
   'landing.feat4Title': 'Emergency medical ID',
   'landing.feat4Body':
     'An opt-in, read-only card a first responder can view on a locked phone, without logging in.',
   'landing.reassureTitle': 'Honest numbers, never guesses',
   'landing.reassureBody':
-    "Every count and date comes from data you enter or scan. When something isn't known, the app says so — it never fabricates a supply level or an expiration.",
+    "Every count and date comes from data you enter or scan. When something isn't known, the app says so. It never fabricates a supply level or an expiration date.",
   'landing.footerDisclaimer': 'Not a medical device. Does not provide glucose or dosing advice.',
 
   // ── login ──
@@ -85,7 +86,7 @@ export const en = {
   'login.confirmPlaceholder': 'Repeat your password',
   'login.min8': 'At least 8 characters.',
   'login.createBtn': 'Create account',
-  'login.magicIntro': "We'll email you a one-time sign-in link — no password needed.",
+  'login.magicIntro': "We'll email you a one-time sign-in link. No password needed.",
   'login.sendMagic': 'Send magic link',
   'login.forgotIntro': "Enter your email and we'll send a link to reset your password.",
   'login.sendReset': 'Send reset link',
@@ -101,7 +102,7 @@ export const en = {
   'login.createdConfirm':
     'Account created! Check your inbox and click the confirmation link to finish signing in.',
   'login.magicSent': 'Magic link sent! Check your inbox.',
-  'login.resetSent': 'Password reset link sent! Check your inbox — the link expires in 1 hour.',
+  'login.resetSent': 'Password reset link sent! Check your inbox. The link expires in 1 hour.',
 
   // ── reset password ──
   'reset.title': 'Set a new password',
@@ -115,7 +116,7 @@ export const en = {
   'home.errTitle': "Couldn't load your supplies",
   'home.emptyTitle': "Let's get you set up",
   'home.emptyBody':
-    "Add your first supply — a sensor, pod, reservoir, or vial — and we'll track how long it lasts and tell you when to reorder.",
+    "Add your first supply (a sensor, pod, reservoir, or vial) and we'll track how long it lasts and tell you when to reorder.",
   'home.addFirst': 'Add your first supply',
   'home.allSet': "You're all set",
   'home.needAttentionOne': '{count} supply needs attention',
@@ -145,7 +146,7 @@ export const en = {
   'reorder.kicker': 'Reorder',
   'reorder.title': 'What to reorder',
   'reorder.intro':
-    "Only the supplies that would dip below your {buffer}-day reserve. Each button opens the supplier's reorder page — we never place an order for you.",
+    "Only the supplies that would dip below your {buffer}-day reserve. Each button opens the supplier's reorder page. We never place an order for you.",
   'reorder.nothingTitle': 'Nothing to reorder',
   'reorder.nothingBody':
     'Everything you track is comfortably above your reserve. Check back when something runs low.',
@@ -178,7 +179,7 @@ export const en = {
   'profile.timezoneDetect': 'Use my current time zone',
   'profile.saved': 'Profile saved.',
   'profile.medicalCardTitle': 'Diagnosis & emergency info',
-  'profile.medicalCardBody': 'Blood type, allergies, and contacts — for your emergency card.',
+  'profile.medicalCardBody': 'Blood type, allergies, and contacts, for your emergency card.',
   'profile.devicesCardTitle': 'Pump & CGM',
   'profile.devicesCardBody': 'The devices your supplies belong to.',
   'profile.manage': 'Manage',
@@ -201,12 +202,12 @@ export const en = {
   'settings.signOut': 'Sign out',
   'settings.bufferTitle': 'Safety buffer',
   'settings.bufferBody':
-    "Flag a supply as “reorder soon” while you still have this many days of reserve left — so you're never racing to zero.",
+    "Flag a supply as “reorder soon” while you still have this many days of reserve left, so you're never racing to zero.",
   'settings.daysReserve': 'days of reserve',
   'settings.daysUnit': 'days',
   'settings.pushTitle': 'Push notifications',
   'settings.pushBody':
-    'The most useful alerts reach you when the app is closed (“Refill-eligible Thursday — tap to reorder”).',
+    'The most useful alerts reach you when the app is closed (“Refill-eligible Thursday: tap to reorder”).',
   'settings.suppliersTitle': 'Supplier shortcuts',
   'settings.suppliersBody': 'Jump to a distributor to place or check on an order.',
 
@@ -214,7 +215,7 @@ export const en = {
   'account.changeEmail': 'Change email',
   'account.newEmail': 'New email address',
   'account.sendEmailChange': 'Send confirmation',
-  'account.emailChangeSent': 'Confirmation sent — check BOTH your old and new inboxes to finish.',
+  'account.emailChangeSent': 'Confirmation sent. Check BOTH your old and new inboxes to finish.',
   'account.exportTitle': 'Export my data',
   'account.exportBody': 'Download everything in your account as a single JSON file.',
   'account.exportBtn': 'Download my data',
@@ -222,7 +223,7 @@ export const en = {
   'account.exportErr': "Couldn't export your data. Please try again.",
   'account.dangerTitle': 'Delete account',
   'account.dangerBody':
-    'Permanently delete your account and all your data — supplies, prescriptions, medical ID, sharing, everything. This cannot be undone.',
+    'Permanently delete your account and all your data: supplies, prescriptions, medical ID, sharing, everything. This cannot be undone.',
   'account.deleteBtn': 'Delete my account',
   'account.deleteConfirmTitle': 'Delete your account?',
   'account.deleteConfirmBody':
@@ -234,7 +235,7 @@ export const en = {
 
   // ── activity feed (Phase E) ──
   'activity.title': 'Recent activity',
-  'activity.empty': 'Nothing yet — your recent actions will show up here.',
+  'activity.empty': 'Nothing yet. Your recent actions will show up here.',
   'activity.supplyAdded': 'Added {detail}',
   'activity.supplyUsed': 'Used one {detail}',
   'activity.supplyRestocked': 'Restocked {detail}',
@@ -242,14 +243,14 @@ export const en = {
   // ── analytics consent (Phase E) ──
   'analytics.title': 'Help improve the app',
   'analytics.body':
-    'Share anonymous usage (which screens you open) to help improve T1D Hub. No health data, supply names, or personal info is ever included. Off by default — change anytime.',
+    'Share anonymous usage (which screens you open) to help improve T1D Hub. No health data, supply names, or personal info is ever included. Off by default. Change anytime.',
   'analytics.on': 'On',
   'analytics.off': 'Off',
 
   // ── parent safety view ──
   'safetyview.kicker': 'Parent safety view',
   'safetyview.caringFor': 'Caring for {name}',
-  'safetyview.subtitle': "The current state, the next step, and who's responding — at a glance.",
+  'safetyview.subtitle': "The current state, the next step, and who's responding, at a glance.",
   'safetyview.currentState': 'Current safety state',
   'safetyview.badgeGood': 'Good',
   'safetyview.badgeWatch': 'Watch',
@@ -260,12 +261,12 @@ export const en = {
   'safetyview.headlineActOne': '{name} is out of 1 supply.',
   'safetyview.headlineActOther': '{name} is out of {count} supplies.',
   'safetyview.supportGood': 'Nothing needs your attention right now. Check back anytime.',
-  'safetyview.supportWatch': 'No emergency — but reorder soon to stay ahead.',
+  'safetyview.supportWatch': 'No emergency, but reorder soon to stay ahead.',
   'safetyview.supportAct': "Reorder now so they don't go without.",
   'safetyview.quickRead': 'Quick read',
   'safetyview.quickReadGood': 'Supplies are well stocked and on track.',
   'safetyview.quickReadWatch': 'Stable for now, but this needs watching.',
-  'safetyview.quickReadAct': 'A supply has run out — act to keep them covered.',
+  'safetyview.quickReadAct': 'A supply has run out. Act to keep them covered.',
   'safetyview.tracked': 'Tracked',
   'safetyview.reorderSoon': 'Reorder soon',
   'safetyview.out': 'Out',
@@ -276,7 +277,7 @@ export const en = {
   'safetyview.monitoringTitle': 'Live monitoring',
   'safetyview.monitoringNotConnected': 'Not connected',
   'safetyview.monitoringBody':
-    "Live glucose / CGM monitoring isn't connected. This view tracks supplies and reorder timing — it doesn't show glucose.",
+    "Live glucose / CGM monitoring isn't connected. This view tracks supplies and reorder timing. It doesn't show glucose.",
   'safetyview.suppliesTitle': 'Supplies',
   'safetyview.viewOnly': 'View only',
   'safetyview.manageRole': 'View & manage',
@@ -293,7 +294,7 @@ export const fr: Record<TKey, string> = {
   'common.cancel': 'Annuler',
   'common.back': 'Retour',
   'common.email': 'E-mail',
-  'common.reload': "C'est fait — actualiser",
+  'common.reload': "C'est fait, actualiser",
 
   // ── nav ──
   'nav.home': 'Accueil',
@@ -319,31 +320,31 @@ export const fr: Record<TKey, string> = {
   'landing.badge': 'Un soutien quotidien pour le diabète de type 1',
   'landing.heroTitle': 'Ne manquez plus jamais de fournitures pour le diabète.',
   'landing.heroSub':
-    "T1D Hub suit vos pods, capteurs, réservoirs et votre insuline, et vous indique quand recommander, avant que vous ne soyez à court. Conçu pour les familles qui vivent avec le diabète de type 1.",
+    "T1D Hub suit vos pods, capteurs, réservoirs et votre insuline, puis vous indique quand recommander, avant que vous ne soyez à court. Conçu pour les familles qui vivent avec le diabète de type 1.",
   'landing.getStarted': 'Commencer',
   'landing.twoWays': 'Deux façons d’utiliser T1D Hub',
   'landing.patientTitle': 'Je gère mes propres fournitures',
   'landing.patientBody':
-    "Suivez vos pods, capteurs, réservoirs et votre insuline, et sachez exactement quand recommander — avant d’être à court.",
+    "Suivez vos pods, capteurs, réservoirs et votre insuline, et sachez exactement quand recommander, avant d’être à court.",
   'landing.caregiverTitle': 'J’accompagne une personne diabétique',
   'landing.caregiverBody':
-    "Gardez un œil serein sur les fournitures d’un proche et aidez-le à recommander avant qu’il ne soit à court — avec l’accès qu’il choisit de vous accorder.",
+    "Gardez un œil serein sur les fournitures d’un proche et aidez-le à recommander avant qu’il ne soit à court, avec l’accès qu’il choisit de vous accorder.",
   'landing.whatYouGet': 'Ce que vous obtenez',
   'landing.feat1Title': 'Le bon moment pour recommander',
   'landing.feat1Body':
-    "Sachez exactement quand recommander chaque fourniture — calculé selon votre marge de sécurité et votre fenêtre de renouvellement d’assurance, pas seulement une fois à zéro.",
+    "Sachez exactement quand recommander chaque fourniture, en fonction de votre marge de sécurité et de votre fenêtre de renouvellement d’assurance, pas seulement une fois à zéro.",
   'landing.feat2Title': 'Suivi de la rotation des sites',
   'landing.feat2Body':
     "Notez vos sites de perfusion et d’injection sur une carte du corps pour bien alterner et laisser chaque zone se reposer.",
   'landing.feat3Title': 'Partage avec les proches',
   'landing.feat3Body':
-    "Invitez un parent ou un partenaire à consulter — et, si vous le souhaitez, à aider à gérer — les fournitures, pour que personne ne se retrouve à court sans le savoir.",
+    "Invitez un parent ou un partenaire à consulter vos fournitures (et, si vous le souhaitez, à aider à les gérer), pour que personne ne se retrouve à court sans le savoir.",
   'landing.feat4Title': 'Fiche médicale d’urgence',
   'landing.feat4Body':
     "Une fiche facultative, en lecture seule, qu’un secouriste peut consulter sur un téléphone verrouillé, sans connexion.",
   'landing.reassureTitle': 'Des chiffres honnêtes, jamais d’approximations',
   'landing.reassureBody':
-    "Chaque quantité et chaque date provient des données que vous saisissez ou scannez. Quand une information est inconnue, l’application le dit — elle n’invente jamais un niveau de stock ou une date de péremption.",
+    "Chaque quantité et chaque date provient des données que vous saisissez ou scannez. Quand une information est inconnue, l’application le dit. Elle n’invente jamais un niveau de stock ni une date de péremption.",
   'landing.footerDisclaimer':
     "Ce n’est pas un dispositif médical. N’offre aucun conseil de glycémie ni de dosage.",
 
@@ -363,7 +364,7 @@ export const fr: Record<TKey, string> = {
   'login.confirmPlaceholder': 'Répétez votre mot de passe',
   'login.min8': 'Au moins 8 caractères.',
   'login.createBtn': 'Créer un compte',
-  'login.magicIntro': 'Nous vous enverrons un lien de connexion à usage unique — aucun mot de passe requis.',
+  'login.magicIntro': 'Nous vous enverrons un lien de connexion à usage unique. Aucun mot de passe requis.',
   'login.sendMagic': 'Envoyer le lien magique',
   'login.forgotIntro':
     'Saisissez votre e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.',
@@ -381,7 +382,7 @@ export const fr: Record<TKey, string> = {
     'Compte créé ! Consultez votre boîte de réception et cliquez sur le lien de confirmation pour terminer la connexion.',
   'login.magicSent': 'Lien magique envoyé ! Consultez votre boîte de réception.',
   'login.resetSent':
-    'Lien de réinitialisation envoyé ! Consultez votre boîte de réception — le lien expire dans 1 heure.',
+    'Lien de réinitialisation envoyé ! Consultez votre boîte de réception. Le lien expire dans 1 heure.',
 
   // ── reset password ──
   'reset.title': 'Définir un nouveau mot de passe',
@@ -395,7 +396,7 @@ export const fr: Record<TKey, string> = {
   'home.errTitle': 'Impossible de charger vos fournitures',
   'home.emptyTitle': 'Commençons la configuration',
   'home.emptyBody':
-    "Ajoutez votre première fourniture — un capteur, un pod, un réservoir ou un flacon — et nous suivrons sa durée et vous indiquerons quand recommander.",
+    "Ajoutez votre première fourniture (un capteur, un pod, un réservoir ou un flacon) et nous suivrons sa durée et vous indiquerons quand recommander.",
   'home.addFirst': 'Ajouter ma première fourniture',
   'home.allSet': 'Tout est en ordre',
   'home.needAttentionOne': '{count} fourniture nécessite votre attention',
@@ -425,7 +426,7 @@ export const fr: Record<TKey, string> = {
   'reorder.kicker': 'Recommander',
   'reorder.title': 'À recommander',
   'reorder.intro':
-    "Seules les fournitures qui passeraient sous votre réserve de {buffer} jours. Chaque bouton ouvre la page de commande du fournisseur — nous ne passons jamais de commande à votre place.",
+    "Seules les fournitures qui passeraient sous votre réserve de {buffer} jours. Chaque bouton ouvre la page de commande du fournisseur. Nous ne passons jamais de commande à votre place.",
   'reorder.nothingTitle': 'Rien à recommander',
   'reorder.nothingBody':
     'Tout ce que vous suivez est confortablement au-dessus de votre réserve. Revenez quand quelque chose vient à manquer.',
@@ -442,7 +443,7 @@ export const fr: Record<TKey, string> = {
   'profile.kicker': 'Compte',
   'profile.title': 'Mon profil',
   'profile.intro':
-    "Votre nom, votre photo et vos informations personnelles. Les détails médicaux et des appareils se trouvent dans leurs propres sections.",
+    "Votre nom, votre photo et vos informations personnelles. Les détails médicaux et ceux des appareils se trouvent dans leurs propres sections.",
   'profile.picture': 'Photo de profil',
   'profile.changePhoto': 'Changer la photo',
   'profile.removePhoto': 'Supprimer',
@@ -459,7 +460,7 @@ export const fr: Record<TKey, string> = {
   'profile.timezoneDetect': 'Utiliser mon fuseau horaire actuel',
   'profile.saved': 'Profil enregistré.',
   'profile.medicalCardTitle': "Diagnostic et infos d’urgence",
-  'profile.medicalCardBody': "Groupe sanguin, allergies et contacts — pour votre fiche d’urgence.",
+  'profile.medicalCardBody': "Groupe sanguin, allergies et contacts, pour votre fiche d’urgence.",
   'profile.devicesCardTitle': 'Pompe et CGM',
   'profile.devicesCardBody': 'Les appareils auxquels vos fournitures sont rattachées.',
   'profile.manage': 'Gérer',
@@ -482,12 +483,12 @@ export const fr: Record<TKey, string> = {
   'settings.signOut': 'Se déconnecter',
   'settings.bufferTitle': 'Marge de sécurité',
   'settings.bufferBody':
-    "Signalez une fourniture comme « à recommander bientôt » tant qu’il vous reste ce nombre de jours de réserve — pour ne jamais courir jusqu’à zéro.",
+    "Signalez une fourniture comme « à recommander bientôt » tant qu’il vous reste ce nombre de jours de réserve, pour ne jamais courir jusqu’à zéro.",
   'settings.daysReserve': 'jours de réserve',
   'settings.daysUnit': 'jours',
   'settings.pushTitle': 'Notifications push',
   'settings.pushBody':
-    "Les alertes les plus utiles vous parviennent même lorsque l’application est fermée (« Renouvellement possible jeudi — appuyez pour recommander »).",
+    "Les alertes les plus utiles vous parviennent même lorsque l’application est fermée (« Renouvellement possible jeudi : appuyez pour recommander »).",
   'settings.suppliersTitle': 'Raccourcis fournisseurs',
   'settings.suppliersBody': 'Accédez à un distributeur pour passer ou suivre une commande.',
 
@@ -496,7 +497,7 @@ export const fr: Record<TKey, string> = {
   'account.newEmail': 'Nouvelle adresse e-mail',
   'account.sendEmailChange': 'Envoyer la confirmation',
   'account.emailChangeSent':
-    "Confirmation envoyée — vérifiez vos DEUX boîtes (ancienne et nouvelle) pour terminer.",
+    "Confirmation envoyée. Vérifiez vos DEUX boîtes (ancienne et nouvelle) pour terminer.",
   'account.exportTitle': 'Exporter mes données',
   'account.exportBody': "Téléchargez tout le contenu de votre compte dans un seul fichier JSON.",
   'account.exportBtn': 'Télécharger mes données',
@@ -504,7 +505,7 @@ export const fr: Record<TKey, string> = {
   'account.exportErr': "Impossible d’exporter vos données. Veuillez réessayer.",
   'account.dangerTitle': 'Supprimer le compte',
   'account.dangerBody':
-    "Supprimez définitivement votre compte et toutes vos données — fournitures, ordonnances, fiche médicale, partages, tout. Cette action est irréversible.",
+    "Supprimez définitivement votre compte et toutes vos données : fournitures, ordonnances, fiche médicale, partages, tout. Cette action est irréversible.",
   'account.deleteBtn': 'Supprimer mon compte',
   'account.deleteConfirmTitle': 'Supprimer votre compte ?',
   'account.deleteConfirmBody':
@@ -516,7 +517,7 @@ export const fr: Record<TKey, string> = {
 
   // ── activity feed (Phase E) ──
   'activity.title': 'Activité récente',
-  'activity.empty': "Rien pour l’instant — vos actions récentes apparaîtront ici.",
+  'activity.empty': "Rien pour l’instant. Vos actions récentes apparaîtront ici.",
   'activity.supplyAdded': 'Ajout de {detail}',
   'activity.supplyUsed': "Utilisation d’un(e) {detail}",
   'activity.supplyRestocked': 'Réapprovisionnement de {detail}',
@@ -524,14 +525,14 @@ export const fr: Record<TKey, string> = {
   // ── analytics consent (Phase E) ──
   'analytics.title': "Aider à améliorer l’application",
   'analytics.body':
-    "Partagez des statistiques d’usage anonymes (les écrans que vous ouvrez) pour aider à améliorer T1D Hub. Aucune donnée de santé, nom de fourniture ou information personnelle n’est jamais inclus. Désactivé par défaut — modifiable à tout moment.",
+    "Partagez des statistiques d’usage anonymes (les écrans que vous ouvrez) pour aider à améliorer T1D Hub. Aucune donnée de santé, aucun nom de fourniture ni aucune information personnelle ne sont jamais inclus. Désactivé par défaut. Modifiable à tout moment.",
   'analytics.on': 'Activé',
   'analytics.off': 'Désactivé',
 
   // ── parent safety view ──
   'safetyview.kicker': 'Vue de sécurité parent',
   'safetyview.caringFor': 'Vous accompagnez {name}',
-  'safetyview.subtitle': "L’état actuel, la prochaine étape et qui intervient — en un coup d’œil.",
+  'safetyview.subtitle': "L’état actuel, la prochaine étape et qui intervient, en un coup d’œil.",
   'safetyview.currentState': 'État de sécurité actuel',
   'safetyview.badgeGood': 'Bon',
   'safetyview.badgeWatch': 'À surveiller',
@@ -539,15 +540,15 @@ export const fr: Record<TKey, string> = {
   'safetyview.headlineGood': 'Tout est couvert.',
   'safetyview.headlineWatchOne': '{name} a 1 fourniture à recommander bientôt.',
   'safetyview.headlineWatchOther': '{name} a {count} fournitures à recommander bientôt.',
-  'safetyview.headlineActOne': "{name} est à court d’1 fourniture.",
+  'safetyview.headlineActOne': "{name} est à court d’une fourniture.",
   'safetyview.headlineActOther': '{name} est à court de {count} fournitures.',
   'safetyview.supportGood': "Rien ne nécessite votre attention pour le moment. Revenez quand vous voulez.",
-  'safetyview.supportWatch': "Pas d’urgence — mais recommandez bientôt pour garder une longueur d’avance.",
+  'safetyview.supportWatch': "Pas d’urgence, mais recommandez bientôt pour garder une longueur d’avance.",
   'safetyview.supportAct': "Recommandez maintenant pour qu’il ou elle ne soit pas à court.",
   'safetyview.quickRead': 'Lecture rapide',
   'safetyview.quickReadGood': 'Les fournitures sont bien approvisionnées et sous contrôle.',
   'safetyview.quickReadWatch': "Stable pour l’instant, mais cela demande de la vigilance.",
-  'safetyview.quickReadAct': "Une fourniture est épuisée — agissez pour assurer la couverture.",
+  'safetyview.quickReadAct': "Une fourniture est épuisée. Agissez pour maintenir la couverture.",
   'safetyview.tracked': 'Suivies',
   'safetyview.reorderSoon': 'À recommander',
   'safetyview.out': 'En rupture',
@@ -558,7 +559,7 @@ export const fr: Record<TKey, string> = {
   'safetyview.monitoringTitle': 'Surveillance en direct',
   'safetyview.monitoringNotConnected': 'Non connecté',
   'safetyview.monitoringBody':
-    "La surveillance de la glycémie / CGM en direct n’est pas connectée. Cette vue suit les fournitures et le moment de recommander — elle n’affiche pas la glycémie.",
+    "La surveillance de la glycémie / CGM en direct n’est pas connectée. Cette vue suit les fournitures et le moment de recommander. Elle n’affiche pas la glycémie.",
   'safetyview.suppliesTitle': 'Fournitures',
   'safetyview.viewOnly': 'Lecture seule',
   'safetyview.manageRole': 'Voir et gérer',
