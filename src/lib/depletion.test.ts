@@ -3,6 +3,8 @@ import {
   DEFAULT_SAFETY_BUFFER_DAYS,
   DEFAULT_USAGE_RATE_PER_DAY,
   isRateEstimated,
+  rateFromDaysPerUnit,
+  daysPerUnitFromRate,
   daysOfStock,
   daysUntilExpiration,
   effectiveRunwayDays,
@@ -31,6 +33,30 @@ describe('isRateEstimated', () => {
   it('treats a positive rate as known (not estimated)', () => {
     expect(isRateEstimated(0.5)).toBe(false)
     expect(isRateEstimated(3)).toBe(false)
+  })
+})
+
+describe('rateFromDaysPerUnit / daysPerUnitFromRate', () => {
+  it('converts "each one lasts N days" to a daily rate', () => {
+    expect(rateFromDaysPerUnit(7)).toBeCloseTo(1 / 7) // a 7-day sensor
+    expect(rateFromDaysPerUnit(3)).toBeCloseTo(1 / 3) // a 3-day pod
+    expect(rateFromDaysPerUnit(0)).toBe(0) // blank → unknown
+    expect(rateFromDaysPerUnit(-2)).toBe(0)
+  })
+  it('round-trips a wear duration back to whole days', () => {
+    expect(daysPerUnitFromRate(rateFromDaysPerUnit(7))).toBe(7)
+    expect(daysPerUnitFromRate(0.1)).toBe(10)
+  })
+  it('returns null when "days per unit" is not meaningful', () => {
+    expect(daysPerUnitFromRate(0)).toBeNull()
+    expect(daysPerUnitFromRate(null)).toBeNull()
+    expect(daysPerUnitFromRate(5)).toBeNull() // consumption item, 5/day
+  })
+  it('fixes the box-of-5-sensors case end-to-end', () => {
+    // 5 Guardian 4 sensors, each worn 7 days, should read ~35 days — NOT the
+    // 1-unit/day fallback's 5.
+    const rate = rateFromDaysPerUnit(7)
+    expect(daysOfStock(5, rate)).toBe(35)
   })
 })
 

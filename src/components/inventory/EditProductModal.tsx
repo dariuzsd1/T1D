@@ -7,6 +7,7 @@ import { Product } from '@/lib/store'
 import { useDialog } from '@/lib/useDialog'
 import { createClient } from '@/lib/supabase/client'
 import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
+import { rateFromDaysPerUnit, daysPerUnitFromRate } from '@/lib/depletion'
 
 interface EditProductModalProps {
   product: Product
@@ -24,8 +25,20 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [expirationDate, setExpirationDate] = useState(
     product.expirationDate ? product.expirationDate.slice(0, 10) : ''
   )
-  const [usageRate, setUsageRate] = useState<string>(
-    product.usageRatePerDay > 0 ? String(product.usageRatePerDay) : ''
+  // Usage is captured two intuitive ways. "wear" = "each one lasts N days"
+  // (sensors/pods/sets — the common case); "rate" = "I use N per day"
+  // (consumption items like test strips). Both resolve to the single internal
+  // usageRatePerDay. Infer the starting mode from the stored rate: a rate of
+  // 1/day or less means a unit lasts at least a day → a wear item.
+  const initialDaysPerUnit = daysPerUnitFromRate(product.usageRatePerDay)
+  const [trackMode, setTrackMode] = useState<'wear' | 'rate'>(
+    product.usageRatePerDay > 1 ? 'rate' : 'wear'
+  )
+  const [perUnitDays, setPerUnitDays] = useState<string>(
+    initialDaysPerUnit != null ? String(initialDaysPerUnit) : ''
+  )
+  const [perDay, setPerDay] = useState<string>(
+    product.usageRatePerDay > 1 ? String(product.usageRatePerDay) : ''
   )
   const [refillIntervalDays, setRefillIntervalDays] = useState<string>(
     product.refillIntervalDays != null ? String(product.refillIntervalDays) : ''
@@ -59,13 +72,20 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
       })
   }, [])
 
+  // Resolve the active mode to the single internal rate. 0 = "not set" → estimate.
+  const resolvedRate =
+    trackMode === 'wear'
+      ? rateFromDaysPerUnit(parseFloat(perUnitDays) || 0)
+      : parseFloat(perDay) > 0
+        ? parseFloat(perDay)
+        : 0
+
   const handleSave = async () => {
     setSaving(true)
     try {
       await onUpdate(product.id, {
         quantity,
-        // 0 = "not set" → the runway falls back to a labelled estimate.
-        usageRatePerDay: usageRate ? parseFloat(usageRate) : 0,
+        usageRatePerDay: resolvedRate,
         // Persist null when cleared so it actually removes the date.
         expirationDate: expirationDate || null,
         refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
@@ -121,21 +141,63 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             />
           </div>
           <div>
-            <label htmlFor="edit-usage" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Daily usage (optional)</label>
-            <input
-              id="edit-usage"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="e.g. 0.33 for one pod every 3 days"
-              value={usageRate}
-              onChange={(e) => setUsageRate(e.target.value)}
-              className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
-            />
+            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Usage (optional)</label>
+            {/* Two intuitive ways to express the same thing. "Each one lasts" suits
+                worn items (sensors/pods/sets); "I use per day" suits consumables. */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 border border-line rounded-xl mb-3">
+              <button
+                type="button"
+                onClick={() => setTrackMode('wear')}
+                className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'wear' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+              >
+                Each one lasts
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackMode('rate')}
+                className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'rate' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+              >
+                I use per day
+              </button>
+            </div>
+
+            {trackMode === 'wear' ? (
+              <div className="relative">
+                <input
+                  id="edit-usage-days"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="e.g. 7 for a sensor, 3 for a pod"
+                  value={perUnitDays}
+                  onChange={(e) => setPerUnitDays(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3.5 pr-14 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">days</span>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  id="edit-usage-rate"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  inputMode="decimal"
+                  placeholder="e.g. 5 test strips a day"
+                  value={perDay}
+                  onChange={(e) => setPerDay(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3.5 pr-16 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">/ day</span>
+              </div>
+            )}
             <p className="text-xs text-faint mt-1.5">
-              {usageRate && parseFloat(usageRate) > 0
-                ? `Makes "days remaining" exact — about ${Math.floor(quantity / parseFloat(usageRate))} days at this rate.`
-                : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
+              {resolvedRate > 0
+                ? `Makes "days remaining" exact — about ${Math.floor(quantity / resolvedRate)} days at this rate.`
+                : trackMode === 'wear'
+                  ? 'Days you wear or use one before replacing it. Until set, days remaining is a rough estimate.'
+                  : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
             </p>
           </div>
           <div>
@@ -175,7 +237,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             <p className="text-xs text-faint mb-3">Lets the app tell you when insurance allows a refill.</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="edit-refill-interval" className="block text-[11px] font-medium text-muted mb-1.5">Supply length (days)</label>
+                <label htmlFor="edit-refill-interval" className="block text-[11px] font-medium text-muted mb-1.5">Days between refills</label>
                 <input
                   id="edit-refill-interval"
                   type="number"

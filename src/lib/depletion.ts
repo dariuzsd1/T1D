@@ -35,6 +35,26 @@ export function isRateEstimated(usageRatePerDay?: number | null): boolean {
   return !(typeof usageRatePerDay === 'number' && usageRatePerDay > 0)
 }
 
+/**
+ * Convert "how long one unit lasts" (the intuitive way people think about a
+ * sensor/pod/set: "each one lasts 7 days") into the internal daily usage rate.
+ * 7 days/unit → 1/7 ≈ 0.143 units/day. Zero/blank means "unknown" (rate 0).
+ */
+export function rateFromDaysPerUnit(daysPerUnit: number): number {
+  return daysPerUnit > 0 ? 1 / daysPerUnit : 0
+}
+
+/**
+ * The inverse: express a daily usage rate as "days each unit lasts", rounded to
+ * whole days. Returns null when the rate is unknown or implies sub-day usage
+ * (a consumption item like test strips, where "days per unit" isn't meaningful).
+ */
+export function daysPerUnitFromRate(usageRatePerDay?: number | null): number | null {
+  if (!(typeof usageRatePerDay === 'number' && usageRatePerDay > 0)) return null
+  if (usageRatePerDay > 1) return null // more than one unit/day → not a wear item
+  return Math.round(1 / usageRatePerDay)
+}
+
 /** Days of stock left, derived from units on hand and daily usage. */
 export function daysOfStock(quantity: number, usageRatePerDay: number): number {
   // An unknown/zero rate falls back to the conservative default rather than Infinity.

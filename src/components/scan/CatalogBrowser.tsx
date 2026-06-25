@@ -15,6 +15,9 @@ export interface CatalogItem {
   brand: string | null
   category: string | null
   units_per_box: number | null
+  // Verified per-unit usage rate (e.g. 0.143/day for a 7-day sensor). Present only
+  // for wear-duration items; blank for per-person-consumption items (insulin, strips).
+  typical_usage_per_day: number | null
   default_refill_interval_days: number | null
   gtin: string | null
 }

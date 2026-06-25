@@ -22,10 +22,65 @@ import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
+import { rateFromDaysPerUnit, daysPerUnitFromRate } from '@/lib/depletion'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
 type ScanStep = 'UPLOAD' | 'MANUAL' | 'BARCODE_CONFIRM' | 'CATALOG_CONFIRM'
+
+/** Format a catalog usage rate as a "days each one lasts" field value (or blank). */
+function daysPerUnitFieldFromRate(rate: number | null | undefined): string {
+  const days = daysPerUnitFromRate(rate ?? null)
+  return days != null ? String(days) : ''
+}
+
+/**
+ * The intuitive way to capture usage: "how long does one unit last?" (a sensor
+ * lasts 7 days, a pod 3) rather than a fractional units/day rate. This is what
+ * makes a box of 5 weekly sensors read as ~35 days instead of the 1-unit/day
+ * fallback's 5. Distinct from the insurance "supply length" (refill cadence).
+ */
+function DaysPerUnitField({
+  id,
+  value,
+  onChange,
+  quantity,
+}: {
+  id: string
+  value: string
+  onChange: (v: string) => void
+  quantity: number
+}) {
+  const days = parseFloat(value) || 0
+  const runway = days > 0 ? Math.floor(quantity * days) : 0
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+        How long does each one last?{' '}
+        <span className="text-faint font-normal normal-case tracking-normal">(optional)</span>
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          placeholder="e.g. 7 for a sensor, 3 for a pod"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-surface border border-line rounded-xl p-3.5 pr-14 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+        />
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">days</span>
+      </div>
+      <p className="text-xs text-faint mt-1.5">
+        {days > 0
+          ? `${quantity} on hand should last about ${runway} days at this rate.`
+          : 'Days you wear or use one before replacing it. Leave blank if unsure — days remaining stays an estimate.'}
+      </p>
+    </div>
+  )
+}
 
 export default function ScanPage() {
   const [step, setStep] = useState<ScanStep>('UPLOAD')
@@ -34,6 +89,11 @@ export default function ScanPage() {
   const [quantity, setQuantity] = useState(1)
   const [expirationDate, setExpirationDate] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // How long one unit lasts (a sensor = 7 days, a pod = 3). The intuitive inverse
+  // of the internal usage rate; blank means "not set" → runway stays an estimate.
+  // Carried from the catalog when known, or typed by hand for a manual add.
+  const [daysPerUnit, setDaysPerUnit] = useState('')
 
   // Manual entry (the photo, if any, is only an on-screen reference while you type).
   const [manualName, setManualName] = useState('')
@@ -61,10 +121,10 @@ export default function ScanPage() {
     }
   }
 
-  // Shared insert used by both the manual and barcode paths.
+  // Shared insert used by the manual, catalog, and barcode paths.
   const saveSupply = async (
     fields: { name: string; brand: string },
-    identifiers?: { gtin?: string | null; lot?: string | null }
+    opts?: { gtin?: string | null; lot?: string | null; usageRatePerDay?: number | null }
   ) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.id) {
@@ -91,20 +151,22 @@ export default function ScanPage() {
       return false
     }
 
-    // Best-effort: store scanned identifiers for future GTIN lookup / recall checks.
-    // Optional columns (docs/BARCODE_SCANNING.md) — a miss here must never undo the insert.
-    if (identifiers) {
-      const idPayload: Record<string, unknown> = {}
-      if (identifiers.gtin) idPayload.barcode = identifiers.gtin
-      if (identifiers.lot) idPayload.lot_number = identifiers.lot
-      if (Object.keys(idPayload).length > 0) {
-        const { error: idError } = await supabase
-          .from('supplies')
-          .update(idPayload)
-          .eq('id', data.id)
-        if (idError) {
-          console.warn('Barcode/lot not saved — run docs/BARCODE_SCANNING.md:', idError.message)
-        }
+    // Best-effort optional columns: scanned identifiers (for GTIN lookup / recall
+    // checks) and the per-unit usage rate (so a sensor's 35-day runway is right
+    // from the start, not the 1-unit/day fallback). A miss on these optional
+    // columns must never undo the core insert above (docs/BARCODE_SCANNING.md).
+    const rate = opts?.usageRatePerDay && opts.usageRatePerDay > 0 ? opts.usageRatePerDay : 0
+    const idPayload: Record<string, unknown> = {}
+    if (opts?.gtin) idPayload.barcode = opts.gtin
+    if (opts?.lot) idPayload.lot_number = opts.lot
+    if (rate > 0) idPayload.usage_rate_per_day = rate
+    if (Object.keys(idPayload).length > 0) {
+      const { error: idError } = await supabase
+        .from('supplies')
+        .update(idPayload)
+        .eq('id', data.id)
+      if (idError) {
+        console.warn('Optional fields not saved — run supabase/setup.sql:', idError.message)
       }
     }
 
@@ -116,7 +178,7 @@ export default function ScanPage() {
       quantity: data.quantity,
       remainingDays: 30, // Recomputed honestly by the store's withRunway()
       lastScanned: new Date().toISOString().split('T')[0],
-      usageRatePerDay: 0, // Unknown until the user sets it → shown as an estimate.
+      usageRatePerDay: rate, // Real catalog/typed rate, or 0 → shown as an estimate.
       expirationDate: data.expiration_date || null,
     })
     void logActivity('supply_added', data.name)
@@ -130,6 +192,9 @@ export default function ScanPage() {
     setBcBrand(item.brand ?? '')
     setCatalogCategory(item.category ?? null)
     setQuantity(item.units_per_box ?? 1)
+    // Prefill "days each one lasts" from the catalog's verified wear rate when it
+    // has one (sensors/pods/sets); leave blank for per-person items (insulin/strips).
+    setDaysPerUnit(daysPerUnitFieldFromRate(item.typical_usage_per_day))
     setExpirationDate('')
     setExpiryFromBarcode(false)
     setCatalogMatch(true)
@@ -146,7 +211,10 @@ export default function ScanPage() {
     setSaving(true)
     setError(null)
     try {
-      const ok = await saveSupply({ name: bcName, brand: bcBrand })
+      const ok = await saveSupply(
+        { name: bcName, brand: bcBrand },
+        { usageRatePerDay: rateFromDaysPerUnit(parseFloat(daysPerUnit) || 0) }
+      )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
       setError(err?.message || 'Failed to save supply')
@@ -162,6 +230,7 @@ export default function ScanPage() {
     setManualName('')
     setManualBrand('')
     setQuantity(1)
+    setDaysPerUnit('')
     setExpirationDate('')
     setStep('MANUAL')
   }
@@ -174,7 +243,10 @@ export default function ScanPage() {
     setSaving(true)
     setError(null)
     try {
-      const ok = await saveSupply({ name: manualName, brand: manualBrand })
+      const ok = await saveSupply(
+        { name: manualName, brand: manualBrand },
+        { usageRatePerDay: rateFromDaysPerUnit(parseFloat(daysPerUnit) || 0) }
+      )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
       setError(err?.message || 'Failed to save supply')
@@ -201,14 +273,15 @@ export default function ScanPage() {
       setExpiryFromBarcode(false)
     }
     setQuantity(1)
+    setDaysPerUnit('')
     setBcName('')
     setBcBrand('')
     setCatalogCategory(null)
     setCatalogMatch(false)
 
-    // Look up the GTIN in the products catalog. Pre-fill name/brand/quantity if
-    // found — every field stays editable. A miss is not an error; fall through
-    // to manual entry.
+    // Look up the GTIN in the products catalog. Pre-fill name/brand/quantity/wear
+    // rate if found — every field stays editable. A miss is not an error; fall
+    // through to manual entry.
     if (parsed.gtin) {
       try {
         const res = await fetch(`/api/scan/lookup?gtin=${encodeURIComponent(parsed.gtin)}`)
@@ -218,6 +291,7 @@ export default function ScanPage() {
             setBcName(product.product_name)
             if (product.brand) setBcBrand(product.brand)
             if (product.units_per_box) setQuantity(product.units_per_box)
+            setDaysPerUnit(daysPerUnitFieldFromRate(product.typical_usage_per_day))
             setCatalogCategory(product.category ?? null)
             setCatalogMatch(true)
           }
@@ -241,7 +315,11 @@ export default function ScanPage() {
     try {
       const ok = await saveSupply(
         { name: bcName, brand: bcBrand },
-        { gtin: scanned.gtin, lot: scanned.lot }
+        {
+          gtin: scanned.gtin,
+          lot: scanned.lot,
+          usageRatePerDay: rateFromDaysPerUnit(parseFloat(daysPerUnit) || 0),
+        }
       )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
@@ -441,6 +519,7 @@ export default function ScanPage() {
                     />
                   </div>
                 </div>
+                <DaysPerUnitField id="m-days" value={daysPerUnit} onChange={setDaysPerUnit} quantity={quantity} />
               </div>
 
               <div className="space-y-3 pt-2">
@@ -537,6 +616,7 @@ export default function ScanPage() {
                     />
                   </div>
                 </div>
+                <DaysPerUnitField id="cat-days" value={daysPerUnit} onChange={setDaysPerUnit} quantity={quantity} />
               </div>
 
               <div className="space-y-3 pt-2">
@@ -656,6 +736,7 @@ export default function ScanPage() {
                     )}
                   </div>
                 </div>
+                <DaysPerUnitField id="bc-days" value={daysPerUnit} onChange={setDaysPerUnit} quantity={quantity} />
               </div>
 
               <div className="space-y-3 pt-2">

@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('product_name, brand, category, units_per_box, default_refill_interval_days, gtin')
+    .select('product_name, brand, category, units_per_box, typical_usage_per_day, default_refill_interval_days, gtin')
     .order('brand', { ascending: true })
     .order('product_name', { ascending: true })
 
