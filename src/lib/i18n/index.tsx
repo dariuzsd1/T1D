@@ -2,10 +2,11 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { en, fr, type TKey } from './dictionaries'
+import { type Lang, LANG_COOKIE, normalizeLang } from './shared'
 
-export type Lang = 'en' | 'fr'
+export type { Lang } from './shared'
+export { LANG_COOKIE, normalizeLang } from './shared'
 
-export const LANG_COOKIE = 'lang'
 const ONE_YEAR = 60 * 60 * 24 * 365
 
 const DICTS: Record<Lang, Record<TKey, string>> = { en, fr }
@@ -18,11 +19,6 @@ interface I18nValue {
 }
 
 const I18nContext = createContext<I18nValue | null>(null)
-
-/** Normalize any cookie/string value to a supported language, defaulting to English. */
-export function normalizeLang(value: string | undefined | null): Lang {
-  return value === 'fr' ? 'fr' : 'en'
-}
 
 export function LanguageProvider({
   initialLang,
