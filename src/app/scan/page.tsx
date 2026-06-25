@@ -166,12 +166,21 @@ export default function ScanPage() {
     // Apply the catalog's verified wear rate when it has one (sensors/pods/sets);
     // stays 0 for per-person items (insulin/strips), which remain an estimate.
     setAutoRate(item.typical_usage_per_day ?? 0)
-    setExpirationDate('')
-    setExpiryFromBarcode(false)
     setCatalogMatch(true)
     setShowCatalog(false)
     setError(null)
-    setStep('CATALOG_CONFIRM')
+    // If we arrived here from a barcode that wasn't in the catalog, keep the
+    // scanned GTIN + expiration and return to the barcode confirm screen so the
+    // real code is saved on the supply. That turns one tap into a contribution:
+    // the scanned GTIN can later be merged into the catalog (no guessing — it's
+    // the exact code from the user's own box, which is more reliable than GUDID).
+    if (scanned) {
+      setStep('BARCODE_CONFIRM')
+    } else {
+      setExpirationDate('')
+      setExpiryFromBarcode(false)
+      setStep('CATALOG_CONFIRM')
+    }
   }
 
   const handleSaveCatalog = async () => {
@@ -672,10 +681,19 @@ export default function ScanPage() {
                   Matched in the product catalog. Review and edit if anything looks off — all fields are editable.
                 </p>
               ) : (
-                <p className="text-sm text-muted">
-                  This code isn&apos;t in our catalog yet. Enter the product name and we&apos;ll save it
-                  with everything else we read from the label.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted">
+                    This code isn&apos;t in our catalog yet. Pick the matching product so we track it
+                    correctly — no typing. We&apos;ll remember this barcode against your supply.
+                  </p>
+                  <button
+                    onClick={() => { setError(null); setShowCatalog(true) }}
+                    className="w-full flex items-center justify-center gap-2 bg-surface-2 hover:bg-line border border-line rounded-xl py-3 font-semibold text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    Find it in the catalog
+                  </button>
+                </div>
               )}
 
               <div className="space-y-5">
