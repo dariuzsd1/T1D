@@ -10,8 +10,9 @@ import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/components/profile/ProfileProvider'
 import { trackEvent } from '@/lib/analytics'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
+import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import {
-  Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight,
+  Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight, Sparkles,
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const { profile } = useProfile()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showStarterKit, setShowStarterKit] = useState(false)
 
   // Privacy-first analytics: only fires once the profile confirms opt-in.
   useEffect(() => {
@@ -102,15 +104,27 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold tracking-tight text-ink">{t('home.emptyTitle')}</h1>
             <p className="text-muted max-w-sm mx-auto leading-relaxed">{t('home.emptyBody')}</p>
           </div>
-          <Link
-            href="/scan"
-            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-          >
-            <Plus className="w-5 h-5" />
-            {t('home.addFirst')}
-          </Link>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={() => setShowStarterKit(true)}
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+            >
+              <Sparkles className="w-5 h-5" />
+              {t('home.quickStart')}
+            </button>
+            <p className="text-sm text-muted max-w-xs mx-auto">{t('home.quickStartBody')}</p>
+            <Link
+              href="/scan"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            >
+              <Plus className="w-4 h-4" />
+              {t('home.addManually')}
+            </Link>
+          </div>
         </motion.div>
       )}
+
+      {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
 
       {/* Status hero — the one answer */}
       {!loading && !error && inventory.length > 0 && (

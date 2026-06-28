@@ -118,6 +118,9 @@ export const en = {
   'home.emptyBody':
     "Add your first supply (a sensor, pod, reservoir, or vial) and we'll track how long it lasts and tell you when to reorder.",
   'home.addFirst': 'Add your first supply',
+  'home.quickStart': 'Quick start',
+  'home.quickStartBody': "Pick your pump and CGM, and we'll add your usual supplies in one tap.",
+  'home.addManually': 'Or add one at a time',
   'home.allSet': "You're all set",
   'home.needAttentionOne': '{count} supply needs attention',
   'home.needAttentionOther': '{count} supplies need attention',
@@ -398,6 +401,9 @@ export const fr: Record<TKey, string> = {
   'home.emptyBody':
     "Ajoutez votre première fourniture (un capteur, un pod, un réservoir ou un flacon) et nous suivrons sa durée et vous indiquerons quand recommander.",
   'home.addFirst': 'Ajouter ma première fourniture',
+  'home.quickStart': 'Démarrage rapide',
+  'home.quickStartBody': "Choisissez votre pompe et votre CGM, et nous ajoutons vos fournitures habituelles en un geste.",
+  'home.addManually': 'Ou ajoutez-les une par une',
   'home.allSet': 'Tout est en ordre',
   'home.needAttentionOne': '{count} fourniture nécessite votre attention',
   'home.needAttentionOther': '{count} fournitures nécessitent votre attention',
