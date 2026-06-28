@@ -77,6 +77,24 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     ],
   },
   {
+    id: 'ilet',
+    label: 'iLet Bionic Pancreas',
+    sublabel: 'Beta Bionics',
+    supplies: [
+      { name: 'iLet Cartridges', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'iLet Infusion Sets', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+    ],
+  },
+  {
+    id: 'ypsopump',
+    label: 'mylife YpsoPump',
+    sublabel: 'Ypsomed',
+    supplies: [
+      { name: 'YpsoPump Cartridges', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'mylife Orbit Infusion Sets', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+    ],
+  },
+  {
     id: 'mdi',
     label: 'Insulin pens (MDI)',
     sublabel: 'No pump',
