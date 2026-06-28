@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { useDialog } from '@/lib/useDialog'
 
 interface BarcodeScannerProps {
@@ -15,42 +17,44 @@ interface BarcodeScannerProps {
 }
 
 // Symbologies worth attempting on diabetes-supply boxes and pharmacy labels.
-// The browser only uses the subset it actually supports.
-const WANTED_FORMATS = [
-  'ean_13',
-  'ean_8',
-  'upc_a',
-  'upc_e',
-  'code_128',
-  'code_39',
-  'itf',
-  'data_matrix',
-  'qr_code',
-]
+// Restricting the set makes decoding faster and steadier than "try everything".
+const HINTS = new Map([
+  [
+    DecodeHintType.POSSIBLE_FORMATS,
+    [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.CODE_128, // GS1-128 pharmacy labels
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.ITF,
+      BarcodeFormat.DATA_MATRIX, // GS1 DataMatrix on most modern boxes
+      BarcodeFormat.QR_CODE,
+    ],
+  ],
+])
 
 type Phase = 'checking' | 'starting' | 'scanning' | 'unsupported' | 'denied' | 'error'
 
 /**
- * Camera barcode scanner built on the browser's native Barcode Detection API
- * (zero npm dependencies). Supported on Chrome (Android/desktop) and Safari; on
- * anything else it shows an honest "not supported here" state and hands back to
- * manual entry. Always stops the camera track on close/unmount.
+ * Camera barcode scanner built on ZXing (`@zxing/browser`), which decodes in pure
+ * JavaScript and therefore works wherever `getUserMedia` does — iOS Safari and
+ * iOS Chrome, desktop Chrome/Edge/Firefox on any OS, and Android. We deliberately
+ * do NOT use the native `BarcodeDetector` API: it is absent on iOS entirely and
+ * on desktop Chrome outside macOS/ChromeOS, which is why the old build failed on
+ * every device. Always stops the camera track on close/unmount.
  */
 export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const rafRef = useRef<number | null>(null)
+  const controlsRef = useRef<IScannerControls | null>(null)
   const detectedRef = useRef(false)
   const [phase, setPhase] = useState<Phase>('checking')
   const [message, setMessage] = useState<string | null>(null)
 
   const stopCamera = useCallback(() => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-    }
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
+    controlsRef.current?.stop()
+    controlsRef.current = null
   }, [])
 
   const handleClose = useCallback(() => {
@@ -65,80 +69,58 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
     let cancelled = false
 
     async function start() {
-      // 1. Feature-detect the native API.
-      if (typeof window === 'undefined' || !('BarcodeDetector' in window)) {
+      // getUserMedia needs a secure context (https or localhost) and a camera.
+      // If it's missing, scanning truly can't run here — hand back to manual entry.
+      if (
+        typeof navigator === 'undefined' ||
+        !navigator.mediaDevices?.getUserMedia
+      ) {
         if (cancelled) return
         setPhase('unsupported')
         onUnsupported?.()
         return
       }
 
-      // 2. Build a detector limited to the formats this device supports.
-      let detector: BarcodeDetector
-      try {
-        const supported = await BarcodeDetector.getSupportedFormats()
-        const formats = WANTED_FORMATS.filter((f) => supported.includes(f))
-        detector = new BarcodeDetector(formats.length ? { formats } : undefined)
-      } catch {
-        if (cancelled) return
-        setPhase('unsupported')
-        onUnsupported?.()
-        return
-      }
+      const video = videoRef.current
+      if (!video) return
 
-      // 3. Open the rear camera.
       setPhase('starting')
+      const reader = new BrowserMultiFormatReader(HINTS)
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false,
-        })
+        // ZXing opens the rear camera, attaches it to our <video>, and invokes the
+        // callback on every analysed frame (a miss throws NotFound — ignored).
+        const controls = await reader.decodeFromConstraints(
+          { video: { facingMode: 'environment' }, audio: false },
+          video,
+          (result) => {
+            if (result && !detectedRef.current) {
+              detectedRef.current = true
+              stopCamera()
+              onDetected(result.getText(), BarcodeFormat[result.getBarcodeFormat()])
+            }
+          }
+        )
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop())
+          controls.stop()
           return
         }
-        streamRef.current = stream
-        const video = videoRef.current
-        if (!video) return
-        video.srcObject = stream
-        await video.play()
+        controlsRef.current = controls
         setPhase('scanning')
       } catch (err: unknown) {
         if (cancelled) return
         const name = (err as { name?: string })?.name
         if (name === 'NotAllowedError' || name === 'SecurityError') {
           setPhase('denied')
-          setMessage('Camera access was blocked. Allow it in your browser, or enter the supply manually.')
+          setMessage('Camera access was blocked. Allow it in your browser settings, or enter the supply manually.')
+        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+          setPhase('error')
+          setMessage('No camera was found on this device. You can still add the supply manually.')
         } else {
           setPhase('error')
           setMessage('Could not start the camera. You can still add the supply manually.')
         }
-        return
       }
-
-      // 4. Detection loop. Throttled to ~5fps; stops on the first read.
-      let last = 0
-      const tick = async (now: number) => {
-        if (cancelled || detectedRef.current) return
-        const video = videoRef.current
-        if (video && video.readyState >= 2 && now - last > 200) {
-          last = now
-          try {
-            const codes = await detector.detect(video)
-            if (codes.length > 0 && !detectedRef.current) {
-              detectedRef.current = true
-              stopCamera()
-              onDetected(codes[0].rawValue, codes[0].format)
-              return
-            }
-          } catch {
-            // Per-frame detect can throw transiently (e.g. video not ready yet);
-            // ignore and try the next frame.
-          }
-        }
-        rafRef.current = requestAnimationFrame(tick)
-      }
-      rafRef.current = requestAnimationFrame(tick)
     }
 
     start()
@@ -148,6 +130,8 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const showOverlay = phase !== 'scanning'
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -176,18 +160,19 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           </button>
         </div>
 
-        {/* Camera viewport */}
+        {/* Camera viewport. The <video> is ALWAYS mounted and visible (never
+            display:none) because iOS Safari will not play a hidden video; overlays
+            sit on top of it until the stream is live. */}
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-ink/90">
           <video
             ref={videoRef}
             playsInline
             muted
-            className={
-              phase === 'scanning' ? 'h-full w-full object-cover' : 'hidden'
-            }
+            autoPlay
+            className="h-full w-full object-cover"
           />
 
-          {/* Aiming frame */}
+          {/* Aiming frame, shown once the camera is live */}
           {phase === 'scanning' && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="h-28 w-3/4 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
@@ -206,7 +191,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
               <CameraOff className="w-8 h-8" />
               <p className="text-sm font-medium leading-relaxed">
                 {phase === 'unsupported'
-                  ? "This browser can't scan barcodes. Try Chrome or Safari, or enter the supply by hand."
+                  ? 'Scanning needs a camera and a secure (https) connection. You can enter the supply by hand instead.'
                   : message}
               </p>
             </div>
@@ -223,7 +208,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           onClick={handleClose}
           className="mt-4 w-full rounded-xl bg-surface-2 py-3 font-semibold text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          {phase === 'unsupported' || phase === 'denied' || phase === 'error'
+          {showOverlay && phase !== 'checking' && phase !== 'starting'
             ? 'Enter manually instead'
             : 'Cancel'}
         </button>
