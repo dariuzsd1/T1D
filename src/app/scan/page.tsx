@@ -15,12 +15,14 @@ import {
   PencilLine,
   LayoutGrid,
   Clock,
+  Sparkles,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
 import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
+import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 import { daysPerUnitFromRate } from '@/lib/depletion'
@@ -79,12 +81,16 @@ export default function ScanPage() {
   // Barcode flow
   const [showScanner, setShowScanner] = useState(false)
   const [showCatalog, setShowCatalog] = useState(false)
+  const [showStarterKit, setShowStarterKit] = useState(false)
   const [scanned, setScanned] = useState<Gs1Parsed | null>(null)
   const [expiryFromBarcode, setExpiryFromBarcode] = useState(false)
   const [bcName, setBcName] = useState('')
   const [bcBrand, setBcBrand] = useState('')
   const [catalogCategory, setCatalogCategory] = useState<string | null>(null)
   const [catalogMatch, setCatalogMatch] = useState(false)
+  // Recognized from the user's OWN prior scans (their personal catalog), when the
+  // shared catalog doesn't have this barcode yet.
+  const [personalMatch, setPersonalMatch] = useState(false)
 
   const { addProduct } = useStore()
   const router = useRouter()
@@ -190,6 +196,7 @@ export default function ScanPage() {
     // stays 0 for per-person items (insulin/strips), which remain an estimate.
     setAutoRate(item.typical_usage_per_day ?? 0)
     setCatalogMatch(true)
+    setPersonalMatch(false)
     setShowCatalog(false)
     setError(null)
     // If we arrived here from a barcode that wasn't in the catalog, keep the
@@ -302,10 +309,11 @@ export default function ScanPage() {
     setBcBrand('')
     setCatalogCategory(null)
     setCatalogMatch(false)
+    setPersonalMatch(false)
 
-    // Look up the GTIN in the products catalog. Pre-fill name/brand/quantity/wear
-    // rate if found — every field stays editable. A miss is not an error; fall
-    // through to manual entry.
+    // Look up the GTIN in the shared products catalog. Pre-fill name/brand/quantity/
+    // wear rate if found — every field stays editable. A miss is not an error.
+    let matched = false
     if (parsed.gtin) {
       try {
         const res = await fetch(`/api/scan/lookup?gtin=${encodeURIComponent(parsed.gtin)}`)
@@ -318,10 +326,37 @@ export default function ScanPage() {
             setAutoRate(product.typical_usage_per_day ?? 0)
             setCatalogCategory(product.category ?? null)
             setCatalogMatch(true)
+            matched = true
           }
         }
       } catch {
         // Catalog lookup is best-effort — a network error must never block the user.
+      }
+    }
+
+    // Personal catalog: if the shared catalog doesn't know this code yet, check
+    // whether YOU have scanned and identified it before. Your own confirmed product
+    // is reliable, so we reuse it — this is how your catalog grows as you scan, with
+    // no maintainer step. (The barcode column may be pre-migration; a miss is fine.)
+    if (!matched && parsed.gtin) {
+      try {
+        const { data: prior } = await supabase
+          .from('supplies')
+          .select('name, brand, usage_rate_per_day')
+          .eq('barcode', parsed.gtin)
+          .not('name', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (prior?.name) {
+          setBcName(prior.name)
+          if (prior.brand) setBcBrand(prior.brand)
+          const rate = Number(prior.usage_rate_per_day)
+          if (rate > 0) setAutoRate(rate)
+          setPersonalMatch(true)
+        }
+      } catch {
+        // Best-effort: an un-migrated barcode column must never block the scan.
       }
     }
 
@@ -377,6 +412,8 @@ export default function ScanPage() {
         />
       )}
 
+      {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
+
       <AnimatePresence mode="wait">
         {step === 'UPLOAD' && (
           <motion.div
@@ -386,6 +423,25 @@ export default function ScanPage() {
             exit={{ opacity: 0, y: -16 }}
             className="space-y-6"
           >
+            {/* Fastest setup: pick your pump + CGM, bulk-add the usual supplies */}
+            <button
+              onClick={() => { setError(null); setShowStarterKit(true) }}
+              className="w-full bg-gradient-to-br from-primary to-primary-deep rounded-3xl p-6 text-left transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-0.5">Quick start</h3>
+                  <p className="text-white/85 text-sm">
+                    New here? Pick your pump and CGM, and we&apos;ll add your usual supplies in one tap.
+                  </p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-white/80" />
+              </div>
+            </button>
+
             {/* Primary, real path: scan the barcode */}
             <button
               onClick={() => { setError(null); setShowScanner(true) }}
@@ -615,7 +671,7 @@ export default function ScanPage() {
                     type="text"
                     autoFocus
                     value={bcName}
-                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false) }}
+                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false); setPersonalMatch(false) }}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
                   {catalogMatch && (
@@ -711,13 +767,18 @@ export default function ScanPage() {
 
               {catalogMatch ? (
                 <p className="text-sm text-muted">
-                  Matched in the product catalog. Review and edit if anything looks off — all fields are editable.
+                  Matched in the product catalog. Review and edit anything that looks off.
+                </p>
+              ) : personalMatch ? (
+                <p className="text-sm text-teal flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  Recognized from your previous scans. Review and edit if needed.
                 </p>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">
                     This code isn&apos;t in our catalog yet. Pick the matching product so we track it
-                    correctly — no typing. We&apos;ll remember this barcode against your supply.
+                    correctly, with no typing. We&apos;ll remember this barcode against your supply.
                   </p>
                   <button
                     onClick={() => { setError(null); setShowCatalog(true) }}
@@ -738,7 +799,7 @@ export default function ScanPage() {
                     autoFocus
                     placeholder="e.g. Omnipod 5 Pods"
                     value={bcName}
-                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false) }}
+                    onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false); setPersonalMatch(false) }}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
                   {catalogMatch && (
