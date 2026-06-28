@@ -24,6 +24,7 @@ import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrows
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 import { daysPerUnitFromRate } from '@/lib/depletion'
+import { decodeBarcodeFromImage } from '@/lib/barcode'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -66,9 +67,14 @@ export default function ScanPage() {
   const [autoRate, setAutoRate] = useState(0)
   const [detectingWear, setDetectingWear] = useState(false)
 
-  // Manual entry (the photo, if any, is only an on-screen reference while you type).
+  // Manual entry (the photo doubles as a barcode source and an on-screen reference).
   const [manualName, setManualName] = useState('')
   const [manualBrand, setManualBrand] = useState('')
+
+  // Photo path: we try to read a barcode out of the picture before falling back
+  // to using it as a reference for manual entry.
+  const [decodingPhoto, setDecodingPhoto] = useState(false)
+  const [photoNote, setPhotoNote] = useState<string | null>(null)
 
   // Barcode flow
   const [showScanner, setShowScanner] = useState(false)
@@ -84,11 +90,28 @@ export default function ScanPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0]
-    if (selected) {
-      setPreview(URL.createObjectURL(selected))
-      setError(null)
+    if (!selected) return
+    const url = URL.createObjectURL(selected)
+    setPreview(url)
+    setError(null)
+    setPhotoNote(null)
+
+    // Try to read a barcode straight out of the photo. A sharp, close still is
+    // often easier to decode than a live webcam frame, so this is both the photo
+    // path and the fallback when live scanning struggles. On a hit, we drop into
+    // the same confirm flow as a live scan; on a miss, the photo stays as a
+    // reference for manual entry (never guessing what the picture shows).
+    setDecodingPhoto(true)
+    const raw = await decodeBarcodeFromImage(url)
+    setDecodingPhoto(false)
+    if (raw) {
+      handleBarcodeDetected(raw)
+    } else {
+      setPhotoNote(
+        "We couldn't find a barcode in that photo. Try a closer, sharper shot of the barcode itself, or enter the details below.",
+      )
     }
   }
 
@@ -392,21 +415,31 @@ export default function ScanPage() {
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold text-ink mb-1">No barcode? Add it manually</h3>
                   <p className="text-muted text-sm mb-5">
-                    Type the details from the box. You can snap a photo first to read from
-                    on-screen while you type — the photo is just a reference and isn&apos;t stored.
+                    Type the details from the box. Or add a photo of the barcode and we&apos;ll try to
+                    read it for you. If we can&apos;t, the photo stays on screen as a reference while
+                    you type.
                   </p>
 
                   {preview && (
                     <div className="relative inline-block mb-5">
                       <img src={preview} alt="Supply reference" className="max-h-48 rounded-xl shadow-md" />
                       <button
-                        onClick={() => setPreview(null)}
+                        onClick={() => { setPreview(null); setPhotoNote(null) }}
                         aria-label="Remove photo"
                         className="absolute -top-3 -right-3 bg-surface border border-line text-ink p-1.5 rounded-full shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
+                  )}
+
+                  {decodingPhoto && (
+                    <p className="mb-4 flex items-center gap-2 text-sm text-muted">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Reading the barcode in your photo…
+                    </p>
+                  )}
+                  {photoNote && !decodingPhoto && (
+                    <p className="mb-4 text-sm text-caution" role="status">{photoNote}</p>
                   )}
 
                   <div className="flex flex-wrap gap-3">

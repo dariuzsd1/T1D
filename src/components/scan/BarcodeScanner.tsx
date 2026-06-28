@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
-import { BarcodeFormat, DecodeHintType } from '@zxing/library'
+import { BarcodeFormat } from '@zxing/library'
+import { barcodeHints } from '@/lib/barcode'
 import { useDialog } from '@/lib/useDialog'
 
 interface BarcodeScannerProps {
@@ -15,25 +16,6 @@ interface BarcodeScannerProps {
    *  entry instead of a dead end. */
   onUnsupported?: () => void
 }
-
-// Symbologies worth attempting on diabetes-supply boxes and pharmacy labels.
-// Restricting the set makes decoding faster and steadier than "try everything".
-const HINTS = new Map([
-  [
-    DecodeHintType.POSSIBLE_FORMATS,
-    [
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_128, // GS1-128 pharmacy labels
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.ITF,
-      BarcodeFormat.DATA_MATRIX, // GS1 DataMatrix on most modern boxes
-      BarcodeFormat.QR_CODE,
-    ],
-  ],
-])
 
 type Phase = 'checking' | 'starting' | 'scanning' | 'unsupported' | 'denied' | 'error'
 
@@ -85,13 +67,25 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
       if (!video) return
 
       setPhase('starting')
-      const reader = new BrowserMultiFormatReader(HINTS)
+      // delayBetweenScanAttempts: analyse a frame roughly every 120ms — frequent
+      // enough to feel instant, throttled enough that TRY_HARDER doesn't peg the CPU.
+      const reader = new BrowserMultiFormatReader(barcodeHints(), {
+        delayBetweenScanAttempts: 120,
+      })
 
       try {
-        // ZXing opens the rear camera, attaches it to our <video>, and invokes the
-        // callback on every analysed frame (a miss throws NotFound — ignored).
+        // Request the highest practical resolution: dense GS1 barcodes need enough
+        // pixels per bar, and a default low-res stream is the usual reason a code
+        // that looks fine to the eye won't decode.
         const controls = await reader.decodeFromConstraints(
-          { video: { facingMode: 'environment' }, audio: false },
+          {
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+            audio: false,
+          },
           video,
           (result) => {
             if (result && !detectedRef.current) {
