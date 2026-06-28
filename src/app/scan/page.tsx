@@ -23,6 +23,7 @@ import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
+import { CameraCapture } from '@/components/scan/CameraCapture'
 import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 import { daysPerUnitFromRate } from '@/lib/depletion'
@@ -82,6 +83,7 @@ export default function ScanPage() {
   const [showScanner, setShowScanner] = useState(false)
   const [showCatalog, setShowCatalog] = useState(false)
   const [showStarterKit, setShowStarterKit] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
   const [scanned, setScanned] = useState<Gs1Parsed | null>(null)
   const [expiryFromBarcode, setExpiryFromBarcode] = useState(false)
   const [bcName, setBcName] = useState('')
@@ -96,19 +98,16 @@ export default function ScanPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0]
-    if (!selected) return
-    const url = URL.createObjectURL(selected)
+  // Shared by both photo sources (file upload and live camera capture): try to
+  // read a barcode straight out of the image. A sharp, close still is often easier
+  // to decode than a live webcam frame, so this is both the photo path and the
+  // fallback when live scanning struggles. On a hit, drop into the same confirm
+  // flow as a live scan; on a miss, the photo stays as a reference for manual
+  // entry (never guessing what the picture shows).
+  const processPhoto = async (url: string) => {
     setPreview(url)
     setError(null)
     setPhotoNote(null)
-
-    // Try to read a barcode straight out of the photo. A sharp, close still is
-    // often easier to decode than a live webcam frame, so this is both the photo
-    // path and the fallback when live scanning struggles. On a hit, we drop into
-    // the same confirm flow as a live scan; on a miss, the photo stays as a
-    // reference for manual entry (never guessing what the picture shows).
     setDecodingPhoto(true)
     const raw = await decodeBarcodeFromImage(url)
     setDecodingPhoto(false)
@@ -119,6 +118,11 @@ export default function ScanPage() {
         "We couldn't find a barcode in that photo. Try a closer, sharper shot of the barcode itself, or enter the details below.",
       )
     }
+  }
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0]
+    if (selected) void processPhoto(URL.createObjectURL(selected))
   }
 
   // Shared insert used by the manual, catalog, and barcode paths.
@@ -414,6 +418,13 @@ export default function ScanPage() {
 
       {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
 
+      {showCamera && (
+        <CameraCapture
+          onCapture={(url) => { setShowCamera(false); void processPhoto(url) }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+
       <AnimatePresence mode="wait">
         {step === 'UPLOAD' && (
           <motion.div
@@ -511,11 +522,14 @@ export default function ScanPage() {
                       Add photo
                       <input type="file" className="hidden" accept="image/*" onChange={onFileChange} />
                     </label>
-                    <label className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink">
+                    <button
+                      type="button"
+                      onClick={() => { setError(null); setShowCamera(true) }}
+                      className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
                       <Camera className="w-5 h-5" />
                       Take photo
-                      <input type="file" className="hidden" accept="image/*" capture="environment" onChange={onFileChange} />
-                    </label>
+                    </button>
                   </div>
                 </div>
               </div>
