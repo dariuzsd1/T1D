@@ -5,8 +5,9 @@ import { RefillStatusBar } from "./RefillStatusBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package, Trash2, Edit3, ShoppingCart, Minus, Loader2,
-  CalendarClock, ChevronDown,
+  CalendarClock, ChevronDown, PackagePlus,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -43,6 +44,8 @@ export function ProductCard({
 
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isRestocking, setIsRestocking] = useState(false)
+  const { showToast } = useToast()
   // Items that need attention open by default; well-stocked ones stay tidy.
   const [expanded, setExpanded] = useState(status !== 'ok')
 
@@ -84,6 +87,33 @@ export function ProductCard({
       } finally {
         setIsUpdating(false)
       }
+    }
+  }
+
+  // "Reorder = re-add": after a box arrives, restock in one tap. We add a full box
+  // on top of what's left — the box size comes from the catalog (matched by name),
+  // falling back to 1 when the product isn't known rather than guessing a count.
+  const handleRestock = async () => {
+    setIsRestocking(true)
+    try {
+      let boxSize = 1
+      try {
+        const res = await fetch(`/api/scan/lookup?name=${encodeURIComponent(product.name)}`)
+        if (res.ok) {
+          const cat = await res.json()
+          if (cat?.units_per_box && cat.units_per_box > 0) boxSize = cat.units_per_box
+        }
+      } catch {
+        // Lookup is best-effort; a miss just means a box of 1.
+      }
+      await onUpdate?.(product.id, { quantity: product.quantity + boxSize })
+      void logActivity('supply_restocked', product.name)
+      showToast(`Restocked ${product.name}: +${boxSize}.`, 'success')
+    } catch (err) {
+      console.error('Failed to restock:', err)
+      showToast('Could not restock. Please try again.', 'caution')
+    } finally {
+      setIsRestocking(false)
     }
   }
 
@@ -202,7 +232,7 @@ export function ProductCard({
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={handleUseOne}
                       disabled={isUpdating || product.quantity === 0}
@@ -214,6 +244,17 @@ export function ProductCard({
                     >
                       {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Minus className="w-3.5 h-3.5" />}
                       Use one
+                    </button>
+
+                    <button
+                      onClick={handleRestock}
+                      disabled={isRestocking}
+                      aria-label={`Restock ${product.name}`}
+                      title="Add a box (after a reorder arrives)"
+                      className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {isRestocking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PackagePlus className="w-3.5 h-3.5" />}
+                      Restock
                     </button>
 
                     <a
