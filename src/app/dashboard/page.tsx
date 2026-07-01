@@ -1,28 +1,45 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { stockStatus } from '@/lib/depletion'
+import { nextEligibleRefillDate } from '@/lib/refill'
+import { reorderTargetFor } from '@/lib/suppliers'
+import { logActivity } from '@/lib/activity'
+import { createClient } from '@/lib/supabase/client'
+import { buildAgenda, formatAgendaDate } from '@/lib/homeAgenda'
+import { setupSteps, setupComplete } from '@/lib/setupProgress'
+import { rowToAppointment, type Appointment } from '@/lib/appointments'
+import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/components/profile/ProfileProvider'
 import { trackEvent } from '@/lib/analytics'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
+import { WhatsNext } from '@/components/dashboard/WhatsNext'
+import { FinishSetup } from '@/components/dashboard/FinishSetup'
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import {
-  Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight, Sparkles,
+  Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight, Sparkles, RefreshCcw,
 } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { inventory, setInventory, safetyBufferDays } = useStore()
+  const { inventory, setInventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const { profile } = useProfile()
+  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showStarterKit, setShowStarterKit] = useState(false)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
+  const [deviceCount, setDeviceCount] = useState(0)
+  // Gates the setup nudge so it only appears once its data (devices) has loaded,
+  // avoiding a flicker of a wrong "X of 4" count on first paint.
+  const [extrasLoaded, setExtrasLoaded] = useState(false)
 
   // Privacy-first analytics: only fires once the profile confirms opt-in.
   useEffect(() => {
@@ -38,9 +55,9 @@ export default function DashboardPage() {
         const result = await response.json()
         setInventory(result.data || [])
         setError(null)
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to fetch inventory:', err)
-        setError(err.message)
+        setError(err instanceof Error ? err.message : 'Failed to load supplies')
       } finally {
         setLoading(false)
       }
@@ -49,6 +66,31 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Load the extra dated sources for "What's Next". Both are table-missing-safe:
+  // if the table doesn't exist yet (un-migrated DB) or the query errors, we simply
+  // leave the list empty — the section then hides. Never fabricates a row.
+  useEffect(() => {
+    let cancelled = false
+    const loadAgendaSources = async () => {
+      const [apptRes, rxRes, devRes] = await Promise.all([
+        supabase.from('appointments').select('*').order('appointment_date', { ascending: true }),
+        supabase.from('prescriptions').select('*'),
+        // Only the count is needed (does a pump/CGM exist?), so ask for a HEAD count.
+        supabase.from('medical_devices').select('id', { count: 'exact', head: true }),
+      ])
+      if (cancelled) return
+      if (!apptRes.error && apptRes.data) setAppointments(apptRes.data.map(rowToAppointment))
+      if (!rxRes.error && rxRes.data) setPrescriptions(rxRes.data.map(rowToPrescription))
+      if (!devRes.error) setDeviceCount(devRes.count ?? 0)
+      setExtrasLoaded(true)
+    }
+    void loadAgendaSources()
+    return () => {
+      cancelled = true
+    }
+  }, [supabase])
+
+  const now = useMemo(() => new Date(), [])
   const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
   const needsAttention = sorted.filter(
     (p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok'
@@ -58,6 +100,47 @@ export default function DashboardPage() {
   )
   const allGood = inventory.length > 0 && needsAttention.length === 0
 
+  // Forward-looking agenda, built from real dated data only (refill-eligible,
+  // appointments, prescription renewals). Empty when nothing is dated.
+  const agenda = useMemo(
+    () => buildAgenda({ inventory, appointments, prescriptions, now }),
+    [inventory, appointments, prescriptions, now]
+  )
+
+  // Onboarding progress, from real stored data only. The nudge shows until every
+  // real step is satisfied, then disappears for good (completion is the dismissal).
+  const steps = useMemo(
+    () => setupSteps({ inventory, deviceCount }),
+    [inventory, deviceCount]
+  )
+  const setupIsComplete = setupComplete(steps)
+
+  // The single most urgent item (lowest runway) drives the actionable messaging.
+  const mostUrgent = needsAttention[0] ?? null
+
+  // The one forward-looking line under the status headline. Never invents a date:
+  // it either pairs a real refill-eligible date, points at the soonest real agenda
+  // item, or is null (then the hero keeps its neutral reserve message). Uses "·"
+  // as the separator — no em-dashes anywhere on the page.
+  const nextClause: string | null = (() => {
+    if (mostUrgent) {
+      const refillDate =
+        mostUrgent.refillIntervalDays && mostUrgent.lastFilledDate
+          ? nextEligibleRefillDate(mostUrgent.lastFilledDate, { supplyDays: mostUrgent.refillIntervalDays })
+          : null
+      return refillDate
+        ? `Reorder ${mostUrgent.name} · refill-eligible ${formatAgendaDate(refillDate, now)}`
+        : `Reorder ${mostUrgent.name} soon`
+    }
+    if (agenda.length > 0) {
+      return `Next: ${agenda[0].label} · ${formatAgendaDate(agenda[0].date, now)}`
+    }
+    return null
+  })()
+
+  // Context-aware primary action. A pod is any Insulet/Omnipod consumable.
+  const pod = inventory.find((p) => /insulet|omnipod|pod\b/i.test(`${p.brand} ${p.name}`)) ?? null
+
   const handleReorder = (label: string) =>
     showToast(
       label === 'find a supplier'
@@ -66,8 +149,19 @@ export default function DashboardPage() {
       'info'
     )
 
+  const handlePodChange = async () => {
+    if (!pod) return
+    if (pod.quantity > 0) {
+      await updateProduct(pod.id, { quantity: pod.quantity - 1 })
+      void logActivity('supply_used', pod.name)
+      showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+    } else {
+      showToast(`You're out of ${pod.name}.`, 'caution')
+    }
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-8" aria-busy={loading}>
+    <div className="max-w-2xl mx-auto space-y-6" aria-busy={loading}>
       <p role="status" aria-live="polite" className="sr-only">
         {loading ? 'Loading supplies…' : ''}
       </p>
@@ -126,7 +220,7 @@ export default function DashboardPage() {
 
       {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
 
-      {/* Status hero — the one answer */}
+      {/* Status hero — one glanceable answer + the single next thing to do */}
       {!loading && !error && inventory.length > 0 && (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
@@ -166,8 +260,12 @@ export default function DashboardPage() {
                       { count: needsAttention.length }
                     )}
               </h1>
+              {/* Forward-looking line: the next real thing to do. Falls back to the
+                  neutral reserve message when there is no real dated event. */}
               <p className="text-muted mt-1.5 leading-relaxed">
-                {allGood
+                {nextClause
+                  ? nextClause
+                  : allGood
                   ? t(
                       inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
                       { count: inventory.length, buffer: safetyBufferDays }
@@ -177,6 +275,50 @@ export default function DashboardPage() {
             </div>
           </div>
         </motion.section>
+      )}
+
+      {/* Primary action — one context-aware next step (floating "+" stays too) */}
+      {!loading && !error && inventory.length > 0 && (
+        <div>
+          {mostUrgent ? (
+            <a
+              href={reorderTargetFor(mostUrgent).url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleReorder(reorderTargetFor(mostUrgent).label)}
+              className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep text-white py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Reorder {mostUrgent.name}
+            </a>
+          ) : pod ? (
+            <button
+              onClick={handlePodChange}
+              className="w-full inline-flex items-center justify-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+            >
+              <RefreshCcw className="w-5 h-5 text-teal" />
+              Log a pod change
+            </button>
+          ) : (
+            <Link
+              href="/scan"
+              className="w-full inline-flex items-center justify-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+            >
+              <Plus className="w-5 h-5 text-primary" />
+              Add a supply
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* What's next — real dated items only; hides itself when empty */}
+      {!loading && !error && <WhatsNext items={agenda} now={now} />}
+
+      {/* Finish setup — only while onboarding is incomplete; disappears for good
+          once every real step is satisfied. Gated on extrasLoaded so the count is
+          never wrong on first paint. */}
+      {!loading && !error && extrasLoaded && !setupIsComplete && (
+        <FinishSetup steps={steps} />
       )}
 
       {/* Attention list — only what matters, with reorder right here */}
