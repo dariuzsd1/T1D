@@ -24,10 +24,10 @@ export const en = {
   'nav.supplies': 'Supplies',
   'nav.add': 'Add',
   'nav.reorder': 'Reorder',
-  'nav.profile': 'My profile',
-  'nav.peopleICareFor': 'People I care for',
+  'nav.profile': 'My Profile',
+  'nav.peopleICareFor': 'People I Care For',
   'nav.sharing': 'Sharing',
-  'nav.rotateSites': 'Rotate sites',
+  'nav.rotateSites': 'Rotate Sites',
   'nav.calendar': 'Calendar',
   'nav.devices': 'Devices',
   'nav.prescriptions': 'Prescriptions',
@@ -35,13 +35,13 @@ export const en = {
   'nav.costs': 'Costs',
   'nav.medicalId': 'Medical ID',
   'nav.settings': 'Settings',
-  'nav.signOut': 'Sign out',
+  'nav.signOut': 'Sign Out',
   'nav.more': 'More',
 
   // ── landing ──
   'landing.signIn': 'Sign in',
   'landing.badge': 'Daily safety support for type 1 diabetes',
-  'landing.heroTitle': 'Never run out of diabetes supplies again.',
+  'landing.heroTitle': 'Your diabetes supply manager.',
   'landing.heroSub':
     'T1D Hub tracks your pods, sensors, reservoirs, and insulin, then tells you when to reorder, before you run low. Built for families living with type 1 diabetes.',
   'landing.getStarted': 'Get started',
@@ -321,7 +321,7 @@ export const fr: Record<TKey, string> = {
   // ── landing ──
   'landing.signIn': 'Se connecter',
   'landing.badge': 'Un soutien quotidien pour le diabète de type 1',
-  'landing.heroTitle': 'Ne manquez plus jamais de fournitures pour le diabète.',
+  'landing.heroTitle': 'Votre gestionnaire de fournitures pour le diabète.',
   'landing.heroSub':
     "T1D Hub suit vos pods, capteurs, réservoirs et votre insuline, puis vous indique quand recommander, avant que vous ne soyez à court. Conçu pour les familles qui vivent avec le diabète de type 1.",
   'landing.getStarted': 'Commencer',

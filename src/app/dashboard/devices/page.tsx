@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Cpu, Plus, Activity, Zap, Pen, TestTube2, ShoppingCart,
   Loader2, X, Trash2, Database, Package, Upload, Info,
-  CheckCircle, AlertTriangle,
+  CheckCircle, AlertTriangle, Link2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -79,6 +79,17 @@ export default function DevicesPage() {
   const linkedTo = (deviceId: string) => inventory.filter(p => p.deviceId === deviceId)
   const unlinkedCount = inventory.filter(p => !p.deviceId).length
 
+  // Visually pair a pump with a CGM as one "system". This is UI grouping only —
+  // it does NOT integrate the devices or claim vendor compatibility; it simply
+  // reflects that a user's pump and CGM are used together. Common case: one pump
+  // + one CGM = one system; any extras fall back to standalone cards.
+  const pumps = devices.filter(d => d.kind === 'pump')
+  const cgms = devices.filter(d => d.kind === 'cgm')
+  const otherDevices = devices.filter(d => d.kind !== 'pump' && d.kind !== 'cgm')
+  const pairCount = Math.min(pumps.length, cgms.length)
+  const systems = Array.from({ length: pairCount }, (_, i) => ({ pump: pumps[i], cgm: cgms[i] }))
+  const soloDevices = [...pumps.slice(pairCount), ...cgms.slice(pairCount), ...otherDevices]
+
   return (
     <div className="space-y-10" aria-busy={loading}>
       <BackButton />
@@ -134,59 +145,50 @@ export default function DevicesPage() {
         </div>
       )}
 
-      {/* Device list */}
+      {/* Device list — paired pump + CGM shown together as a "system" */}
       {!loading && !needsSetup && devices.length > 0 && (
         <div className="space-y-6">
-          {devices.map(device => {
-            const Icon = KIND_ICON[device.kind]
-            const supplies = linkedTo(device.id)
-            return (
-              <motion.div
-                key={device.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-surface border border-line rounded-3xl p-6 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-ink leading-tight">{deviceLabel(device)}</h3>
-                      <p className="text-xs font-semibold text-muted uppercase tracking-widest mt-1">
-                        {DEVICE_KIND_LABEL[device.kind]}
-                        {device.brand ? ` · ${device.brand}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(device.id)}
-                    aria-label={`Remove ${deviceLabel(device)}`}
-                    className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:text-urgent hover:bg-urgent-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+          {systems.map(({ pump, cgm }) => (
+            <div
+              key={`system-${pump.id}-${cgm.id}`}
+              className="rounded-[28px] border border-primary/20 bg-primary/[0.04] p-3 sm:p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+                <Link2 className="w-4 h-4" />
+                Your system
+              </div>
+              <div className="space-y-2">
+                <DeviceCard
+                  device={pump}
+                  supplies={linkedTo(pump.id)}
+                  bufferDays={safetyBufferDays}
+                  onDelete={handleDelete}
+                />
+                {/* Connector — visual "these are used together", not a data claim */}
+                <div className="flex items-center gap-2 px-4" aria-hidden="true">
+                  <span className="h-px flex-1 bg-primary/15" />
+                  <Link2 className="w-3.5 h-3.5 text-primary/50" />
+                  <span className="h-px flex-1 bg-primary/15" />
                 </div>
+                <DeviceCard
+                  device={cgm}
+                  supplies={linkedTo(cgm.id)}
+                  bufferDays={safetyBufferDays}
+                  onDelete={handleDelete}
+                />
+              </div>
+            </div>
+          ))}
 
-                {/* Linked consumables */}
-                <div className="mt-5 border-t border-line pt-4">
-                  {supplies.length === 0 ? (
-                    <p className="text-sm text-faint">
-                      No supplies linked yet. Open a supply on the dashboard, tap Edit, and choose
-                      this device.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-line">
-                      {supplies.map(s => (
-                        <ConsumableRow key={s.id} product={s} bufferDays={safetyBufferDays} />
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
+          {soloDevices.map(device => (
+            <DeviceCard
+              key={device.id}
+              device={device}
+              supplies={linkedTo(device.id)}
+              bufferDays={safetyBufferDays}
+              onDelete={handleDelete}
+            />
+          ))}
 
           {unlinkedCount > 0 && (
             <p className="text-sm text-faint text-center">
@@ -211,6 +213,67 @@ export default function DevicesPage() {
         />
       )}
     </div>
+  )
+}
+
+/** One device card: identity header, delete, and its linked consumables. Used
+ *  standalone and inside a "system" grouping (paired pump + CGM). */
+function DeviceCard({
+  device,
+  supplies,
+  bufferDays,
+  onDelete,
+}: {
+  device: MedicalDevice
+  supplies: Product[]
+  bufferDays: number
+  onDelete: (id: string) => void
+}) {
+  const Icon = KIND_ICON[device.kind]
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-surface border border-line rounded-3xl p-6 shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-ink leading-tight">{deviceLabel(device)}</h3>
+            <p className="text-xs font-semibold text-muted uppercase tracking-widest mt-1">
+              {DEVICE_KIND_LABEL[device.kind]}
+              {device.brand ? ` · ${device.brand}` : ''}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => onDelete(device.id)}
+          aria-label={`Remove ${deviceLabel(device)}`}
+          className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:text-urgent hover:bg-urgent-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Linked consumables */}
+      <div className="mt-5 border-t border-line pt-4">
+        {supplies.length === 0 ? (
+          <p className="text-sm text-faint">
+            No supplies linked yet. Open a supply on the dashboard, tap Edit, and choose
+            this device.
+          </p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {supplies.map(s => (
+              <ConsumableRow key={s.id} product={s} bufferDays={bufferDays} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </motion.div>
   )
 }
 

@@ -5,7 +5,7 @@ import {
   ShieldCheck,
   ArrowRight,
   CalendarClock,
-  Map,
+  Syringe,
   Users,
   HeartPulse,
   HeartHandshake,
@@ -19,7 +19,7 @@ import type { TKey } from "@/lib/i18n/dictionaries"
 
 const FEATURES: { icon: typeof CalendarClock; title: TKey; body: TKey }[] = [
   { icon: CalendarClock, title: "landing.feat1Title", body: "landing.feat1Body" },
-  { icon: Map, title: "landing.feat2Title", body: "landing.feat2Body" },
+  { icon: Syringe, title: "landing.feat2Title", body: "landing.feat2Body" },
   { icon: Users, title: "landing.feat3Title", body: "landing.feat3Body" },
   { icon: HeartPulse, title: "landing.feat4Title", body: "landing.feat4Body" },
 ]

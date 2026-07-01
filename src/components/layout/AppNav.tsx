@@ -6,9 +6,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  ScanLine,
   CalendarDays,
-  Map,
+  Syringe,
   Settings,
   LogOut,
   ShieldCheck,
@@ -32,12 +31,12 @@ import { useProfile } from '@/components/profile/ProfileProvider'
 import { Avatar } from '@/components/profile/Avatar'
 import { userLabel } from '@/lib/profile'
 
-// Core supply loop — see status, browse supplies, add one, reorder. Shown in
-// both the desktop sidebar and the mobile tab bar. `key` is resolved with t().
+// Core supply loop — see status, browse supplies, reorder. Adding a supply is
+// handled by the floating "+" action, so it's intentionally not a nav tab. Shown
+// in both the desktop sidebar and the mobile tab bar. `key` is resolved with t().
 const navItems: { key: TKey; href: string; icon: typeof LayoutDashboard }[] = [
   { key: 'nav.home', href: '/dashboard', icon: LayoutDashboard },
   { key: 'nav.supplies', href: '/dashboard/supplies', icon: Package },
-  { key: 'nav.add', href: '/scan', icon: ScanLine },
   { key: 'nav.reorder', href: '/dashboard/reorder', icon: ShoppingCart },
 ]
 
@@ -47,7 +46,7 @@ const secondaryNav: { key: TKey; href: string; icon: typeof LayoutDashboard }[] 
   { key: 'nav.profile', href: '/dashboard/profile', icon: User },
   { key: 'nav.peopleICareFor', href: '/dashboard/family', icon: HeartHandshake },
   { key: 'nav.sharing', href: '/dashboard/caregivers', icon: Share2 },
-  { key: 'nav.rotateSites', href: '/dashboard/site-tracker', icon: Map },
+  { key: 'nav.rotateSites', href: '/dashboard/site-tracker', icon: Syringe },
   { key: 'nav.calendar', href: '/dashboard/calendar', icon: CalendarDays },
   { key: 'nav.devices', href: '/dashboard/devices', icon: Cpu },
   { key: 'nav.prescriptions', href: '/dashboard/prescriptions', icon: Pill },
@@ -77,7 +76,7 @@ export function AppNav() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 border-r border-line flex-col h-screen sticky top-0 bg-surface">
+      <aside className="hidden lg:flex w-64 border-r border-line flex-col h-screen sticky top-0 overflow-y-auto bg-surface">
         <div className="p-6">
           <div className="flex items-center gap-3 text-primary mb-8">
             <ShieldCheck className="w-7 h-7" />

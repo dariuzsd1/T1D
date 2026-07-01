@@ -192,6 +192,16 @@ Maturity: strong visual/UI craft, prototype-grade engineering. **Not production-
 - **M8 — Unbounded OCR input = DoS vector** (`ocrExtractor.ts:75-84`, O(words³)·Fuse, no cap). Cap input.
 - **M9 — PHI in localStorage** (`store.ts:110`) unencrypted, survives logout. Stop or scope/clear it.
 
+### Deferred (future) — intent preserved, not to be built yet
+
+- **Prescription photo intake.** Let a user photograph a prescription/receipt and have the app
+  auto-categorize and store it, so it's usable at any pharmacy. This is a **real planned feature**,
+  deliberately scoped down for now **pending a legal review of health-data handling** (a prescription
+  image is PHI — see the same HIPAA/PHI caution already noted at **C6**). **Do not build the
+  auto-categorization, OCR of the script, or any clinic-messaging / pharmacy trigger from this
+  feature until that review is done.** This note exists only to preserve the intent; nothing should
+  be implemented from it now.
+
 ---
 
 ## 5. Architecture decisions (settled)

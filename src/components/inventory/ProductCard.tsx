@@ -138,41 +138,56 @@ export function ProductCard({
     >
       <Card className="bg-surface border-line hover:border-primary/30 transition-colors overflow-hidden">
         <CardContent className="p-0">
-          {/* Collapsed glance — name, status, days. Tap to reveal detail + actions. */}
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            aria-expanded={expanded}
-            aria-controls={panelId}
-            className="w-full flex items-center gap-4 p-5 text-left transition-colors hover:bg-surface-2/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-          >
-            <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center border shrink-0", tone.iconBg)}>
-              <Package className={cn("w-5 h-5", tone.icon)} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-ink leading-tight truncate">{product.name}</h3>
-              <p className="text-sm text-muted truncate">
-                {product.brand ? `${product.brand} · ` : ''}{statusLabel}
-              </p>
-            </div>
-
-            <div className="text-right shrink-0">
-              <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
-                {estimated ? '~' : ''}{product.remainingDays}
+          {/* Collapsed glance — name, status, days. Tap to reveal detail + actions.
+              The quick "use one" button sits alongside (not inside) the toggle so a
+              user can log usage in one tap without opening the card. */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              className="flex-1 min-w-0 flex items-center gap-4 p-5 text-left transition-colors hover:bg-surface-2/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            >
+              <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center border shrink-0", tone.iconBg)}>
+                <Package className={cn("w-5 h-5", tone.icon)} />
               </div>
-              <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
-                {estimated ? 'est. days' : 'days'}
-              </div>
-            </div>
 
-            <ChevronDown
-              className={cn(
-                "w-5 h-5 text-faint transition-transform shrink-0",
-                expanded && "rotate-180"
-              )}
-              aria-hidden="true"
-            />
-          </button>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-ink leading-tight truncate">{product.name}</h3>
+                <p className="text-sm text-muted truncate">
+                  {product.brand ? `${product.brand} · ` : ''}{statusLabel}
+                </p>
+              </div>
+
+              <div className="text-right shrink-0">
+                <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
+                  {estimated ? '~' : ''}{product.remainingDays}
+                </div>
+                <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
+                  {estimated ? 'est. days' : 'days'}
+                </div>
+              </div>
+
+              <ChevronDown
+                className={cn(
+                  "w-5 h-5 text-faint transition-transform shrink-0",
+                  expanded && "rotate-180"
+                )}
+                aria-hidden="true"
+              />
+            </button>
+
+            {/* One-tap "use one" — log usage without expanding the card first */}
+            <button
+              onClick={handleUseOne}
+              disabled={isUpdating || product.quantity === 0}
+              aria-label={`Use one ${product.name}`}
+              title={product.quantity === 0 ? 'None on hand' : 'Log one used'}
+              className="shrink-0 mr-4 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-line bg-surface-2 text-ink transition-colors hover:bg-line active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Minus className="w-4 h-4" />}
+            </button>
+          </div>
 
           {/* Expanded detail + actions */}
           <AnimatePresence initial={false}>
