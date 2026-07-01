@@ -1,266 +1,426 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, RefreshCcw, Info, ChevronRight, Check, Package } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Check, Info, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useStore } from '@/lib/store'
-import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
-
-// Static body-map positions only. We never hardcode "lastUsed" or a health
-// verdict here — those are derived from real site logs below (CLAUDE.md §9:
-// show real elapsed time, say "unknown" when unknown, never fake "Optimal").
-const SITES = [
-  { id: 'abdomen-tl', label: 'Top Left Abdomen', pos: { x: '35%', y: '45%' } },
-  { id: 'abdomen-tr', label: 'Top Right Abdomen', pos: { x: '65%', y: '45%' } },
-  { id: 'thigh-l', label: 'Left Thigh', pos: { x: '30%', y: '75%' } },
-  { id: 'thigh-r', label: 'Right Thigh', pos: { x: '70%', y: '75%' } },
-  { id: 'arm-l', label: 'Left Arm', pos: { x: '15%', y: '35%' } },
-  { id: 'arm-r', label: 'Right Arm', pos: { x: '85%', y: '35%' } },
-]
-
-// Rest a site for at least this long before reusing it (lipohypertrophy guard).
-const REST_DAYS = 7
-const MS_PER_DAY = 1000 * 60 * 60 * 24
-
-type SiteStatus = 'never' | 'resting' | 'ready'
-
-interface SiteView {
-  id: string
-  label: string
-  pos: { x: string; y: string }
-  lastUsedAt: string | null
-  lastUsedLabel: string
-  daysSince: number | null
-  status: SiteStatus
-}
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/Toast'
+import type { Product } from '@/lib/store'
+import {
+  BODY_ZONES,
+  RECENT_USE_DAYS,
+  type BodyView,
+  type BodyZone,
+  type SiteChangeRow,
+  type ZoneView,
+  buildZoneViews,
+  suggestedZoneId,
+  hasZoneHistory,
+  zoneLabel,
+  zoneAria,
+  zoneCenter,
+  elapsedText,
+} from '@/lib/siteRotation'
+import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
 
 export default function SiteTrackerPage() {
-  const { siteLogs, addSiteLog, inventory, setInventory, updateProduct } = useStore()
+  const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  // Which supply a site change consumes (e.g. the pod/infusion set). '' = none.
-  const [linkedSupplyId, setLinkedSupplyId] = useState<string>('')
 
-  // Load inventory so the "also use one" supply picker works even when the user
-  // lands here directly (the store no longer persists across reloads).
+  const [view, setView] = useState<BodyView>('front')
+  const [changes, setChanges] = useState<SiteChangeRow[]>([])
+  const [inventory, setInventory] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  // Which zone's log dialog is open.
+  const [logZone, setLogZone] = useState<BodyZone | null>(null)
+  // Zone driving the tooltip (hovered / keyboard-focused).
+  const [activeId, setActiveId] = useState<string | null>(null)
+  // Nonce → the post-log checkmark flash.
+  const [justLogged, setJustLogged] = useState<number | null>(null)
+
+  const loadChanges = useCallback(async () => {
+    // select('*') stays forward-compatible: `body_zone` surfaces automatically
+    // once the migration is applied, and its absence never errors the read.
+    const { data, error } = await supabase
+      .from('site_changes')
+      .select('*')
+      .order('applied_date', { ascending: false })
+    if (!error && data) {
+      setChanges(
+        data.map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          body_zone: (r.body_zone as string | null) ?? null,
+          applied_date: (r.applied_date as string | null) ?? null,
+        }))
+      )
+    }
+  }, [supabase])
+
   useEffect(() => {
-    if (inventory.length > 0) return
-    fetch('/api/inventory')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((res) => res?.data && setInventory(res.data))
-      .catch(() => {})
-  }, [inventory.length, setInventory])
-
-  const linkedSupply = inventory.find((p) => p.id === linkedSupplyId) ?? null
-
-  // Build an honest view of each site from the real logs.
-  const sites: SiteView[] = SITES.map((site) => {
-    const lastLog = siteLogs
-      .filter((l) => l.siteId === site.id)
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )[0]
-
-    if (!lastLog) {
-      return {
-        ...site,
-        lastUsedAt: null,
-        lastUsedLabel: 'Never used',
-        daysSince: null,
-        status: 'never',
-      }
+    let cancelled = false
+    const load = async () => {
+      await Promise.all([
+        loadChanges(),
+        fetch('/api/inventory')
+          .then((r) => (r.ok ? r.json() : { data: [] }))
+          .then((res) => { if (!cancelled) setInventory(Array.isArray(res.data) ? res.data : []) })
+          .catch(() => {}),
+      ])
+      if (!cancelled) setLoading(false)
     }
+    void load()
+    return () => { cancelled = true }
+  }, [loadChanges])
 
-    const daysSince = Math.floor(
-      (Date.now() - new Date(lastLog.timestamp).getTime()) / MS_PER_DAY
-    )
-    return {
-      ...site,
-      lastUsedAt: lastLog.timestamp,
-      lastUsedLabel: `${formatDistanceToNow(new Date(lastLog.timestamp))} ago`,
-      daysSince,
-      status: daysSince < REST_DAYS ? 'resting' : 'ready',
-    }
-  })
+  // Auto-clear the checkmark flash.
+  useEffect(() => {
+    if (justLogged == null) return
+    const t = setTimeout(() => setJustLogged(null), 1300)
+    return () => clearTimeout(t)
+  }, [justLogged])
 
-  const selectedSite = sites.find((s) => s.id === selectedId) ?? null
+  const views = useMemo(() => buildZoneViews(changes), [changes])
+  const historyExists = useMemo(() => hasZoneHistory(changes), [changes])
+  // Only surface a suggestion once there's real history (else it's meaningless).
+  const suggestedId = historyExists ? suggestedZoneId(views) : null
+  const suggestedZone = suggestedId ? BODY_ZONES.find((z) => z.id === suggestedId) ?? null : null
 
-  // Suggest the site rested longest (never-used first, then most days since use).
-  const suggestedSite = [...sites].sort((a, b) => {
-    if (a.status === 'never' && b.status !== 'never') return -1
-    if (b.status === 'never' && a.status !== 'never') return 1
-    return (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity)
-  })[0]
+  const visibleZones = BODY_ZONES.filter((z) => z.view === view)
+  const activeZone = visibleZones.find((z) => z.id === activeId) ?? null
 
-  const handleMarkUsed = (site: SiteView) => {
-    // One interaction: log the site, advance the rotation, and (if a supply is
-    // linked) decrement that pod/set so inventory stays honest (CLAUDE.md §7-V2).
-    addSiteLog({
-      id: crypto.randomUUID(),
-      siteId: site.id,
-      timestamp: new Date().toISOString(),
-    })
-
-    if (linkedSupply && linkedSupply.quantity > 0) {
-      updateProduct(linkedSupply.id, { quantity: linkedSupply.quantity - 1 })
-      showToast(
-        `${site.label} logged and one ${linkedSupply.name} used. Rest the site ${REST_DAYS} days.`,
-        'success'
-      )
-    } else {
-      showToast(
-        `${site.label} logged. Rest it ${REST_DAYS} days before reusing.`,
-        'success'
-      )
-    }
+  const switchView = (v: BodyView) => {
+    setView(v)
+    setActiveId(null)
   }
 
-  const statusLabel = (s: SiteStatus) =>
-    s === 'never' ? 'Fresh site' : s === 'resting' ? 'Resting' : 'Ready'
+  const handleSave = async (zone: BodyZone, input: SiteChangeInput) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('You appear to be signed out. Please sign in again.')
+
+    // Core insert first; the zone is a best-effort attach so a pre-migration DB
+    // still records the change (just without a zone) instead of failing.
+    const { data, error } = await supabase
+      .from('site_changes')
+      .insert({
+        user_id: user.id,
+        supply_id: input.supplyId,
+        applied_date: input.appliedDate,
+        notes: input.notes || null,
+      })
+      .select('id')
+      .single()
+    if (error || !data) throw new Error(error?.message || 'Could not save this site change.')
+
+    const { error: zoneErr } = await supabase
+      .from('site_changes')
+      .update({ body_zone: zone.id })
+      .eq('id', data.id)
+    if (zoneErr) {
+      console.warn('body_zone not saved yet — run supabase/setup.sql:', zoneErr.message)
+    }
+
+    await loadChanges()
+    setJustLogged(Date.now())
+    showToast('Logged. Nice rotating.', 'success')
+  }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
+    <div className="max-w-3xl mx-auto space-y-8">
       <BackButton />
-      <header className="flex justify-between items-end">
-        <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Keep sites healthy</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Injection sites</h1>
-        </div>
-        <button className="bg-surface border border-line px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-surface-2 text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-          <RefreshCcw className="w-5 h-5" />
-          Update history
-        </button>
+
+      <header className="text-center space-y-3">
+        <p className="text-muted text-xs font-semibold uppercase tracking-[0.2em]">Keep your sites healthy</p>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">Rotation map</h1>
+        <p className="text-muted max-w-md mx-auto leading-relaxed">
+          Rotating where you inject or place a site helps insulin absorb evenly. Pick a fresh spot each time.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
-        {/* Human Body Map */}
-        <div className="lg:col-span-2 relative flex justify-center bg-surface border border-line rounded-3xl p-10 overflow-hidden min-h-[520px] shadow-sm">
-          <div className="relative w-full max-w-sm">
-            <svg viewBox="0 0 100 120" className="w-full h-full fill-surface-2 stroke-line stroke-[0.3]">
-              <path d="M50 5 C55 5, 60 10, 60 15 C60 20, 55 25, 50 25 C45 25, 40 20, 40 15 C40 10, 45 5, 50 5
-                M40 25 L35 30 C30 35, 25 45, 25 55 L22 80 L28 80 L30 55 C32 50, 40 45, 50 45 C60 45, 68 50, 70 55 L72 80 L78 80 L75 55 C75 45, 70 35, 65 30 L60 25 Z
-                M40 80 L35 115 L45 115 L48 85 C49 83, 51 83, 52 85 L55 115 L65 115 L60 80 Z"
-              />
-            </svg>
-
-            {sites.map((site) => (
-              <motion.button
-                key={site.id}
-                whileHover={{ scale: 1.2 }}
-                onClick={() => setSelectedId(site.id)}
-                aria-label={`${site.label} — ${statusLabel(site.status)}, ${site.lastUsedLabel}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 group"
-                style={{ left: site.pos.x, top: site.pos.y }}
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded-full border-2 transition-all",
-                  site.id === suggestedSite.id
-                    ? "bg-primary border-surface shadow-md ring-2 ring-primary/30"
-                    : site.status === 'resting'
-                      ? "bg-caution border-surface"
-                      : site.status === 'ready'
-                        ? "bg-success border-surface"
-                        : "bg-surface-2 border-line group-hover:border-primary group-hover:bg-primary/40"
-                )} />
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        {/* Info Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-primary text-white rounded-3xl p-7 shadow-sm">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] mb-3 opacity-80">Next suggested</h3>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                <MapPin className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="text-xl font-bold">{suggestedSite.label}</h4>
-                <p className="text-xs font-medium opacity-80">
-                  {suggestedSite.status === 'never' ? 'Fresh site' : `Rested ${suggestedSite.lastUsedLabel}`}
-                </p>
-              </div>
-            </div>
-            {inventory.length > 0 && (
-              <div className="mb-4">
-                <label htmlFor="linked-supply" className="flex items-center gap-1.5 text-xs font-medium opacity-80 mb-2">
-                  <Package className="w-3.5 h-3.5" />
-                  Also use one of
-                </label>
-                <select
-                  id="linked-supply"
-                  value={linkedSupplyId}
-                  onChange={(e) => setLinkedSupplyId(e.target.value)}
-                  className="w-full bg-white text-ink rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
-                >
-                  <option value="">Don&apos;t track a supply</option>
-                  {inventory.map((p) => (
-                    <option key={p.id} value={p.id} disabled={p.quantity <= 0}>
-                      {p.name}{p.quantity <= 0 ? ' (none left)' : ` (${p.quantity} left)`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
+      {/* Front / Back segmented control */}
+      <div className="flex justify-center">
+        <div role="tablist" aria-label="Body view" className="inline-flex rounded-xl bg-surface-2 p-1">
+          {(['front', 'back'] as BodyView[]).map((v) => (
             <button
-              onClick={() => { setSelectedId(suggestedSite.id); handleMarkUsed(suggestedSite); }}
-              className="w-full bg-white text-primary py-3.5 rounded-xl font-semibold text-sm hover:bg-surface-2 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => switchView(v)}
+              className={cn(
+                'px-6 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal',
+                view === v ? 'bg-surface text-teal shadow-sm' : 'text-muted hover:text-ink'
+              )}
             >
-              {linkedSupply ? 'Log site & use one' : 'Mark as used'}
-              <ChevronRight className="w-4 h-4" />
+              {v === 'front' ? 'Front' : 'Back'}
             </button>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {selectedSite ? (
-              <motion.div
-                key={selectedSite.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-surface border border-line rounded-3xl p-7 shadow-sm"
-              >
-                <h3 className="text-muted text-xs font-semibold uppercase tracking-widest mb-6">{selectedSite.label}</h3>
-
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted font-medium">Status</span>
-                    <span className={cn(
-                      "font-semibold flex items-center gap-2",
-                      selectedSite.status === 'resting' ? "text-caution" : "text-success"
-                    )}>
-                      {selectedSite.status === 'ready' && <Check className="w-4 h-4" />}
-                      {statusLabel(selectedSite.status)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted font-medium">Last used</span>
-                    <span className="text-ink font-semibold">{selectedSite.lastUsedLabel}</span>
-                  </div>
-                  <div className="pt-4 border-t border-line flex gap-3">
-                    <Info className="w-4 h-4 text-faint mt-0.5 shrink-0" />
-                    <p className="text-xs text-muted leading-relaxed">
-                      {selectedSite.status === 'resting'
-                        ? `Used recently — let it rest ${Math.max(0, REST_DAYS - (selectedSite.daysSince ?? 0))} more day(s) before reusing.`
-                        : 'Rotate at least 1 inch from the previous injection.'}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="h-48 border border-line rounded-3xl flex items-center justify-center text-center p-8 text-sm text-faint">
-                Select a site on the map to view its history.
-              </div>
-            )}
-          </AnimatePresence>
+          ))}
         </div>
       </div>
+
+      {/* Suggested-next callout (real history) or first-time prompt */}
+      {!loading && (
+        <div className="flex justify-center -mt-2">
+          {suggestedZone ? (
+            <button
+              onClick={() => switchView(suggestedZone.view)}
+              className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success-soft px-4 py-1.5 text-sm font-medium text-success transition-colors hover:bg-success/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+            >
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              Suggested next: <span className="font-semibold">{zoneLabel(suggestedZone)}</span>
+              {suggestedZone.view !== view && <span className="text-success/70">· on the {suggestedZone.view} view</span>}
+            </button>
+          ) : historyExists ? null : (
+            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-1.5 text-sm text-muted">
+              <Info className="w-4 h-4 text-teal" aria-hidden="true" />
+              Tap any zone to log your first site change.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Figure */}
+      <div className="relative bg-surface border border-line rounded-3xl p-6 sm:p-10 shadow-sm">
+        {loading ? (
+          <div className="flex items-center justify-center h-[440px]" aria-busy="true">
+            <Loader2 className="w-6 h-6 text-teal animate-spin" />
+          </div>
+        ) : (
+          <div className="relative mx-auto w-full max-w-[300px] aspect-[240/470]">
+            <svg
+              viewBox="0 0 240 470"
+              className="absolute inset-0 h-full w-full"
+              role="group"
+              aria-label={`Body map, ${view} view`}
+            >
+              {/* Base figure — unchanged from Stage 1 (figure shapes not in scope). */}
+              <g fill="var(--color-surface-2)" stroke="var(--color-line)" strokeWidth={2} strokeLinejoin="round">
+                <circle cx="120" cy="52" r="30" />
+                <rect x="108" y="76" width="24" height="24" rx="10" />
+                <path d="M70 108 Q72 97 84 96 L156 96 Q168 97 170 108 Q176 146 154 185 Q150 220 166 250 Q168 261 158 262 L82 262 Q72 261 74 250 Q90 220 86 185 Q64 146 70 108 Z" />
+                <rect x="48" y="112" width="24" height="140" rx="12" />
+                <rect x="168" y="112" width="24" height="140" rx="12" />
+                <rect x="78" y="248" width="38" height="204" rx="18" />
+                <rect x="124" y="248" width="38" height="204" rx="18" />
+              </g>
+
+              {view === 'back' && (
+                <line x1="120" y1="104" x2="120" y2="210" stroke="var(--color-line)" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
+              )}
+
+              {visibleZones.map((zone) => (
+                <ZoneShape
+                  key={zone.id}
+                  zone={zone}
+                  zoneView={views.get(zone.id)!}
+                  isSuggested={zone.id === suggestedId}
+                  open={logZone?.id === zone.id}
+                  onOpen={() => setLogZone(zone)}
+                  onActiveChange={(on) =>
+                    setActiveId((cur) => (on ? zone.id : cur === zone.id ? null : cur))
+                  }
+                />
+              ))}
+            </svg>
+
+            {/* Tooltip — real name + last-used status for the active zone. */}
+            {activeZone && (() => {
+              const { cx, cy } = zoneCenter(activeZone)
+              const zv = views.get(activeZone.id)!
+              const suggested = activeZone.id === suggestedId
+              return (
+                <div
+                  className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
+                  style={{ left: `${(cx / 240) * 100}%`, top: `${(cy / 470) * 100}%` }}
+                >
+                  <div className="mb-2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-white shadow-md">
+                    <span className="block text-xs font-semibold">{zoneLabel(activeZone)}</span>
+                    <span className="block text-[11px] text-white/80">
+                      {suggested ? 'Suggested next · ' : ''}{elapsedText(zv.elapsed)}
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Post-log checkmark flash (respects reduced motion). */}
+            <CheckmarkFlash show={justLogged != null} />
+          </div>
+        )}
+      </div>
+
+      {/* Color key */}
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+        <LegendItem label="Available" fill="var(--color-surface-2)" opacity={1} stroke="var(--color-faint)" />
+        <LegendItem label="Focused or selected" fill="var(--color-teal)" opacity={0.24} stroke="var(--color-teal)" />
+        <LegendItem label={`Recently used (last ${RECENT_USE_DAYS} days)`} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
+        <LegendItem label="Suggested next" fill="var(--color-success)" opacity={0.2} stroke="var(--color-success)" />
+      </div>
+
+      <p className="flex items-start justify-center gap-2 text-center text-xs text-faint max-w-md mx-auto">
+        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span>Each zone&apos;s status comes from your logged history. A zone you haven&apos;t used shows &quot;Not yet logged.&quot;</span>
+      </p>
+
+      {logZone && (
+        <LogSiteChangeModal
+          zone={logZone}
+          inventory={inventory}
+          onClose={() => setLogZone(null)}
+          onSave={(input) => handleSave(logZone, input)}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * A single zone: a focusable rounded rect with resting-marker (suggested/recent/
+ * default) and interactive (hover/focus/open) paint, plus a small corner dot for
+ * marked zones. Tokens are applied via CSS vars so paint transitions together.
+ */
+function ZoneShape({
+  zone,
+  zoneView,
+  isSuggested,
+  open,
+  onOpen,
+  onActiveChange,
+}: {
+  zone: BodyZone
+  zoneView: ZoneView
+  isSuggested: boolean
+  open: boolean
+  onOpen: () => void
+  onActiveChange: (active: boolean) => void
+}) {
+  const [hover, setHover] = useState(false)
+  const [focus, setFocus] = useState(false)
+  const active = hover || focus || open
+
+  let fill = 'var(--color-surface-2)'
+  let fillOpacity = 1
+  let stroke = 'var(--color-faint)' // strengthened resting outline (reads as tappable)
+  let strokeWidth = 1.75
+  if (active) {
+    fill = 'var(--color-teal)'
+    fillOpacity = open ? 0.24 : 0.14
+    stroke = 'var(--color-teal)'
+    strokeWidth = open ? 3 : 2.25
+  } else if (isSuggested) {
+    fill = 'var(--color-success)'
+    fillOpacity = 0.12
+    stroke = 'var(--color-success)'
+    strokeWidth = 2.25
+  } else if (zoneView.isRecent) {
+    fill = 'var(--color-caution)'
+    fillOpacity = 0.12
+    stroke = 'var(--color-caution)'
+    strokeWidth = 2.25
+  }
+
+  const dotColor = isSuggested
+    ? 'var(--color-success)'
+    : zoneView.isRecent
+      ? 'var(--color-caution)'
+      : null
+
+  const ariaParts = [zoneAria(zone)]
+  if (isSuggested) ariaParts.push('suggested next')
+  else if (zoneView.isRecent) ariaParts.push('recently used')
+  ariaParts.push(elapsedText(zoneView.elapsed).toLowerCase())
+  const ariaLabel = ariaParts.join(', ')
+
+  return (
+    <g>
+      <rect
+        x={zone.x}
+        y={zone.y}
+        width={zone.w}
+        height={zone.h}
+        rx={zone.rx}
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        className="cursor-pointer outline-none"
+        style={{
+          fill,
+          fillOpacity,
+          stroke,
+          strokeWidth,
+          transition: 'fill .15s ease, fill-opacity .15s ease, stroke .15s ease, stroke-width .15s ease',
+        }}
+        onMouseEnter={() => { setHover(true); onActiveChange(true) }}
+        onMouseLeave={() => { setHover(false); onActiveChange(false) }}
+        onFocus={() => { setFocus(true); onActiveChange(true) }}
+        onBlur={() => { setFocus(false); onActiveChange(false) }}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onOpen()
+          }
+        }}
+      />
+      {dotColor && (
+        <circle
+          cx={zone.x + zone.w - 7}
+          cy={zone.y + 7}
+          r={4}
+          fill={dotColor}
+          stroke="var(--color-surface)"
+          strokeWidth={1.5}
+          aria-hidden="true"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
+    </g>
+  )
+}
+
+function CheckmarkFlash({ show }: { show: boolean }) {
+  const reduce = useReducedMotion()
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          aria-hidden="true"
+        >
+          <motion.div
+            className="flex items-center justify-center w-20 h-20 rounded-full bg-success text-white shadow-lg"
+            initial={reduce ? { opacity: 0 } : { scale: 0.6, opacity: 0 }}
+            animate={reduce ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+          >
+            <Check className="w-10 h-10" strokeWidth={3} />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+function LegendItem({
+  label,
+  fill,
+  opacity,
+  stroke,
+}: {
+  label: string
+  fill: string
+  opacity: number
+  stroke: string
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 text-xs text-muted">
+      <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0" aria-hidden="true">
+        <rect x="1" y="1" width="14" height="14" rx="4" style={{ fill, fillOpacity: opacity, stroke, strokeWidth: 1.5 }} />
+      </svg>
+      {label}
+    </span>
   )
 }
