@@ -1,19 +1,19 @@
 import { AppNav } from "@/components/layout/AppNav";
 import { RiskAlertBanner } from "@/components/layout/RiskAlertBanner";
 import { QuickActionHub } from "@/components/dashboard/QuickActionHub";
-import { ToastProvider } from "@/components/ui/Toast";
 import { PreferencesHydrator } from "@/components/PreferencesHydrator";
 import { ProfileProvider } from "@/components/profile/ProfileProvider";
 import { PreferenceSync } from "@/components/profile/PreferenceSync";
 
+// ToastProvider now lives in the root layout (app/layout.tsx) so toasts work on
+// every route; it's intentionally not duplicated here.
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ToastProvider>
-      <ProfileProvider>
+    <ProfileProvider>
       <PreferencesHydrator />
       <PreferenceSync />
       <div className="flex flex-col min-h-screen bg-canvas text-ink">
@@ -29,7 +29,6 @@ export default function DashboardLayout({
         </div>
         <QuickActionHub />
       </div>
-      </ProfileProvider>
-    </ToastProvider>
+    </ProfileProvider>
   );
 }

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { LANG_COOKIE, normalizeLang } from "@/lib/i18n/shared";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,12 @@ export default async function RootLayout({
           attributes on <body> before React hydrates; this only silences that
           one-level attribute diff, not real mismatches in our own markup. */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <LanguageProvider initialLang={lang}>{children}</LanguageProvider>
+        {/* ToastProvider lives at the root so accessible toasts work on EVERY
+            route (scan, login, public pages), not just under the dashboard
+            layout. The StarterKitModal's useToast() crashed on /scan before this. */}
+        <LanguageProvider initialLang={lang}>
+          <ToastProvider>{children}</ToastProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
