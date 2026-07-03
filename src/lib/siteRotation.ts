@@ -1,0 +1,178 @@
+/**
+ * Body-zone model + rotation logic for the site-rotation map
+ * (src/app/dashboard/site-tracker/page.tsx).
+ *
+ * Honesty rules (CLAUDE.md §9.1, §7 V2): every per-zone status is derived from
+ * real `site_changes` rows. A zone with no logged change reads "Not yet logged";
+ * an unparseable date reads "unknown". Nothing here fabricates a date or a verdict.
+ *
+ * Left/right convention (confirmed in Stage 1 review): the figure is read as a
+ * person, so on the FRONT view (facing you) the person's left is on your right;
+ * on the BACK view (facing away) the person's left is on your left. That mirror
+ * is baked into each zone's geometry `x` below — the labels are anatomical.
+ */
+
+export type BodyView = 'front' | 'back'
+
+/** Any zone used within this many days counts as "recently used" (amber). Kept a
+ *  single constant so it can later be made device-type-aware; not per-device now. */
+export const RECENT_USE_DAYS = 14
+
+export interface BodyZone {
+  /** Stable id — persisted as `site_changes.body_zone`. */
+  id: string
+  region: string
+  side: 'left' | 'right' | 'center'
+  view: BodyView
+  // Rounded-rect geometry in the 240×470 SVG viewBox.
+  x: number
+  y: number
+  w: number
+  h: number
+  rx: number
+}
+
+// Order matters: ties for "suggested next" resolve to the first zone here.
+export const BODY_ZONES: BodyZone[] = [
+  // FRONT — mirrored (person faces you): person's left drawn on screen-right.
+  { id: 'abdomen_left', region: 'Abdomen', side: 'left', view: 'front', x: 124, y: 162, w: 32, h: 56, rx: 14 },
+  { id: 'abdomen_right', region: 'Abdomen', side: 'right', view: 'front', x: 84, y: 162, w: 32, h: 56, rx: 14 },
+  { id: 'thigh_left', region: 'Thigh', side: 'left', view: 'front', x: 128, y: 272, w: 30, h: 66, rx: 14 },
+  { id: 'thigh_right', region: 'Thigh', side: 'right', view: 'front', x: 82, y: 272, w: 30, h: 66, rx: 14 },
+  // BACK — direct (person faces away): person's left drawn on screen-left.
+  { id: 'upper_arm_left', region: 'Upper arm', side: 'left', view: 'back', x: 50, y: 118, w: 20, h: 60, rx: 10 },
+  { id: 'upper_arm_right', region: 'Upper arm', side: 'right', view: 'back', x: 170, y: 118, w: 20, h: 60, rx: 10 },
+  { id: 'lower_back', region: 'Lower back', side: 'center', view: 'back', x: 92, y: 168, w: 56, h: 42, rx: 14 },
+  { id: 'hip_left', region: 'Hip / upper buttock', side: 'left', view: 'back', x: 84, y: 216, w: 32, h: 52, rx: 16 },
+  { id: 'hip_right', region: 'Hip / upper buttock', side: 'right', view: 'back', x: 124, y: 216, w: 32, h: 52, rx: 16 },
+]
+
+export const BODY_ZONE_IDS: readonly string[] = BODY_ZONES.map((z) => z.id)
+
+/** Short display label, e.g. "Left abdomen" / "Lower back" (no dashes). */
+export function zoneLabel(z: BodyZone): string {
+  if (z.side === 'center') return z.region
+  return `${z.side === 'left' ? 'Left' : 'Right'} ${z.region.toLowerCase()}`
+}
+
+/** Aria fragment, e.g. "Abdomen, left side" / "Lower back". */
+export function zoneAria(z: BodyZone): string {
+  if (z.side === 'center') return z.region
+  return `${z.region}, ${z.side} side`
+}
+
+export function zoneCenter(z: BodyZone): { cx: number; cy: number } {
+  return { cx: z.x + z.w / 2, cy: z.y + z.h / 2 }
+}
+
+/** Only the fields the marker logic needs from a site_changes row. */
+export interface SiteChangeRow {
+  id: string
+  body_zone: string | null
+  applied_date: string | null
+}
+
+/** Real elapsed time since a zone's most recent logged change. */
+export type Elapsed =
+  | { kind: 'never' }
+  | { kind: 'unknown' }
+  | { kind: 'days'; days: number; date: string }
+
+export interface ZoneView {
+  zone: BodyZone
+  elapsed: Elapsed
+  /** Used within RECENT_USE_DAYS. Only true for a real, dated change. */
+  isRecent: boolean
+}
+
+function parseYmd(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function midnight(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+
+/** Whole days between a YYYY-MM-DD date and today (local, clamped at 0). null if
+ *  the string can't be parsed. */
+export function daysSince(dateStr: string, now: Date = new Date()): number | null {
+  const d = parseYmd(dateStr)
+  if (!d) return null
+  return Math.max(0, Math.round((midnight(now) - midnight(d)) / 86_400_000))
+}
+
+/** Does the user have ANY zone-attributed history? (false = true first-time or
+ *  pre-migration state → the map shows a first-log prompt, not a suggestion.) */
+export function hasZoneHistory(changes: SiteChangeRow[]): boolean {
+  return changes.some((c) => c.body_zone != null && BODY_ZONE_IDS.includes(c.body_zone))
+}
+
+/** Build the per-zone view (most recent real change → elapsed + recent flag). */
+export function buildZoneViews(
+  changes: SiteChangeRow[],
+  now: Date = new Date()
+): Map<string, ZoneView> {
+  // Newest real dated change per zone.
+  const latest = new Map<string, string>()
+  for (const c of changes) {
+    if (!c.body_zone || !c.applied_date) continue
+    const prev = latest.get(c.body_zone)
+    if (!prev || c.applied_date > prev) latest.set(c.body_zone, c.applied_date)
+  }
+
+  const views = new Map<string, ZoneView>()
+  for (const zone of BODY_ZONES) {
+    const date = latest.get(zone.id)
+    let elapsed: Elapsed
+    if (!date) {
+      elapsed = { kind: 'never' }
+    } else {
+      const days = daysSince(date, now)
+      elapsed = days == null ? { kind: 'unknown' } : { kind: 'days', days, date }
+    }
+    const isRecent = elapsed.kind === 'days' && elapsed.days <= RECENT_USE_DAYS
+    views.set(zone.id, { zone, elapsed, isRecent })
+  }
+  return views
+}
+
+/**
+ * The single best "suggested next" zone: the longest-rested spot, with never-used
+ * zones ranked highest (oldest possible). Ties resolve to the first by BODY_ZONES
+ * order. Returns exactly one id (or null if there are no zones). Callers only
+ * surface it when hasZoneHistory() is true.
+ */
+export function suggestedZoneId(views: Map<string, ZoneView>): string | null {
+  let bestId: string | null = null
+  let bestScore = -Infinity
+  for (const zone of BODY_ZONES) {
+    const v = views.get(zone.id)
+    if (!v) continue
+    // never = oldest possible; days = older is higher; unknown = lowest priority.
+    const score =
+      v.elapsed.kind === 'never' ? Infinity : v.elapsed.kind === 'days' ? v.elapsed.days : -Infinity
+    // Strictly-greater keeps the FIRST zone on a tie (correct tie-break).
+    if (score > bestScore) {
+      bestScore = score
+      bestId = zone.id
+    }
+  }
+  return bestId
+}
+
+/** Human elapsed text, e.g. "Last used 3 days ago" / "Not yet logged". */
+export function elapsedText(elapsed: Elapsed): string {
+  switch (elapsed.kind) {
+    case 'never':
+      return 'Not yet logged'
+    case 'unknown':
+      return 'Last used: unknown'
+    case 'days':
+      if (elapsed.days === 0) return 'Last used today'
+      if (elapsed.days === 1) return 'Last used yesterday'
+      return `Last used ${elapsed.days} days ago`
+  }
+}

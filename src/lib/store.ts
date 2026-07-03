@@ -28,13 +28,6 @@ export interface Product {
   deviceId?: string | null;
 }
 
-export interface SiteLog {
-  id: string;
-  siteId: string;
-  timestamp: string;
-  notes?: string;
-}
-
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
 export const SAFETY_BUFFER_KEY = 't1d-safety-buffer'
 
@@ -46,7 +39,6 @@ function withRunway(product: Product): Product {
 
 interface T1DStore {
   inventory: Product[];
-  siteLogs: SiteLog[];
   safetyBufferDays: number;
 
   // Actions
@@ -54,16 +46,15 @@ interface T1DStore {
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
-  addSiteLog: (log: SiteLog) => void;
   setSafetyBufferDays: (days: number) => void;
 }
 
-// NOTE: no `persist` middleware. Inventory and site logs are PHI; the dashboard
-// re-fetches them from Supabase (the source of truth) on mount, so caching them
-// unencrypted in localStorage (where they'd survive logout) is an unnecessary risk.
+// NOTE: no `persist` middleware. Inventory is PHI; the dashboard re-fetches it
+// from Supabase (the source of truth) on mount, so caching it unencrypted in
+// localStorage (where it'd survive logout) is an unnecessary risk. Site-change
+// history is likewise read straight from Supabase by the rotation-map page.
 export const useStore = create<T1DStore>()((set) => ({
   inventory: [],
-  siteLogs: [],
   safetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
 
   setInventory: (inventory) =>
@@ -164,9 +155,6 @@ export const useStore = create<T1DStore>()((set) => ({
     }
   },
 
-  addSiteLog: (log) => set((state) => ({
-    siteLogs: [log, ...state.siteLogs]
-  })),
   setSafetyBufferDays: (safetyBufferDays) => {
     // The buffer is a non-PHI UI preference, so it's safe to remember locally
     // (PHI like inventory/site logs is still never persisted). PreferencesHydrator

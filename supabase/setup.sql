@@ -107,7 +107,7 @@ create trigger supplies_set_updated_at before update on public.supplies
 
 -- ============================================================================
 -- 3. SITE CHANGES  (injection/pod-site rotation history — PHI)
---    Drives "days remaining" in src/app/api/inventory/route.ts.
+--    Backs the rotation map (body_zone). Not used by the inventory runway math.
 -- ============================================================================
 create table if not exists public.site_changes (
   id                     uuid primary key default gen_random_uuid(),
@@ -120,7 +120,19 @@ create table if not exists public.site_changes (
   updated_at             timestamptz not null default now()
 );
 
+-- Body zone for the rotation map (added later; idempotent). One of the 9 known
+-- zones, or null for legacy / unspecified rows.
+alter table public.site_changes add column if not exists body_zone text;
+alter table public.site_changes drop constraint if exists site_changes_body_zone_check;
+alter table public.site_changes add constraint site_changes_body_zone_check
+  check (body_zone is null or body_zone in (
+    'abdomen_left','abdomen_right','thigh_left','thigh_right',
+    'upper_arm_left','upper_arm_right','hip_left','hip_right','lower_back'
+  ));
+
 create index if not exists site_changes_user_id_idx on public.site_changes(user_id);
+create index if not exists site_changes_body_zone_idx
+  on public.site_changes(user_id, body_zone, applied_date desc);
 
 alter table public.site_changes enable row level security;
 
