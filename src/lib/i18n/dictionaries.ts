@@ -136,6 +136,21 @@ export const en = {
   'home.nothingNeeded': 'Nothing needed',
   'home.addSupply': 'Add a supply',
 
+  // ── onboarding (first-run) ──
+  'onboarding.kicker': 'Welcome',
+  'onboarding.title': 'Set up your supplies',
+  'onboarding.subtitle':
+    "Pick what you use and we'll add the usual supplies, with box sizes and how long each one lasts already filled in. You can change anything later.",
+  'onboarding.delivery': 'Insulin delivery',
+  'onboarding.cgm': 'Continuous glucose monitor',
+  'onboarding.willAdd': "We'll add",
+  'onboarding.perBox': '{n} per box',
+  'onboarding.daysEach': '~{n} days each',
+  'onboarding.pickPrompt': 'Pick what you use',
+  'onboarding.finish': 'Add supplies and finish',
+  'onboarding.skip': 'Skip for now',
+  'onboarding.error': 'Could not finish setup. Please try again.',
+
   // ── supply status row (home + reorder) ──
   'row.outOfStock': 'Out of stock',
   'row.reorderSoon': 'Reorder soon',
@@ -418,6 +433,21 @@ export const fr: Record<TKey, string> = {
   'home.cardToReorderOther': '{count} à recommander',
   'home.nothingNeeded': 'Rien à faire',
   'home.addSupply': 'Ajouter une fourniture',
+
+  // ── onboarding (first-run) ──
+  'onboarding.kicker': 'Bienvenue',
+  'onboarding.title': 'Configurez vos fournitures',
+  'onboarding.subtitle':
+    'Choisissez ce que vous utilisez et nous ajouterons les fournitures habituelles, avec la taille des boîtes et la durée de chaque unité déjà remplies. Vous pourrez tout modifier plus tard.',
+  'onboarding.delivery': "Administration d'insuline",
+  'onboarding.cgm': 'Capteur de glycémie en continu',
+  'onboarding.willAdd': 'Nous ajouterons',
+  'onboarding.perBox': '{n} par boîte',
+  'onboarding.daysEach': '~{n} jours chacune',
+  'onboarding.pickPrompt': 'Choisissez ce que vous utilisez',
+  'onboarding.finish': 'Ajouter les fournitures et terminer',
+  'onboarding.skip': "Passer pour l'instant",
+  'onboarding.error': 'Impossible de terminer la configuration. Veuillez réessayer.',
 
   // ── supply status row ──
   'row.outOfStock': 'En rupture',

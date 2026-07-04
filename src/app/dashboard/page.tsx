@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { stockStatus } from '@/lib/depletion'
@@ -20,7 +21,6 @@ import { trackEvent } from '@/lib/analytics'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { WhatsNext } from '@/components/dashboard/WhatsNext'
 import { FinishSetup } from '@/components/dashboard/FinishSetup'
-import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import {
   Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight, Sparkles, RefreshCcw,
 } from 'lucide-react'
@@ -29,11 +29,11 @@ export default function DashboardPage() {
   const { inventory, setInventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
+  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showStarterKit, setShowStarterKit] = useState(false)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [deviceCount, setDeviceCount] = useState(0)
@@ -89,6 +89,26 @@ export default function DashboardPage() {
       cancelled = true
     }
   }, [supabase])
+
+  // First-run onboarding gate: send a brand-new, genuinely empty account (no
+  // completed onboarding, no supplies, no devices) into the flow, exactly once.
+  // Guarding on real emptiness means existing users — and pre-migration accounts
+  // that already have data — are never redirected; completion/skip sets the flag.
+  const onboardingRedirected = useRef(false)
+  useEffect(() => {
+    if (onboardingRedirected.current) return
+    if (loading || !extrasLoaded || profileLoading || !profile) return
+    // Session fallback set by the onboarding page: covers a finish/skip made
+    // before the onboarding_completed_at column exists (pre-migration), where
+    // the durable flag couldn't be written. The DB flag remains the real gate.
+    let doneThisSession = false
+    try { doneThisSession = sessionStorage.getItem('t1d-onboarding-done') === '1' } catch { /* private mode */ }
+    if (doneThisSession) return
+    if (profile.onboardingCompletedAt == null && inventory.length === 0 && deviceCount === 0) {
+      onboardingRedirected.current = true
+      router.replace('/dashboard/onboarding')
+    }
+  }, [loading, extrasLoaded, profileLoading, profile, inventory.length, deviceCount, router])
 
   const now = useMemo(() => new Date(), [])
   const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
@@ -199,13 +219,13 @@ export default function DashboardPage() {
             <p className="text-muted max-w-sm mx-auto leading-relaxed">{t('home.emptyBody')}</p>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <button
-              onClick={() => setShowStarterKit(true)}
+            <Link
+              href="/dashboard/onboarding"
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <Sparkles className="w-5 h-5" />
               {t('home.quickStart')}
-            </button>
+            </Link>
             <p className="text-sm text-muted max-w-xs mx-auto">{t('home.quickStartBody')}</p>
             <Link
               href="/scan"
@@ -217,8 +237,6 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       )}
-
-      {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
 
       {/* Status hero — one glanceable answer + the single next thing to do */}
       {!loading && !error && inventory.length > 0 && (

@@ -11,6 +11,8 @@ export interface Profile {
   safetyBufferDays: number | null
   analyticsOptIn: boolean
   avatarPath: string | null
+  /** First-run onboarding gate. null = not completed (or column pre-migration). */
+  onboardingCompletedAt: string | null
   createdAt: string
 }
 
@@ -25,6 +27,7 @@ export interface ProfileRow {
   safety_buffer_days: number | null
   analytics_opt_in: boolean | null
   avatar_path: string | null
+  onboarding_completed_at: string | null
   created_at: string
   updated_at: string
 }
@@ -41,6 +44,7 @@ export function rowToProfile(r: ProfileRow): Profile {
     safetyBufferDays: r.safety_buffer_days ?? null,
     analyticsOptIn: r.analytics_opt_in ?? false,
     avatarPath: r.avatar_path ?? null,
+    onboardingCompletedAt: r.onboarding_completed_at ?? null,
     createdAt: r.created_at,
   }
 }

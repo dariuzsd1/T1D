@@ -494,6 +494,9 @@ alter table public.profiles add column if not exists locale         text;
 alter table public.profiles add column if not exists safety_buffer_days integer;
 -- Usage analytics consent (Phase E). Default FALSE — opt-in only for a health app.
 alter table public.profiles add column if not exists analytics_opt_in boolean not null default false;
+-- First-run onboarding gate. NULL = not done; set to now() when the user finishes
+-- or skips the onboarding flow, so it never auto-shows again.
+alter table public.profiles add column if not exists onboarding_completed_at timestamptz;
 
 alter table public.profiles enable row level security;
 
