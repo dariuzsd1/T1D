@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
-import { stockStatus } from '@/lib/depletion'
+import { displayStatus } from '@/lib/depletion'
 import { nextEligibleRefillDate } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { logActivity } from '@/lib/activity'
@@ -112,12 +112,18 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), [])
   const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
-  const needsAttention = sorted.filter(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok'
-  )
+  // displayStatus, not raw stockStatus: an estimated rate never alarms ('unset'),
+  // so a freshly added box doesn't greet the user with a warning built on a guess.
+  const needsAttention = sorted.filter((p) => {
+    const s = displayStatus(p, safetyBufferDays)
+    return s === 'out' || s === 'low'
+  })
   const hasOut = needsAttention.some(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) === 'out'
+    (p) => displayStatus(p, safetyBufferDays) === 'out'
   )
+  const unsetCount = inventory.filter(
+    (p) => displayStatus(p, safetyBufferDays) === 'unset'
+  ).length
   const allGood = inventory.length > 0 && needsAttention.length === 0
 
   // Forward-looking agenda, built from real dated data only (refill-eligible,
@@ -172,9 +178,14 @@ export default function DashboardPage() {
   const handlePodChange = async () => {
     if (!pod) return
     if (pod.quantity > 0) {
-      await updateProduct(pod.id, { quantity: pod.quantity - 1 })
-      void logActivity('supply_used', pod.name)
-      showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+      try {
+        await updateProduct(pod.id, { quantity: pod.quantity - 1 })
+        void logActivity('supply_used', pod.name)
+        showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+      } catch (err) {
+        console.error('Failed to log pod change:', err)
+        showToast(`Couldn't save that. ${pod.name} is unchanged.`, 'caution')
+      }
     } else {
       showToast(`You're out of ${pod.name}.`, 'caution')
     }
@@ -284,10 +295,16 @@ export default function DashboardPage() {
                 {nextClause
                   ? nextClause
                   : allGood
-                  ? t(
-                      inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
-                      { count: inventory.length, buffer: safetyBufferDays }
-                    )
+                  ? unsetCount > 0
+                    // Honest subline: "above your reserve" can't be claimed for
+                    // items whose usage rate is unknown — nudge to set it instead.
+                    ? t(unsetCount === 1 ? 'home.unsetSubOne' : 'home.unsetSubOther', {
+                        count: unsetCount,
+                      })
+                    : t(
+                        inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
+                        { count: inventory.length, buffer: safetyBufferDays }
+                      )
                   : t('home.needSub', { buffer: safetyBufferDays })}
               </p>
             </div>

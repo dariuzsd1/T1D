@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import {
-  stockStatus,
+  displayStatus,
   reorderByDate,
   daysUntilExpiration,
   isRateEstimated,
@@ -39,21 +39,24 @@ export function ProductCard({
   onUpdate,
   onOrder,
 }: ProductCardProps) {
-  // Semantic color: red is reserved for a true stockout; routine low stock is amber.
-  const status = stockStatus(product.remainingDays, bufferDays)
+  // Semantic color: red is reserved for a true stockout; routine low stock is
+  // amber; an unknown usage rate is neutral 'unset' (an estimate never alarms).
+  const status = displayStatus(product, bufferDays)
 
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isRestocking, setIsRestocking] = useState(false)
   const { showToast } = useToast()
-  // Items that need attention open by default; well-stocked ones stay tidy.
-  const [expanded, setExpanded] = useState(status !== 'ok')
+  // Items that need real attention open by default; the rest stay tidy.
+  const [expanded, setExpanded] = useState(status === 'out' || status === 'low')
 
   const tone =
     status === 'out'
       ? { dot: 'bg-urgent', number: 'text-urgent', iconBg: 'bg-urgent-soft border-urgent/30', icon: 'text-urgent', btn: 'bg-urgent text-white' }
       : status === 'low'
       ? { dot: 'bg-caution', number: 'text-caution', iconBg: 'bg-caution-soft border-caution/30', icon: 'text-caution', btn: 'bg-caution text-white' }
+      : status === 'unset'
+      ? { dot: 'bg-faint', number: 'text-ink', iconBg: 'bg-surface-2 border-line', icon: 'text-muted', btn: 'bg-primary text-white' }
       : { dot: 'bg-success', number: 'text-ink', iconBg: 'bg-primary/10 border-primary/20', icon: 'text-primary', btn: 'bg-primary text-white' }
 
   const reorderBy = reorderByDate(product.remainingDays, bufferDays)
@@ -65,15 +68,21 @@ export function ProductCard({
   const estimated = isRateEstimated(product.usageRatePerDay)
 
   const statusLabel =
-    status === 'out' ? 'Out of stock' : status === 'low' ? 'Reorder soon' : 'Well stocked'
+    status === 'out' ? 'Out of stock'
+    : status === 'low' ? 'Reorder soon'
+    : status === 'unset' ? 'Usage not set'
+    : 'Well stocked'
 
-  // One honest detail line: stock on hand · runway · when to reorder.
+  // One honest detail line: stock on hand · runway · when to reorder. An unset
+  // item gets no reorder-by date — that date would rest on the guessed rate.
   const daysPhrase = estimated
     ? `~${product.remainingDays} days (estimate)`
     : `${product.remainingDays} days`
   const summary =
     status === 'out'
-      ? 'Out of stock — reorder now'
+      ? 'Out of stock. Reorder now.'
+      : status === 'unset'
+      ? `${product.quantity} on hand · set usage to see days left`
       : `${product.quantity} on hand · ${daysPhrase} · reorder by ${format(reorderBy, 'EEE, MMM d')}`
 
   const handleUseOne = async () => {
@@ -84,6 +93,7 @@ export function ProductCard({
         void logActivity('supply_used', product.name)
       } catch (err) {
         console.error('Failed to update:', err)
+        showToast(`Couldn't save that. ${product.name} is unchanged.`, 'caution')
       } finally {
         setIsUpdating(false)
       }
@@ -123,6 +133,7 @@ export function ProductCard({
       await onDelete?.(product.id)
     } catch (err) {
       console.error('Failed to delete:', err)
+      showToast(`Couldn't delete ${product.name}. It's still in your list.`, 'caution')
     } finally {
       setIsDeleting(false)
     }
@@ -243,7 +254,7 @@ export function ProductCard({
                   )}
 
                   <div className="bg-surface-2 rounded-xl p-4 border border-line">
-                    <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} />
+                    <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} status={status} />
                   </div>
 
                   {/* Actions */}

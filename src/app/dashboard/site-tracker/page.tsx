@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { logActivity } from '@/lib/activity'
 import type { Product } from '@/lib/store'
 import {
   BODY_ZONES,
@@ -121,9 +122,37 @@ export default function SiteTrackerPage() {
       console.warn('body_zone not saved yet — run supabase/setup.sql:', zoneErr.message)
     }
 
+    // 1-tap rotation: logging the site also uses up one of the linked supply, so
+    // one interaction does both (V2 promise). Only real stock is decremented, and
+    // the toast only claims what actually saved.
+    let usedLine: string | null = null
+    let usedFailed: string | null = null
+    const linked = input.supplyId ? inventory.find((p) => p.id === input.supplyId) : null
+    if (linked && linked.quantity > 0) {
+      const nextQty = linked.quantity - 1
+      const { error: useErr } = await supabase
+        .from('supplies')
+        .update({ quantity: nextQty, updated_at: new Date().toISOString() })
+        .eq('id', linked.id)
+      if (useErr) {
+        console.error('Linked supply not decremented:', useErr.message)
+        usedFailed = linked.name
+      } else {
+        setInventory((prev) =>
+          prev.map((p) => (p.id === linked.id ? { ...p, quantity: nextQty } : p))
+        )
+        void logActivity('supply_used', linked.name)
+        usedLine = `1 ${linked.name} used, ${nextQty} left.`
+      }
+    }
+
     await loadChanges()
     setJustLogged(Date.now())
-    showToast('Logged. Nice rotating.', 'success')
+    if (usedFailed) {
+      showToast(`Site logged, but ${usedFailed} wasn't updated. Adjust it on the Supplies page.`, 'caution')
+    } else {
+      showToast(usedLine ? `Logged. ${usedLine}` : 'Logged. Nice rotating.', 'success')
+    }
   }
 
   return (

@@ -1,7 +1,7 @@
 'use client'
 
 import type { Product } from '@/lib/store'
-import { stockStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -23,21 +23,32 @@ export function SupplyStatusRow({
   onReorder?: (label: string) => void
 }) {
   const { t } = useI18n()
-  const status = stockStatus(product.remainingDays, bufferDays)
+  // displayStatus: an unknown rate renders neutral 'unset', never an alarm.
+  const status = displayStatus(product, bufferDays)
   const estimated = isRateEstimated(product.usageRatePerDay)
   const reorder = reorderTargetFor(product)
 
   const dot =
-    status === 'out' ? 'bg-urgent' : status === 'low' ? 'bg-caution' : 'bg-success'
+    status === 'out' ? 'bg-urgent'
+    : status === 'low' ? 'bg-caution'
+    : status === 'unset' ? 'bg-faint'
+    : 'bg-success'
   const statusLabel =
-    status === 'out' ? t('row.outOfStock') : status === 'low' ? t('row.reorderSoon') : t('row.wellStocked')
+    status === 'out' ? t('row.outOfStock')
+    : status === 'low' ? t('row.reorderSoon')
+    : status === 'unset' ? t('row.unsetLabel')
+    : t('row.wellStocked')
 
-  // One honest line: how long it lasts (or "out now"), never a data dump.
+  // One honest line: how long it lasts (or "out now"), never a data dump. An
+  // unset item's day count would rest on the fallback guess, so say so instead.
   const daysLabel = t(
     product.remainingDays === 1 ? 'row.daysLeftOne' : 'row.daysLeftOther',
     { count: `${estimated ? '~' : ''}${product.remainingDays}` }
   )
-  const daysLine = status === 'out' ? t('row.noneOnHand') : daysLabel
+  const daysLine =
+    status === 'out' ? t('row.noneOnHand')
+    : status === 'unset' ? t('row.unsetDays')
+    : daysLabel
 
   return (
     <div className="flex items-center gap-4 bg-surface border border-line rounded-2xl p-4">

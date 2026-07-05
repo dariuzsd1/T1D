@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
-import { stockStatus } from '@/lib/depletion'
+import { displayStatus } from '@/lib/depletion'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
@@ -37,10 +37,18 @@ export default function ReorderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Out first, then low — most urgent at the top. "ok" items aren't shown here.
+  // Out first, then low — most urgent at the top. "ok" items aren't shown here,
+  // and neither are unknown-rate items: their runway is a guess, so they get the
+  // quiet "not forecast yet" list below instead of an urgency ranking.
   const toReorder = [...inventory]
-    .filter((p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok')
+    .filter((p) => {
+      const s = displayStatus(p, safetyBufferDays)
+      return s === 'out' || s === 'low'
+    })
     .sort((a, b) => a.remainingDays - b.remainingDays)
+  const notForecast = inventory.filter(
+    (p) => displayStatus(p, safetyBufferDays) === 'unset'
+  )
 
   const handleReorder = (label: string) =>
     showToast(
@@ -102,6 +110,31 @@ export default function ReorderPage() {
               onReorder={handleReorder}
             />
           ))}
+        </section>
+      )}
+
+      {/* Unknown-rate items — quiet, never ranked as urgent (their runway is a
+          guess until usage is set; a guess must not drive an alarm). */}
+      {!loading && notForecast.length > 0 && (
+        <section className="bg-surface border border-line rounded-3xl p-6">
+          <h3 className="font-semibold text-ink">{t('reorder.unsetTitle')}</h3>
+          <p className="text-sm text-muted mt-1 mb-4">{t('reorder.unsetBody')}</p>
+          <ul className="divide-y divide-line">
+            {notForecast.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink text-sm truncate">{p.name}</p>
+                  <p className="text-xs text-muted">{p.quantity} · {t('row.unsetDays')}</p>
+                </div>
+                <Link
+                  href="/dashboard/supplies"
+                  className="shrink-0 text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-2 py-1"
+                >
+                  {t('reorder.setUsage')}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

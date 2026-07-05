@@ -52,6 +52,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [deviceId, setDeviceId] = useState<string>(product.deviceId ?? '')
   const [devices, setDevices] = useState<MedicalDevice[]>([])
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
@@ -82,6 +83,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
     try {
       await onUpdate(product.id, {
         quantity,
@@ -95,6 +97,11 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
       })
       onSaved?.(product.name)
       onClose()
+    } catch (err) {
+      // Keep the dialog open with the user's input intact — closing (or toasting
+      // success) on a failed write would silently lose the change.
+      console.error('Failed to save changes:', err)
+      setSaveError("Couldn't save your changes. Check your connection and try again.")
     } finally {
       setSaving(false)
     }
@@ -277,6 +284,12 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             </p>
           </div>
         </div>
+
+        {saveError && (
+          <div role="status" className="mt-5 p-3 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium">
+            {saveError}
+          </div>
+        )}
 
         <div className="mt-8 flex gap-3">
           <button

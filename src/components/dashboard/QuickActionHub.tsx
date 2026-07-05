@@ -19,9 +19,14 @@ export function QuickActionHub() {
     if (!item) {
       showToast(`No ${label} in your inventory yet.`, 'info')
     } else if (item.quantity > 0) {
-      await updateProduct(item.id, { quantity: item.quantity - 1 })
-      void logActivity('supply_used', item.name)
-      showToast(`Logged one ${item.name}. ${item.quantity - 1} left.`, 'success')
+      try {
+        await updateProduct(item.id, { quantity: item.quantity - 1 })
+        void logActivity('supply_used', item.name)
+        showToast(`Logged one ${item.name}. ${item.quantity - 1} left.`, 'success')
+      } catch (err) {
+        console.error('Failed to log usage:', err)
+        showToast(`Couldn't save that. ${item.name} is unchanged.`, 'caution')
+      }
     } else {
       showToast(`You're out of ${item.name}.`, 'caution')
     }

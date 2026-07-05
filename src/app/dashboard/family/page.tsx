@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { isMissingTableError } from '@/lib/prescriptions'
-import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { BackButton } from '@/components/ui/BackButton'
 import {
   type SharedWithMe, type CaregiverShareRow,
@@ -43,10 +43,14 @@ export default function FamilyPage() {
         setStatuses(prev => ({ ...prev, [ownerId]: { loading: false, error: true, total: 0, attention: 0 } }))
         return
       }
-      const items: { remainingDays: number }[] = json.data ?? []
-      const attention = items.filter(
-        (p) => stockStatus(p.remainingDays, DEFAULT_SAFETY_BUFFER_DAYS) !== 'ok'
-      ).length
+      // displayStatus: unknown-rate items don't count as "needs attention" — the
+      // caregiver count must not alarm on the fallback estimate.
+      const items: { remainingDays: number; quantity: number; usageRatePerDay: number; expirationDate?: string | null }[] =
+        json.data ?? []
+      const attention = items.filter((p) => {
+        const s = displayStatus(p, DEFAULT_SAFETY_BUFFER_DAYS)
+        return s === 'out' || s === 'low'
+      }).length
       setStatuses(prev => ({
         ...prev,
         [ownerId]: { loading: false, total: items.length, attention },

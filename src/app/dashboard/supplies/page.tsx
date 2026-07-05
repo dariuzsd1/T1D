@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useStore } from '@/lib/store'
 import { ProductCard } from '@/components/inventory/ProductCard'
 import { EditProductModal } from '@/components/inventory/EditProductModal'
-import { stockStatus } from '@/lib/depletion'
+import { displayStatus } from '@/lib/depletion'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import { Plus } from 'lucide-react'
@@ -48,13 +48,17 @@ export default function SuppliesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Three honest groups: real alarms (out/low on facts), unknown-rate items
+  // (calm "set usage" prompt — never an alarm built on the fallback estimate),
+  // and the genuinely well stocked.
   const sortedInventory = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
-  const needsAttention = sortedInventory.filter(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok'
-  )
-  const stableItems = sortedInventory.filter(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) === 'ok'
-  )
+  const statusOf = (p: (typeof inventory)[number]) => displayStatus(p, safetyBufferDays)
+  const needsAttention = sortedInventory.filter((p) => {
+    const s = statusOf(p)
+    return s === 'out' || s === 'low'
+  })
+  const unsetItems = sortedInventory.filter((p) => statusOf(p) === 'unset')
+  const stableItems = sortedInventory.filter((p) => statusOf(p) === 'ok')
 
   return (
     <div className="space-y-10" aria-busy={loading}>
@@ -115,6 +119,28 @@ export default function SuppliesPage() {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {needsAttention.map((item) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                bufferDays={safetyBufferDays}
+                onUpdate={updateProduct}
+                onDelete={removeProduct}
+                onOrder={handleOrder}
+                onEdit={setEditingId}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!loading && unsetItems.length > 0 && (
+        <section className="space-y-6 pt-10 border-t border-line">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-faint rounded-full" />
+            <h2 className="text-base font-semibold tracking-wide text-muted">Set usage to track</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            {unsetItems.map((item) => (
               <ProductCard
                 key={item.id}
                 product={item}
