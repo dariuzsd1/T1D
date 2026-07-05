@@ -7,6 +7,7 @@ import { Product } from '@/lib/store'
 import { useDialog } from '@/lib/useDialog'
 import { createClient } from '@/lib/supabase/client'
 import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
+import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { rateFromDaysPerUnit, daysPerUnitFromRate } from '@/lib/depletion'
 
 interface EditProductModalProps {
@@ -51,6 +52,8 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   )
   const [deviceId, setDeviceId] = useState<string>(product.deviceId ?? '')
   const [devices, setDevices] = useState<MedicalDevice[]>([])
+  const [prescriptionId, setPrescriptionId] = useState<string>(product.prescriptionId ?? '')
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const dialogRef = useDialog<HTMLDivElement>(onClose)
@@ -60,8 +63,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
     firstFieldRef.current?.focus()
   }, [])
 
-  // Load the user's devices so this supply can be linked to a pump/CGM.
-  // Best-effort: if the table doesn't exist yet, the picker simply stays empty.
+  // Load the user's devices + prescriptions so this supply can be linked to a
+  // pump/CGM and to the prescription that covers it. Best-effort: if a table
+  // doesn't exist yet, that picker simply stays hidden.
   useEffect(() => {
     const supabase = createClient()
     supabase
@@ -70,6 +74,13 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
       .order('created_at', { ascending: true })
       .then(({ data }) => {
         if (data) setDevices((data as MedicalDeviceRow[]).map(rowToDevice))
+      })
+    supabase
+      .from('prescriptions')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) setPrescriptions(data.map(rowToPrescription))
       })
   }, [])
 
@@ -94,6 +105,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         lastFilledDate: lastFilledDate || null,
         copay: copay ? parseFloat(copay) : null,
         deviceId: deviceId || null,
+        prescriptionId: prescriptionId || null,
       })
       onSaved?.(product.name)
       onClose()
@@ -232,6 +244,28 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                 <option value="">Not linked to a device</option>
                 {devices.map(d => (
                   <option key={d.id} value={d.id}>{deviceLabel(d)}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Link this supply to the prescription that covers it, so runway and
+              refills-left can be reconciled ("no refills left and it runs out
+              in 9 days"). Only shown once at least one prescription exists. */}
+          {prescriptions.length > 0 && (
+            <div>
+              <label htmlFor="edit-prescription" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Covered by a prescription (optional)</label>
+              <select
+                id="edit-prescription"
+                value={prescriptionId}
+                onChange={(e) => setPrescriptionId(e.target.value)}
+                className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+              >
+                <option value="">Not linked to a prescription</option>
+                {prescriptions.map(rx => (
+                  <option key={rx.id} value={rx.id}>
+                    {rx.medicationName}{rx.dosage ? ` (${rx.dosage})` : ''}
+                  </option>
                 ))}
               </select>
             </div>

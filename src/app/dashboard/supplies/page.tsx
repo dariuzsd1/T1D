@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useStore } from '@/lib/store'
+import { createClient } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/inventory/ProductCard'
 import { EditProductModal } from '@/components/inventory/EditProductModal'
 import { displayStatus } from '@/lib/depletion'
+import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import { Plus } from 'lucide-react'
@@ -17,8 +19,12 @@ export default function SuppliesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
 
   const editingProduct = inventory.find((p) => p.id === editingId) ?? null
+  const rxById = new Map(prescriptions.map((rx) => [rx.id, rx]))
+  const linkedRxFor = (p: { prescriptionId?: string | null }) =>
+    p.prescriptionId ? rxById.get(p.prescriptionId) ?? null : null
 
   const handleOrder = (label: string) =>
     showToast(
@@ -45,6 +51,15 @@ export default function SuppliesPage() {
       }
     }
     fetchInventory()
+
+    // Prescriptions power the runway ↔ refills-left line on each card.
+    // Best-effort: a missing table just means no reconciliation lines.
+    createClient()
+      .from('prescriptions')
+      .select('*')
+      .then(({ data }) => {
+        if (data) setPrescriptions(data.map(rowToPrescription))
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -123,6 +138,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
                 onOrder={handleOrder}
@@ -145,6 +161,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
                 onOrder={handleOrder}
@@ -164,6 +181,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
                 onOrder={handleOrder}
