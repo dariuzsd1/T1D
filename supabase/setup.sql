@@ -187,11 +187,17 @@ create table if not exists public.caregiver_shares (
   owner_id        uuid not null references auth.users(id) on delete cascade,
   caregiver_email text not null,
   role            text not null default 'view'  check (role in ('view','manage')),
-  status          text not null default 'accepted' check (status in ('invited','accepted','revoked')),
+  status          text not null default 'invited' check (status in ('invited','accepted','revoked')),
   created_at      timestamptz not null default now(),
   accepted_at     timestamptz,
   unique (owner_id, caregiver_email)
 );
+
+-- Consent step: new shares start as 'invited' and grant NOTHING until the
+-- caregiver accepts (every cross-account policy below requires 'accepted').
+-- Idempotent for databases created before this default changed.
+alter table public.caregiver_shares
+  alter column status set default 'invited';
 
 alter table public.caregiver_shares enable row level security;
 
@@ -202,6 +208,28 @@ create policy "owner manages shares" on public.caregiver_shares
 drop policy if exists "caregiver sees own invites" on public.caregiver_shares;
 create policy "caregiver sees own invites" on public.caregiver_shares
   for select using (lower(caregiver_email) = lower(auth.jwt() ->> 'email'));
+
+-- Accept/decline an invite. A security-definer function instead of an UPDATE
+-- policy on purpose: a row policy can't stop the caregiver from also editing
+-- their own `role` (privilege escalation) — this function can ONLY flip the
+-- status of a pending invite addressed to the caller's email.
+create or replace function public.respond_to_caregiver_share(share_id uuid, accept boolean)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  update public.caregiver_shares
+     set status      = case when accept then 'accepted' else 'revoked' end,
+         accepted_at = case when accept then now() else accepted_at end
+   where id = share_id
+     and lower(caregiver_email) = lower(auth.jwt() ->> 'email')
+     and status = 'invited'
+  returning true;
+$$;
+
+revoke execute on function public.respond_to_caregiver_share(uuid, boolean) from public, anon;
+grant execute on function public.respond_to_caregiver_share(uuid, boolean) to authenticated;
 
 -- Cross-account READ access: a caregiver with an accepted share can read the
 -- patient's supplies + prescriptions. Additive to the "own rows" policies.

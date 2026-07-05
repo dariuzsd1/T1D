@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   HeartHandshake, ShieldCheck, ChevronRight, Loader2, CheckCircle2,
-  AlertTriangle, Database, RefreshCw,
+  AlertTriangle, Database, RefreshCw, MailQuestion,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { isMissingTableError } from '@/lib/prescriptions'
 import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import {
   type SharedWithMe, type CaregiverShareRow,
@@ -26,12 +27,16 @@ interface PatientStatus {
 
 export default function FamilyPage() {
   const supabase = useMemo(() => createClient(), [])
+  const { showToast } = useToast()
 
   const [shares, setShares] = useState<SharedWithMe[]>([])
+  const [pending, setPending] = useState<SharedWithMe[]>([])
   const [statuses, setStatuses] = useState<Record<string, PatientStatus>>({})
   const [loading, setLoading] = useState(true)
   const [needsMigration, setNeedsMigration] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Share id currently being accepted/declined (disables that card's buttons).
+  const [responding, setResponding] = useState<string | null>(null)
 
   // Fetch one patient's inventory and reduce it to a calm "N need attention" count.
   const loadStatus = useCallback(async (ownerId: string) => {
@@ -80,16 +85,48 @@ export default function FamilyPage() {
 
     setNeedsMigration(false)
     const rows = (data ?? []) as CaregiverShareRow[]
-    // Only the shares where I'm the caregiver (someone else owns the data).
+    // Only the shares where I'm the caregiver (someone else owns the data),
+    // split by consent: pending invites need an accept/decline first — they
+    // grant no access until accepted (RLS requires 'accepted').
     const mine = rows.filter(r => r.owner_id !== user?.id).map(rowToSharedWithMe)
-    setShares(mine)
+    const active = mine.filter(s => s.status === 'accepted')
+    setShares(active)
+    setPending(mine.filter(s => s.status === 'invited'))
     setLoading(false)
 
-    // Kick off per-person status loads in parallel.
-    mine.forEach(s => loadStatus(s.ownerId))
+    // Kick off per-person status loads in parallel (accepted shares only —
+    // a pending share can't read anything yet).
+    active.forEach(s => loadStatus(s.ownerId))
   }, [supabase, loadStatus])
 
   useEffect(() => { load() }, [load])
+
+  // Accept/decline goes through a security-definer function that can only flip
+  // the status of an invite addressed to my email (see supabase/setup.sql).
+  const respond = async (share: SharedWithMe, accept: boolean) => {
+    setResponding(share.shareId)
+    const { data, error: rErr } = await supabase.rpc('respond_to_caregiver_share', {
+      share_id: share.shareId,
+      accept,
+    })
+    setResponding(null)
+    if (rErr || !data) {
+      showToast(
+        rErr?.message?.includes('function')
+          ? 'This needs the latest supabase/setup.sql. Run it, then try again.'
+          : "Couldn't save your response. Please try again.",
+        'caution'
+      )
+      return
+    }
+    showToast(
+      accept
+        ? `You now see ${share.ownerEmail ?? 'their'} supplies.`
+        : 'Invite declined.',
+      accept ? 'success' : 'info'
+    )
+    await load()
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -138,8 +175,54 @@ export default function FamilyPage() {
         </div>
       )}
 
+      {/* Pending invites — consent first: nothing is visible until accepted */}
+      {!loading && !error && pending.length > 0 && (
+        <section className="space-y-3">
+          {pending.map((s) => (
+            <motion.div
+              key={s.shareId}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-primary/30 bg-primary/5 p-5"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <MailQuestion className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-ink">
+                    {s.ownerEmail ?? 'Someone'} invited you to view their supplies
+                  </p>
+                  <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {ROLE_LABEL[s.role]} · you see nothing until you accept
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => respond(s, true)}
+                  disabled={responding === s.shareId}
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                >
+                  {responding === s.shareId && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Accept
+                </button>
+                <button
+                  onClick={() => respond(s, false)}
+                  disabled={responding === s.shareId}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-sm text-muted hover:bg-surface-2 border border-line transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Decline
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </section>
+      )}
+
       {/* Empty — not caring for anyone yet */}
-      {!loading && !error && !needsMigration && shares.length === 0 && (
+      {!loading && !error && !needsMigration && shares.length === 0 && pending.length === 0 && (
         <div className="bg-surface border border-line rounded-3xl p-10 text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto">
             <HeartHandshake className="w-7 h-7 text-muted" />
