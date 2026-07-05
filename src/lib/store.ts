@@ -67,92 +67,83 @@ export const useStore = create<T1DStore>()((set) => ({
   updateProduct: async (id, updates) => {
     const supabase = createClient()
 
-    try {
-      // Only send the columns that actually changed so an expiration edit
-      // doesn't clobber quantity (or vice-versa).
-      const payload: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      }
-      if (updates.quantity !== undefined) payload.quantity = updates.quantity
-      if (updates.expirationDate !== undefined)
-        payload.expiration_date = updates.expirationDate
+    // Only send the columns that actually changed so an expiration edit
+    // doesn't clobber quantity (or vice-versa).
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    }
+    if (updates.quantity !== undefined) payload.quantity = updates.quantity
+    if (updates.expirationDate !== undefined)
+      payload.expiration_date = updates.expirationDate
 
-      const { error } = await supabase
+    const { error } = await supabase
+      .from('supplies')
+      .update(payload)
+      .eq('id', id)
+
+    // A failed core write must reach the caller — the UI may never report
+    // success (or update local state) for a save that didn't happen.
+    if (error) throw new Error(error.message)
+
+    // Optional columns (usage rate + refill cycle) are added by supabase/setup.sql.
+    // Write them separately and best-effort so a "column does not exist" error
+    // on an un-migrated DB can never break the core quantity/expiration save above.
+    if (
+      updates.usageRatePerDay !== undefined ||
+      updates.refillIntervalDays !== undefined ||
+      updates.lastFilledDate !== undefined ||
+      updates.copay !== undefined ||
+      updates.deviceId !== undefined
+    ) {
+      const optionalPayload: Record<string, unknown> = {}
+      if (updates.usageRatePerDay !== undefined)
+        // Store NULL (not 0) when cleared so it reads back as "estimate".
+        optionalPayload.usage_rate_per_day =
+          updates.usageRatePerDay > 0 ? updates.usageRatePerDay : null
+      if (updates.refillIntervalDays !== undefined)
+        optionalPayload.refill_interval_days = updates.refillIntervalDays
+      if (updates.lastFilledDate !== undefined)
+        optionalPayload.last_filled_date = updates.lastFilledDate
+      if (updates.copay !== undefined)
+        // NULL when cleared so it's simply not counted (never $0 fabricated).
+        optionalPayload.copay = updates.copay && updates.copay > 0 ? updates.copay : null
+      if (updates.deviceId !== undefined)
+        // NULL when unlinked. Best-effort like the others (column may be pre-migration).
+        optionalPayload.device_id = updates.deviceId || null
+
+      const { error: optionalError } = await supabase
         .from('supplies')
-        .update(payload)
+        .update(optionalPayload)
         .eq('id', id)
 
-      if (error) {
-        console.error('Failed to update product:', error)
-        return
-      }
-
-      // Optional columns (usage rate + refill cycle) are added by supabase/setup.sql.
-      // Write them separately and best-effort so a "column does not exist" error
-      // on an un-migrated DB can never break the core quantity/expiration save above.
-      if (
-        updates.usageRatePerDay !== undefined ||
-        updates.refillIntervalDays !== undefined ||
-        updates.lastFilledDate !== undefined ||
-        updates.copay !== undefined ||
-        updates.deviceId !== undefined
-      ) {
-        const optionalPayload: Record<string, unknown> = {}
-        if (updates.usageRatePerDay !== undefined)
-          // Store NULL (not 0) when cleared so it reads back as "estimate".
-          optionalPayload.usage_rate_per_day =
-            updates.usageRatePerDay > 0 ? updates.usageRatePerDay : null
-        if (updates.refillIntervalDays !== undefined)
-          optionalPayload.refill_interval_days = updates.refillIntervalDays
-        if (updates.lastFilledDate !== undefined)
-          optionalPayload.last_filled_date = updates.lastFilledDate
-        if (updates.copay !== undefined)
-          // NULL when cleared so it's simply not counted (never $0 fabricated).
-          optionalPayload.copay = updates.copay && updates.copay > 0 ? updates.copay : null
-        if (updates.deviceId !== undefined)
-          // NULL when unlinked. Best-effort like the others (column may be pre-migration).
-          optionalPayload.device_id = updates.deviceId || null
-
-        const { error: optionalError } = await supabase
-          .from('supplies')
-          .update(optionalPayload)
-          .eq('id', id)
-
-        if (optionalError) {
-          console.warn(
-            'Usage rate / refill cycle not saved — run supabase/setup.sql:',
-            optionalError.message
-          )
-        }
-      }
-
-      set((state) => ({
-        inventory: state.inventory.map(p =>
-          p.id === id ? withRunway({ ...p, ...updates }) : p
+      if (optionalError) {
+        console.warn(
+          'Usage rate / refill cycle not saved — run supabase/setup.sql:',
+          optionalError.message
         )
-      }))
-    } catch (err) {
-      console.error('Failed to update product:', err)
+      }
     }
+
+    set((state) => ({
+      inventory: state.inventory.map(p =>
+        p.id === id ? withRunway({ ...p, ...updates }) : p
+      )
+    }))
   },
 
   removeProduct: async (id) => {
     const supabase = createClient()
 
-    try {
-      const { error } = await supabase
-        .from('supplies')
-        .delete()
-        .eq('id', id)
+    const { error } = await supabase
+      .from('supplies')
+      .delete()
+      .eq('id', id)
 
-      if (!error) {
-        set((state) => ({
-          inventory: state.inventory.filter(p => p.id !== id)
-        }))
-      }
-    } catch (err) {
-      console.error('Failed to remove product:', err)
-    }
+    if (error) throw new Error(error.message)
+
+    set((state) => ({
+      inventory: state.inventory.filter(p => p.id !== id)
+    }))
   },
 
   setSafetyBufferDays: (safetyBufferDays) => {

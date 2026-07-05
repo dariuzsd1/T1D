@@ -127,6 +127,8 @@ export const en = {
   'home.allSetSubOne': 'Your supply is above your {buffer}-day reserve.',
   'home.allSetSubOther': 'All {count} supplies are above your {buffer}-day reserve.',
   'home.needSub': 'Reorder soon to stay above your {buffer}-day reserve.',
+  'home.unsetSubOne': 'Set a usage rate on 1 supply to track its runway.',
+  'home.unsetSubOther': 'Set a usage rate on {count} supplies to track their runway.',
   'home.cardAllSupplies': 'All supplies',
   'home.cardTrackedOne': '{count} tracked',
   'home.cardTrackedOther': '{count} tracked',
@@ -136,6 +138,21 @@ export const en = {
   'home.nothingNeeded': 'Nothing needed',
   'home.addSupply': 'Add a supply',
 
+  // ── onboarding (first-run) ──
+  'onboarding.kicker': 'Welcome',
+  'onboarding.title': 'Set up your supplies',
+  'onboarding.subtitle':
+    "Pick what you use and we'll add the usual supplies, with box sizes and how long each one lasts already filled in. You can change anything later.",
+  'onboarding.delivery': 'Insulin delivery',
+  'onboarding.cgm': 'Continuous glucose monitor',
+  'onboarding.willAdd': "We'll add",
+  'onboarding.perBox': '{n} per box',
+  'onboarding.daysEach': '~{n} days each',
+  'onboarding.pickPrompt': 'Pick what you use',
+  'onboarding.finish': 'Add supplies and finish',
+  'onboarding.skip': 'Skip for now',
+  'onboarding.error': 'Could not finish setup. Please try again.',
+
   // ── supply status row (home + reorder) ──
   'row.outOfStock': 'Out of stock',
   'row.reorderSoon': 'Reorder soon',
@@ -144,6 +161,8 @@ export const en = {
   'row.daysLeftOne': '{count} day left',
   'row.daysLeftOther': '{count} days left',
   'row.reorder': 'Reorder',
+  'row.unsetLabel': 'Usage not set',
+  'row.unsetDays': 'set usage to see days left',
 
   // ── reorder page ──
   'reorder.kicker': 'Reorder',
@@ -156,6 +175,10 @@ export const en = {
   'reorder.viewAll': 'View all supplies',
   'reorder.distributorsTitle': 'Distributor shortcuts',
   'reorder.distributorsBody': 'Place or check on an order with a major DME supplier.',
+  'reorder.unsetTitle': 'Not forecast yet',
+  'reorder.unsetBody':
+    'These have no usage rate, so their runway is unknown. Set one and they will show up here when it matters.',
+  'reorder.setUsage': 'Set usage',
 
   // ── shared toasts ──
   'toast.openingSupplier': "Opening {label}'s reorder page in a new tab.",
@@ -410,6 +433,8 @@ export const fr: Record<TKey, string> = {
   'home.allSetSubOne': 'Votre fourniture est au-dessus de votre réserve de {buffer} jours.',
   'home.allSetSubOther': 'Vos {count} fournitures sont au-dessus de votre réserve de {buffer} jours.',
   'home.needSub': 'Recommandez bientôt pour rester au-dessus de votre réserve de {buffer} jours.',
+  'home.unsetSubOne': "Renseignez l'usage d'une fourniture pour suivre son autonomie.",
+  'home.unsetSubOther': "Renseignez l'usage de {count} fournitures pour suivre leur autonomie.",
   'home.cardAllSupplies': 'Toutes les fournitures',
   'home.cardTrackedOne': '{count} suivie',
   'home.cardTrackedOther': '{count} suivies',
@@ -419,6 +444,21 @@ export const fr: Record<TKey, string> = {
   'home.nothingNeeded': 'Rien à faire',
   'home.addSupply': 'Ajouter une fourniture',
 
+  // ── onboarding (first-run) ──
+  'onboarding.kicker': 'Bienvenue',
+  'onboarding.title': 'Configurez vos fournitures',
+  'onboarding.subtitle':
+    'Choisissez ce que vous utilisez et nous ajouterons les fournitures habituelles, avec la taille des boîtes et la durée de chaque unité déjà remplies. Vous pourrez tout modifier plus tard.',
+  'onboarding.delivery': "Administration d'insuline",
+  'onboarding.cgm': 'Capteur de glycémie en continu',
+  'onboarding.willAdd': 'Nous ajouterons',
+  'onboarding.perBox': '{n} par boîte',
+  'onboarding.daysEach': '~{n} jours chacune',
+  'onboarding.pickPrompt': 'Choisissez ce que vous utilisez',
+  'onboarding.finish': 'Ajouter les fournitures et terminer',
+  'onboarding.skip': "Passer pour l'instant",
+  'onboarding.error': 'Impossible de terminer la configuration. Veuillez réessayer.',
+
   // ── supply status row ──
   'row.outOfStock': 'En rupture',
   'row.reorderSoon': 'À recommander bientôt',
@@ -427,6 +467,8 @@ export const fr: Record<TKey, string> = {
   'row.daysLeftOne': '{count} jour restant',
   'row.daysLeftOther': '{count} jours restants',
   'row.reorder': 'Recommander',
+  'row.unsetLabel': 'Usage non renseigné',
+  'row.unsetDays': "renseignez l'usage pour voir les jours restants",
 
   // ── reorder page ──
   'reorder.kicker': 'Recommander',
@@ -440,6 +482,10 @@ export const fr: Record<TKey, string> = {
   'reorder.distributorsTitle': 'Raccourcis distributeurs',
   'reorder.distributorsBody':
     "Passez ou suivez une commande auprès d’un grand distributeur de matériel médical.",
+  'reorder.unsetTitle': 'Pas encore de prévision',
+  'reorder.unsetBody':
+    "Ces fournitures n'ont pas de rythme d'usage, leur autonomie est donc inconnue. Renseignez-le et elles apparaîtront ici au bon moment.",
+  'reorder.setUsage': "Renseigner l'usage",
 
   // ── shared toasts ──
   'toast.openingSupplier': 'Ouverture de la page de commande de {label} dans un nouvel onglet.',

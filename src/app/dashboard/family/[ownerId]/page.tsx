@@ -10,7 +10,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
-import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS, isRateEstimated } from '@/lib/depletion'
+import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS, isRateEstimated } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { BackButton } from '@/components/ui/BackButton'
 import { Badge } from '@/components/ui/badge'
@@ -52,19 +52,25 @@ export default function SafetyViewPage() {
   const name = ownerEmail ? ownerEmail.split('@')[0] : `#${String(ownerId).slice(0, 6)}`
 
   // Derive status from runway, recomputed against optimistic quantities.
+  // displayStatus: unknown-rate items are neutral 'unset' here too — a caregiver
+  // must not be alarmed (or reassured) by a number built on the fallback guess.
   const withStatus = inventory.map(p => {
     const qty = qtyMap[p.id] ?? p.quantity
     const estimated = isRateEstimated(p.usageRatePerDay)
     const runway = p.usageRatePerDay > 0 ? Math.round(qty / p.usageRatePerDay) : p.remainingDays
-    return { product: p, qty, estimated, runway, status: stockStatus(runway, DEFAULT_SAFETY_BUFFER_DAYS) }
+    const status = displayStatus(
+      { quantity: qty, usageRatePerDay: p.usageRatePerDay, expirationDate: p.expirationDate },
+      DEFAULT_SAFETY_BUFFER_DAYS
+    )
+    return { product: p, qty, estimated, runway, status }
   })
   const outCount = withStatus.filter(s => s.status === 'out').length
   const lowCount = withStatus.filter(s => s.status === 'low').length
   const safety: Safety = outCount > 0 ? 'act' : lowCount > 0 ? 'watch' : 'good'
 
-  // Most urgent item name (fewest days left among non-ok), else None.
+  // Most urgent item name (fewest days left among real alarms), else None.
   const urgent = [...withStatus]
-    .filter(s => s.status !== 'ok')
+    .filter(s => s.status === 'out' || s.status === 'low')
     .sort((a, b) => a.runway - b.runway)[0]
 
   const handleUseOne = async (product: Product) => {
@@ -191,15 +197,20 @@ export default function SafetyViewPage() {
                   {withStatus
                     .sort((a, b) => a.runway - b.runway)
                     .map(({ product, qty, estimated, runway, status }) => {
-                      const badgeTone = status === 'out' ? 'urgent' : status === 'low' ? 'caution' : 'success'
-                      const label = status === 'out' ? t('row.outOfStock') : status === 'low' ? t('row.reorderSoon') : t('row.wellStocked')
+                      const badgeTone =
+                        status === 'out' ? 'urgent' : status === 'low' ? 'caution' : status === 'unset' ? 'neutral' : 'success'
+                      const label =
+                        status === 'out' ? t('row.outOfStock')
+                        : status === 'low' ? t('row.reorderSoon')
+                        : status === 'unset' ? t('row.unsetLabel')
+                        : t('row.wellStocked')
                       const reorder = reorderTargetFor(product)
                       return (
                         <li key={product.id} className="py-3 flex items-center gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-ink text-sm truncate">{product.name}</p>
                             <p className="text-xs text-muted mt-0.5">
-                              {qty} · {status === 'out' ? t('row.noneOnHand') : t(runway === 1 ? 'row.daysLeftOne' : 'row.daysLeftOther', { count: `${estimated ? '~' : ''}${runway}` })}
+                              {qty} · {status === 'out' ? t('row.noneOnHand') : status === 'unset' ? t('row.unsetDays') : t(runway === 1 ? 'row.daysLeftOne' : 'row.daysLeftOther', { count: `${estimated ? '~' : ''}${runway}` })}
                             </p>
                           </div>
                           <Badge tone={badgeTone}>{label}</Badge>

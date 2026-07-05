@@ -37,9 +37,11 @@ export function setupSteps({ inventory, deviceCount }: SetupInputs): SetupStep[]
   const hasUsage = inventory.some((p) => (p.usageRatePerDay ?? 0) > 0)
   const hasRefill = inventory.some((p) => (p.refillIntervalDays ?? 0) > 0)
 
+  // supply + device are what the onboarding flow collects, so those steps route
+  // into it; usage + refill are per-supply, edited on the Supplies page.
   return [
-    { key: 'supply', label: 'Add your first supply', done: hasSupply, href: '/scan' },
-    { key: 'device', label: 'Add your pump or CGM', done: hasDevice, href: '/dashboard/devices' },
+    { key: 'supply', label: 'Add your first supply', done: hasSupply, href: '/dashboard/onboarding' },
+    { key: 'device', label: 'Add your pump or CGM', done: hasDevice, href: '/dashboard/onboarding' },
     { key: 'usage', label: 'Set how fast you use a supply', done: hasUsage, href: '/dashboard/supplies' },
     { key: 'refill', label: 'Add a refill cycle', done: hasRefill, href: '/dashboard/supplies' },
   ]

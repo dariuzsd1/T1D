@@ -16,7 +16,7 @@ import {
   rowToDevice, deviceToRow, deviceLabel, DEVICE_PRESETS, DEVICE_KIND_LABEL,
 } from '@/lib/devices'
 import { isMissingTableError } from '@/lib/prescriptions'
-import { stockStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -279,18 +279,23 @@ function DeviceCard({
 
 /** One linked consumable: name, runway (honest), status, reorder hand-off. */
 function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: number }) {
-  const status = stockStatus(product.remainingDays, bufferDays)
+  // displayStatus: an unknown rate renders neutral, never an alarm on a guess.
+  const status = displayStatus(product, bufferDays)
   const estimated = isRateEstimated(product.usageRatePerDay)
   const reorder = reorderTargetFor(product)
-  const tone = status === 'out' ? 'urgent' : status === 'low' ? 'caution' : 'success'
-  const label = status === 'out' ? 'Out' : status === 'low' ? 'Reorder soon' : 'Well stocked'
+  const tone =
+    status === 'out' ? 'urgent' : status === 'low' ? 'caution' : status === 'unset' ? 'neutral' : 'success'
+  const label =
+    status === 'out' ? 'Out' : status === 'low' ? 'Reorder soon' : status === 'unset' ? 'Usage not set' : 'Well stocked'
 
   return (
     <li className="flex items-center gap-3 py-3">
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-ink text-sm truncate">{product.name}</p>
         <p className="text-xs text-muted">
-          {product.quantity} on hand · {estimated ? '~' : ''}{product.remainingDays} days left
+          {status === 'unset'
+            ? `${product.quantity} on hand · set usage to see days left`
+            : `${product.quantity} on hand · ${estimated ? '~' : ''}${product.remainingDays} days left`}
         </p>
       </div>
       <Badge tone={tone}>{label}</Badge>
@@ -388,6 +393,7 @@ function CareLinkImportSection({
     if (!summary) return
     setApplying(true)
     let applied = 0
+    let failed = 0
 
     for (const kindSummary of summary.recognized) {
       const supplyId = mappings[kindSummary.kind]
@@ -397,19 +403,28 @@ function CareLinkImportSection({
       if (!product) continue
 
       const next = Math.max(0, product.quantity - kindSummary.count)
-      await updateProduct(supplyId, { quantity: next })
-      applied++
+      try {
+        await updateProduct(supplyId, { quantity: next })
+        applied++
+      } catch (err) {
+        // Keep going: one failed write shouldn't abandon the rest of the import,
+        // but it must be counted and reported, never claimed as applied.
+        console.error(`CareLink apply failed for ${product.name}:`, err)
+        failed++
+      }
     }
 
     setApplying(false)
     setSummary(null)
-    setApplied(true)
+    setApplied(applied > 0)
     onApplied()
 
-    if (applied > 0) {
+    if (failed > 0) {
+      showToast(`Applied ${applied} of ${applied + failed} changes. ${failed} didn't save, please try again.`, 'caution')
+    } else if (applied > 0) {
       showToast(`Applied ${applied} CareLink change${applied === 1 ? '' : 's'}.`, 'success')
     } else {
-      showToast('No supplies were updated — all event types were set to Skip.', 'info')
+      showToast('No supplies were updated. All event types were set to Skip.', 'info')
     }
   }
 

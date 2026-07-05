@@ -70,7 +70,7 @@ export default function SharingPage() {
       return
     }
     if (myShares.some(s => s.caregiverEmail.toLowerCase() === trimmed && s.status !== 'revoked')) {
-      showToast('That person already has access.', 'info')
+      showToast('That person is already invited or has access.', 'info')
       return
     }
     setInviting(true)
@@ -80,21 +80,32 @@ export default function SharingPage() {
       setInviting(false)
       return
     }
-    const { error: iErr } = await supabase.from('caregiver_shares').insert({
-      owner_id: user.id,
-      owner_email: user.email,   // stored so caregivers can see whose data it is
-      caregiver_email: trimmed,
-      role,
-      status: 'accepted',
-    })
+    // Consent step: the share starts as 'invited' and grants no access until the
+    // caregiver accepts it from their Care circle page (RLS requires 'accepted').
+    // A declined (revoked) share for the same email is revived rather than
+    // inserted — the unique (owner_id, caregiver_email) constraint forbids two rows.
+    const revoked = myShares.find(
+      s => s.caregiverEmail.toLowerCase() === trimmed && s.status === 'revoked'
+    )
+    const { error: iErr } = revoked
+      ? await supabase.from('caregiver_shares')
+          .update({ status: 'invited', role, accepted_at: null })
+          .eq('id', revoked.id)
+      : await supabase.from('caregiver_shares').insert({
+          owner_id: user.id,
+          owner_email: user.email,   // stored so caregivers can see whose data it is
+          caregiver_email: trimmed,
+          role,
+          status: 'invited',
+        })
     setInviting(false)
     if (iErr) {
-      showToast(`Couldn't add caregiver: ${iErr.message}`, 'caution')
+      showToast(`Couldn't invite caregiver: ${iErr.message}`, 'caution')
       return
     }
     setEmail('')
     setRole('view')
-    showToast(`Added ${trimmed}.`, 'success')
+    showToast(`Invited ${trimmed}. They'll be asked to accept.`, 'success')
     await load()
   }
 
@@ -176,15 +187,16 @@ export default function SharingPage() {
               </div>
               <Button onClick={handleInvite} disabled={inviting} className="w-full">
                 {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {inviting ? 'Adding…' : 'Add caregiver'}
+                {inviting ? 'Inviting…' : 'Invite caregiver'}
               </Button>
             </div>
 
             <div className="mt-4 flex gap-2.5 rounded-2xl bg-surface-2 border border-line p-3.5 text-xs text-muted leading-relaxed">
               <Info className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
               <p>
-                Access is live as soon as they sign in with this exact email. We don&apos;t send
-                the invite automatically yet — share the app link with them directly.
+                They see nothing until they sign in with this exact email and accept your
+                invite. We don&apos;t send the invite automatically yet, so share the app link
+                with them directly.
               </p>
             </div>
           </section>

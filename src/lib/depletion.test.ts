@@ -9,6 +9,7 @@ import {
   daysUntilExpiration,
   effectiveRunwayDays,
   stockStatus,
+  displayStatus,
   reorderByDate,
 } from './depletion'
 
@@ -127,6 +128,38 @@ describe('stockStatus', () => {
   it('is ok above the buffer', () => {
     expect(stockStatus(15, 14)).toBe('ok')
     expect(stockStatus(90, 14)).toBe('ok')
+  })
+})
+
+describe('displayStatus (estimates never alarm)', () => {
+  it('never alarms on the fallback rate: 1 vial with no rate is unset, not low', () => {
+    // The bug this fixes: adding 1 insulin vial → fallback 1/day → "1 day left"
+    // → instant amber. The UI status must be the neutral 'unset' instead.
+    expect(displayStatus({ quantity: 1, usageRatePerDay: 0 })).toBe('unset')
+    expect(displayStatus({ quantity: 5, usageRatePerDay: 0 }, 14)).toBe('unset')
+  })
+  it('keeps real statuses for known rates', () => {
+    expect(displayStatus({ quantity: 9, usageRatePerDay: 0.1 }, 14)).toBe('ok') // 90 days
+    expect(displayStatus({ quantity: 1, usageRatePerDay: 0.1 }, 14)).toBe('low') // 10 days
+    expect(displayStatus({ quantity: 3, usageRatePerDay: 1 }, 14)).toBe('low')
+  })
+  it('0 on hand is a true stockout regardless of the rate', () => {
+    expect(displayStatus({ quantity: 0, usageRatePerDay: 0 })).toBe('out')
+    expect(displayStatus({ quantity: 0, usageRatePerDay: 0.5 })).toBe('out')
+  })
+  it('a real expiration date still cuts through an estimated rate', () => {
+    // Expiry is dated fact, not usage guesswork: expired stock is out …
+    expect(
+      displayStatus({ quantity: 5, usageRatePerDay: 0, expirationDate: isoInDays(-2) })
+    ).toBe('out')
+    // … and stock expiring inside the buffer is genuinely low.
+    expect(
+      displayStatus({ quantity: 5, usageRatePerDay: 0, expirationDate: isoInDays(7) }, 14)
+    ).toBe('low')
+    // A far-off expiry changes nothing: still unset.
+    expect(
+      displayStatus({ quantity: 5, usageRatePerDay: 0, expirationDate: isoInDays(300) }, 14)
+    ).toBe('unset')
   })
 })
 

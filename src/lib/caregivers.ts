@@ -49,12 +49,15 @@ export function rowToShare(r: CaregiverShareRow): CaregiverShare {
 /**
  * A share the current user received — they are the caregiver, the patient is
  * the owner. ownerEmail comes from the owner_email column stored at invite time.
+ * `status` drives the consent step: an 'invited' share grants no access until
+ * the caregiver accepts it (RLS requires 'accepted').
  */
 export interface SharedWithMe {
   shareId: string
   ownerId: string
   ownerEmail: string | null
   role: CaregiverRole
+  status: ShareStatus
   createdAt: string | null
 }
 
@@ -64,6 +67,7 @@ export function rowToSharedWithMe(r: CaregiverShareRow): SharedWithMe {
     ownerId: r.owner_id,
     ownerEmail: r.owner_email,
     role: r.role,
+    status: r.status,
     createdAt: r.created_at,
   }
 }

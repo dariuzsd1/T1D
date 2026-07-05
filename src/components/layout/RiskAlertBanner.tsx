@@ -1,7 +1,7 @@
 'use client'
 
 import { useStore } from '@/lib/store'
-import { stockStatus } from '@/lib/depletion'
+import { displayStatus } from '@/lib/depletion'
 import { AlertTriangle, Clock, ArrowRight, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -11,8 +11,10 @@ export function RiskAlertBanner() {
   const { inventory, safetyBufferDays } = useStore()
   const [dismissed, setDismissed] = useState(false)
 
-  const out = inventory.filter((p) => stockStatus(p.remainingDays, safetyBufferDays) === 'out')
-  const low = inventory.filter((p) => stockStatus(p.remainingDays, safetyBufferDays) === 'low')
+  // displayStatus: items with an estimated rate stay out of this banner entirely —
+  // an app-wide alarm may only rest on facts (real rate, real 0, real expiry).
+  const out = inventory.filter((p) => displayStatus(p, safetyBufferDays) === 'out')
+  const low = inventory.filter((p) => displayStatus(p, safetyBufferDays) === 'low')
 
   if (dismissed || (out.length === 0 && low.length === 0)) return null
 

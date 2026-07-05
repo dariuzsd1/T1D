@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ChevronLeft,
@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
-import { stockStatus, type StockStatus } from '@/lib/depletion'
+import { displayStatus, stockStatus, type StockStatus } from '@/lib/depletion'
 import { assessRefill } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import {
@@ -30,28 +30,57 @@ import {
 type DayEventKind = 'runout' | 'eligible'
 
 export default function CalendarPage() {
-  const { inventory, safetyBufferDays } = useStore()
+  const { inventory, setInventory, safetyBufferDays } = useStore()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [loading, setLoading] = useState(true)
+
+  // The store is empty on a direct load or refresh (inventory is PHI, so it's
+  // never persisted locally) — fetch it like the other dashboard pages do.
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/inventory')
+        if (response.ok) {
+          const result = await response.json()
+          setInventory(result.data || [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch inventory:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchInventory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Per-item forecast: when it runs out (real, from usage) and — when the user
   // has entered a refill cycle — when insurance lets them refill (the moat).
+  // Items with no usage rate are 'unset': their run-out date would rest on the
+  // fallback guess, so they get no run-out marker or forecast entry (a made-up
+  // date on a calendar is exactly what CLAUDE.md §9.1 forbids). Refill-eligible
+  // markers stay — those come from real entered dates.
   const items = inventory.map((item) => {
     const rule = item.refillIntervalDays
       ? { supplyDays: item.refillIntervalDays }
       : null
     return {
       item,
+      unset: displayStatus(item, safetyBufferDays) === 'unset',
       runOutDate: addDays(new Date(), item.remainingDays),
       status: stockStatus(item.remainingDays, safetyBufferDays),
       assessment: assessRefill(item.remainingDays, item.lastFilledDate, rule),
     }
   })
+  const forecastable = items.filter((i) => !i.unset)
+  const unsetCount = items.length - forecastable.length
 
   // Flatten into calendar markers. Refill-eligible markers only appear for items
   // that actually have a refill cycle — nothing is fabricated (CLAUDE.md §9.1).
   const events: { date: Date; name: string; kind: DayEventKind; status: StockStatus }[] = []
-  for (const { item, runOutDate, status, assessment } of items) {
-    events.push({ date: runOutDate, name: item.name, kind: 'runout', status })
+  for (const { item, unset, runOutDate, status, assessment } of items) {
+    if (!unset) events.push({ date: runOutDate, name: item.name, kind: 'runout', status })
     if (assessment.eligibleDate) {
       events.push({ date: assessment.eligibleDate, name: item.name, kind: 'eligible', status })
     }
@@ -72,7 +101,7 @@ export default function CalendarPage() {
   const eligibleTone = 'bg-teal/10 border-teal/30 text-teal'
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
+    <div className="max-w-6xl mx-auto space-y-10" aria-busy={loading}>
       <BackButton />
       <header className="flex justify-between items-end">
         <div>
@@ -166,11 +195,24 @@ export default function CalendarPage() {
         <div className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted px-1">Upcoming</h3>
 
-          {items.length === 0 && (
+          {loading && items.length === 0 && (
+            <div className="animate-pulse space-y-3" aria-hidden="true">
+              <div className="h-20 bg-surface-2 rounded-2xl" />
+              <div className="h-20 bg-surface-2 rounded-2xl" />
+            </div>
+          )}
+
+          {!loading && items.length === 0 && (
             <p className="text-sm text-faint px-1">Add supplies to see when they&apos;ll run out.</p>
           )}
 
-          {[...items]
+          {!loading && items.length > 0 && forecastable.length === 0 && (
+            <p className="text-sm text-faint px-1">
+              No forecast yet. Set a usage rate on your supplies to see run-out dates here.
+            </p>
+          )}
+
+          {[...forecastable]
             .sort((a, b) => a.runOutDate.getTime() - b.runOutDate.getTime())
             .map(({ item, runOutDate, status, assessment }, idx) => {
               const reorder = reorderTargetFor(item)
@@ -223,6 +265,8 @@ export default function CalendarPage() {
           <div className="bg-surface-2 rounded-2xl p-4 border border-line">
             <p className="text-xs text-faint leading-relaxed">
               Run-out dates use your current usage rate. Add each item&apos;s refill cycle to see when insurance lets you reorder.
+              {unsetCount > 0 &&
+                ` ${unsetCount === 1 ? '1 supply has' : `${unsetCount} supplies have`} no usage rate yet and ${unsetCount === 1 ? "isn't" : "aren't"} forecast.`}
             </p>
           </div>
         </div>

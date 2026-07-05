@@ -22,9 +22,9 @@ export interface SiteChangeInput {
 
 /**
  * Accessible "log a site change" dialog. Mirrors AppointmentModal (useDialog:
- * focus trap, Escape, focus restore, scroll lock). Records the change only — it
- * does not decrement supply quantity or recompute runway (that's the separate
- * M4 issue, out of scope here).
+ * focus trap, Escape, focus restore, scroll lock). When a consumable is selected,
+ * saving also logs one of it as used (the page decrements the supply) — the hint
+ * under the picker tells the user before they confirm.
  */
 export function LogSiteChangeModal({
   zone,
@@ -123,6 +123,17 @@ export function LogSiteChangeModal({
                 No supplies tracked yet. You can still log the site and add the consumable later.
               </p>
             )}
+            {(() => {
+              const selected = inventory.find((p) => p.id === supplyId)
+              if (!selected) return null
+              return (
+                <p className="mt-1.5 text-xs text-faint">
+                  {selected.quantity > 0
+                    ? `Saving also logs 1 used (${selected.quantity - 1} left after).`
+                    : 'None on hand, so the count stays at 0.'}
+                </p>
+              )
+            })()}
           </div>
 
           <div>

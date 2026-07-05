@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
-import { stockStatus } from '@/lib/depletion'
+import { displayStatus } from '@/lib/depletion'
 import { nextEligibleRefillDate } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { logActivity } from '@/lib/activity'
@@ -20,7 +21,6 @@ import { trackEvent } from '@/lib/analytics'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { WhatsNext } from '@/components/dashboard/WhatsNext'
 import { FinishSetup } from '@/components/dashboard/FinishSetup'
-import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import {
   Plus, CheckCircle2, AlertTriangle, ShoppingCart, Package, ChevronRight, Sparkles, RefreshCcw,
 } from 'lucide-react'
@@ -29,11 +29,11 @@ export default function DashboardPage() {
   const { inventory, setInventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
+  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showStarterKit, setShowStarterKit] = useState(false)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [deviceCount, setDeviceCount] = useState(0)
@@ -90,14 +90,40 @@ export default function DashboardPage() {
     }
   }, [supabase])
 
+  // First-run onboarding gate: send a brand-new, genuinely empty account (no
+  // completed onboarding, no supplies, no devices) into the flow, exactly once.
+  // Guarding on real emptiness means existing users — and pre-migration accounts
+  // that already have data — are never redirected; completion/skip sets the flag.
+  const onboardingRedirected = useRef(false)
+  useEffect(() => {
+    if (onboardingRedirected.current) return
+    if (loading || !extrasLoaded || profileLoading || !profile) return
+    // Session fallback set by the onboarding page: covers a finish/skip made
+    // before the onboarding_completed_at column exists (pre-migration), where
+    // the durable flag couldn't be written. The DB flag remains the real gate.
+    let doneThisSession = false
+    try { doneThisSession = sessionStorage.getItem('t1d-onboarding-done') === '1' } catch { /* private mode */ }
+    if (doneThisSession) return
+    if (profile.onboardingCompletedAt == null && inventory.length === 0 && deviceCount === 0) {
+      onboardingRedirected.current = true
+      router.replace('/dashboard/onboarding')
+    }
+  }, [loading, extrasLoaded, profileLoading, profile, inventory.length, deviceCount, router])
+
   const now = useMemo(() => new Date(), [])
   const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
-  const needsAttention = sorted.filter(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) !== 'ok'
-  )
+  // displayStatus, not raw stockStatus: an estimated rate never alarms ('unset'),
+  // so a freshly added box doesn't greet the user with a warning built on a guess.
+  const needsAttention = sorted.filter((p) => {
+    const s = displayStatus(p, safetyBufferDays)
+    return s === 'out' || s === 'low'
+  })
   const hasOut = needsAttention.some(
-    (p) => stockStatus(p.remainingDays, safetyBufferDays) === 'out'
+    (p) => displayStatus(p, safetyBufferDays) === 'out'
   )
+  const unsetCount = inventory.filter(
+    (p) => displayStatus(p, safetyBufferDays) === 'unset'
+  ).length
   const allGood = inventory.length > 0 && needsAttention.length === 0
 
   // Forward-looking agenda, built from real dated data only (refill-eligible,
@@ -152,9 +178,14 @@ export default function DashboardPage() {
   const handlePodChange = async () => {
     if (!pod) return
     if (pod.quantity > 0) {
-      await updateProduct(pod.id, { quantity: pod.quantity - 1 })
-      void logActivity('supply_used', pod.name)
-      showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+      try {
+        await updateProduct(pod.id, { quantity: pod.quantity - 1 })
+        void logActivity('supply_used', pod.name)
+        showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+      } catch (err) {
+        console.error('Failed to log pod change:', err)
+        showToast(`Couldn't save that. ${pod.name} is unchanged.`, 'caution')
+      }
     } else {
       showToast(`You're out of ${pod.name}.`, 'caution')
     }
@@ -199,13 +230,13 @@ export default function DashboardPage() {
             <p className="text-muted max-w-sm mx-auto leading-relaxed">{t('home.emptyBody')}</p>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <button
-              onClick={() => setShowStarterKit(true)}
+            <Link
+              href="/dashboard/onboarding"
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-6 py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <Sparkles className="w-5 h-5" />
               {t('home.quickStart')}
-            </button>
+            </Link>
             <p className="text-sm text-muted max-w-xs mx-auto">{t('home.quickStartBody')}</p>
             <Link
               href="/scan"
@@ -217,8 +248,6 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       )}
-
-      {showStarterKit && <StarterKitModal onClose={() => setShowStarterKit(false)} />}
 
       {/* Status hero — one glanceable answer + the single next thing to do */}
       {!loading && !error && inventory.length > 0 && (
@@ -266,10 +295,16 @@ export default function DashboardPage() {
                 {nextClause
                   ? nextClause
                   : allGood
-                  ? t(
-                      inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
-                      { count: inventory.length, buffer: safetyBufferDays }
-                    )
+                  ? unsetCount > 0
+                    // Honest subline: "above your reserve" can't be claimed for
+                    // items whose usage rate is unknown — nudge to set it instead.
+                    ? t(unsetCount === 1 ? 'home.unsetSubOne' : 'home.unsetSubOther', {
+                        count: unsetCount,
+                      })
+                    : t(
+                        inventory.length === 1 ? 'home.allSetSubOne' : 'home.allSetSubOther',
+                        { count: inventory.length, buffer: safetyBufferDays }
+                      )
                   : t('home.needSub', { buffer: safetyBufferDays })}
               </p>
             </div>

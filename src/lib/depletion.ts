@@ -94,6 +94,35 @@ export function stockStatus(
 }
 
 /**
+ * What the UI is allowed to CLAIM about an item. `stockStatus` stays the raw
+ * engine (known-rate math, also ported server-side); this wraps it with the
+ * honesty gate: an alarm may only rest on facts, never on the fallback rate.
+ * A fresh box must not greet the user with a warning built on a guess.
+ *
+ * Facts still cut through for an estimated-rate item:
+ *   - 0 on hand is a true stockout ('out'),
+ *   - a real expiration date that has passed ('out') or falls inside the
+ *     buffer ('low') — expiry is dated fact, not usage guesswork.
+ * Everything else with an unknown rate is 'unset': a calm "set usage to
+ * track this" state, excluded from alerts and reorder lists.
+ */
+export type DisplayStatus = StockStatus | 'unset'
+
+export function displayStatus(
+  p: RunwayInput,
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+): DisplayStatus {
+  if (p.quantity <= 0) return 'out'
+  if (!isRateEstimated(p.usageRatePerDay)) {
+    return stockStatus(effectiveRunwayDays(p), bufferDays)
+  }
+  const exp = daysUntilExpiration(p.expirationDate)
+  if (exp !== null && exp <= 0) return 'out'
+  if (exp !== null && exp <= bufferDays) return 'low'
+  return 'unset'
+}
+
+/**
  * The date to reorder by so you still have `bufferDays` of reserve left when the
  * new supply arrives. Returns today if you're already at/under the buffer.
  */

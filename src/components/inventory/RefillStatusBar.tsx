@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS } from "@/lib/depletion";
+import { Clock, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS, type DisplayStatus } from "@/lib/depletion";
 
 interface RefillStatusBarProps {
   daysRemaining: number;
@@ -9,6 +9,9 @@ interface RefillStatusBarProps {
   totalDays?: number;
   /** True when the runway rests on the fallback rate, not a user-entered one. */
   estimated?: boolean;
+  /** Pass the caller's displayStatus so 'unset' renders neutral (an estimate
+   *  never alarms). Falls back to raw stockStatus when not provided. */
+  status?: DisplayStatus;
 }
 
 export function RefillStatusBar({
@@ -16,34 +19,11 @@ export function RefillStatusBar({
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
   totalDays = 30,
   estimated = false,
+  status,
 }: RefillStatusBarProps) {
   const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
 
-  const status = stockStatus(daysRemaining, bufferDays);
-
-  // Semantic color: red only for a true stockout; routine low stock is amber.
-  const variants = {
-    out: {
-      bar: "bg-urgent",
-      text: "text-urgent",
-      icon: <AlertTriangle className="w-4 h-4" />,
-      label: "Out — reorder now",
-    },
-    low: {
-      bar: "bg-caution",
-      text: "text-caution",
-      icon: <Clock className="w-4 h-4" />,
-      label: "Running low",
-    },
-    ok: {
-      bar: "bg-success",
-      text: "text-success",
-      icon: <CheckCircle2 className="w-4 h-4" />,
-      label: "Well stocked",
-    },
-  };
-
-  const current = variants[status];
+  const current = variants[status ?? stockStatus(daysRemaining, bufferDays)];
 
   return (
     <div className="space-y-2.5">
@@ -67,3 +47,32 @@ export function RefillStatusBar({
     </div>
   );
 }
+
+// Semantic color: red only for a true stockout; routine low stock is amber;
+// an unknown usage rate is neutral (never an alarm built on the fallback guess).
+const variants: Record<DisplayStatus, { bar: string; text: string; icon: React.ReactNode; label: string }> = {
+  out: {
+    bar: "bg-urgent",
+    text: "text-urgent",
+    icon: <AlertTriangle className="w-4 h-4" />,
+    label: "Out. Reorder now",
+  },
+  low: {
+    bar: "bg-caution",
+    text: "text-caution",
+    icon: <Clock className="w-4 h-4" />,
+    label: "Running low",
+  },
+  ok: {
+    bar: "bg-success",
+    text: "text-success",
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    label: "Well stocked",
+  },
+  unset: {
+    bar: "bg-faint",
+    text: "text-muted",
+    icon: <HelpCircle className="w-4 h-4" />,
+    label: "Set usage to track",
+  },
+};
