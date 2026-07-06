@@ -36,7 +36,7 @@ export function RiskAlertBanner() {
       initial={{ height: 0, opacity: 0 }}
       animate={{ height: 'auto', opacity: 1 }}
       role="status"
-      className={`relative z-[100] border-b ${tone}`}
+      className={`print:hidden relative z-[100] border-b ${tone}`}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">

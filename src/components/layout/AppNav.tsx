@@ -21,6 +21,7 @@ import {
   HeartHandshake,
   Share2,
   User,
+  ClipboardList,
   MoreHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -51,6 +52,7 @@ const secondaryNav: { key: TKey; href: string; icon: typeof LayoutDashboard }[] 
   { key: 'nav.devices', href: '/dashboard/devices', icon: Cpu },
   { key: 'nav.prescriptions', href: '/dashboard/prescriptions', icon: Pill },
   { key: 'nav.appointments', href: '/dashboard/appointments', icon: Stethoscope },
+  { key: 'nav.visitPrep', href: '/dashboard/visit-prep', icon: ClipboardList },
   { key: 'nav.costs', href: '/dashboard/costs', icon: DollarSign },
   { key: 'nav.medicalId', href: '/dashboard/medical-id', icon: HeartPulse },
 ]
@@ -76,7 +78,7 @@ export function AppNav() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 border-r border-line flex-col h-screen sticky top-0 overflow-y-auto bg-surface">
+      <aside className="hidden lg:flex print:hidden w-64 border-r border-line flex-col h-screen sticky top-0 overflow-y-auto bg-surface">
         <div className="p-6">
           <div className="flex items-center gap-3 text-primary mb-8">
             <ShieldCheck className="w-7 h-7" />
@@ -167,7 +169,7 @@ export function AppNav() {
 
       {/* Mobile bottom tab bar */}
       <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-[105] bg-surface border-t border-line pb-[env(safe-area-inset-bottom)]"
+        className="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-[105] bg-surface border-t border-line pb-[env(safe-area-inset-bottom)]"
         aria-label="Primary"
       >
         <div className="flex items-stretch justify-around">
