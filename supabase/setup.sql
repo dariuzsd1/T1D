@@ -673,6 +673,26 @@ create policy "own analytics read" on public.analytics_events
 
 
 -- ============================================================================
+-- 16. NOTIFICATION LOG  (server-only — dedupe for the notify-refills Edge
+--     Function so the daily scan doesn't re-send the same alert every day;
+--     see supabase/functions/notify-refills/ + docs/PUSH_NOTIFICATIONS.md).
+-- ============================================================================
+create table if not exists public.notification_log (
+  id        uuid primary key default gen_random_uuid(),
+  user_id   uuid not null references auth.users(id) on delete cascade,
+  supply_id uuid references public.supplies(id) on delete cascade,
+  kind      text not null check (kind in ('runout','gap')),
+  sent_at   timestamptz not null default now()
+);
+create index if not exists notification_log_recent_idx
+  on public.notification_log (user_id, supply_id, kind, sent_at desc);
+alter table public.notification_log enable row level security;
+-- No client policies on purpose: RLS-on with zero policies denies all client
+-- access. Only the Edge Function's service-role key (which bypasses RLS)
+-- reads and writes this log.
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

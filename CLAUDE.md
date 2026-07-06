@@ -65,6 +65,17 @@ auto-tracking. The headline a user should see is not "runs out in 5 days" — it
 > kept to 4 core items. **Honest gaps documented:** caregiver "viewing-as" switch,
 > auto-invite emails, manage-role writes, GTIN→product directory.
 >
+> **2026-07-05 — FCM push SERVER side BUILT (deploy pending).** The sender is
+> written and committed: `supabase/functions/notify-refills/index.ts` (Deno Edge
+> Function; ports depletion+refill engines with the same "estimates never alarm"
+> display rule, per-user lead time + quiet hours + timezone, 3-day dedupe via new
+> `notification_log` (setup.sql §16), FCM HTTP v1 with WebCrypto-signed OAuth,
+> dead-token purge), `supabase/cron.sql` (daily 14:00 UTC pg_cron trigger), and
+> `docs/PUSH_NOTIFICATIONS.md` rewritten as an exact ~20-min deploy checklist.
+> **User action:** follow that checklist (service-account key → deploy function →
+> secret → enable pg_cron/pg_net → run cron.sql → test). Until then nothing sends.
+> Note: `supabase/functions` is excluded from tsconfig (Deno globals).
+>
 > **Phase 2 batch 4 (2026-06-18) — FCM push CLIENT side DONE.** `firebase`
 > (^12.15.0) is now a committed dependency (installed on the user's second,
 > Node-capable machine; both package.json + package-lock.json are in the repo, so

@@ -1,140 +1,106 @@
-# Push notifications (FCM) — implementation guide
+# Push notifications (FCM) — deploy checklist
 
-> Status: **not yet implemented.** This is the highest-ROI MVP feature (a
-> rarely-opened app only works if it reaches the user *off-device*), but it
-> needs external setup that can't live in the repo alone. This doc is the
-> step-by-step to land it at **$0/month** (no Firebase Blaze, no Twilio) per
-> MASTER_SUGGESTIONS §6.
+> Status: **client half DONE · server half BUILT, awaiting the steps below.**
+> The app already registers the service worker, asks permission, and stores
+> device tokens (`src/components/PushToggle.tsx` on the Settings page). The
+> sender is written too: `supabase/functions/notify-refills/index.ts`. What's
+> left is ~20 minutes of one-time dashboard setup — no code. Total cost: **$0/month**
+> (no Firebase Blaze, no credit card; pg_cron + Edge Function replace Cloud Functions).
 
-## Architecture ($0, no credit card)
+## Architecture (already built)
 
 ```
-Supabase pg_cron (daily)            ← free, built into Supabase
-  → Supabase Edge Function          ← free tier
-      → scans supplies for items that cross the safety buffer
-      → POSTs to FCM HTTP v1 API    ← Firebase Cloud Messaging is free & unlimited
-          → browser/device shows the notification
+Supabase pg_cron (daily 14:00 UTC)              ← supabase/cron.sql
+  → Edge Function notify-refills                ← supabase/functions/notify-refills/
+      → reads supplies/prefs/tokens with the service role
+      → same honest engines as the app (depletion.ts + refill.ts ports):
+          · run-out alerts measured against YOUR lead time / safety buffer
+          · "estimates never alarm" — an unset usage rate can't page you
+          · the moat: "you'd run out N days before your refill date" (gap)
+      → respects quiet hours (your timezone), dedupes for 3 days
+        (notification_log), purges dead tokens
+      → FCM HTTP v1 → the browser shows the notification, click opens the app
 ```
 
-We deliberately **do not** use Firebase Cloud Functions (they require the Blaze
-pay-as-you-go plan + a credit card). `pg_cron` + an Edge Function replace them
-for free.
+## What you do (in order)
 
-## What you need to provide
+### 1. Get the Firebase service-account key (2 min)
+Firebase Console → project **t1-diabetes** → ⚙ Project settings →
+**Service accounts** → *Generate new private key* → a JSON file downloads.
+Treat it like a password. Never commit it.
 
-1. **Firebase project** (free Spark plan is fine — we only use FCM).
-   - Console → Project settings → Cloud Messaging → **Web Push certificates** →
-     generate a **VAPID key pair**. Copy the public key.
-   - Project settings → Service accounts → **generate a private key** (JSON).
-     This is used server-side by the Edge Function to call the FCM HTTP v1 API.
-2. **Supabase**: a real project (not paused), with `pg_cron` enabled
-   (Dashboard → Database → Extensions → enable `pg_cron` and `pg_net`).
+### 2. Make sure the DB is current (1 min)
+Re-run `supabase/setup.sql` in the SQL editor (idempotent). It creates
+`fcm_tokens`, `notification_prefs`, and the new `notification_log` (§16).
 
-## Steps
+### 3. Deploy the function (5 min, pick ONE way)
 
-### 1. Client: register a service worker + get a token
-- Add `firebase` to deps; create `public/firebase-messaging-sw.js`.
-- On the dashboard, after login, ask permission and call `getToken(messaging,
-  { vapidKey })`. Store the returned token.
-- Env: `NEXT_PUBLIC_FIREBASE_*` config values + `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
+**Dashboard (no installs):** Supabase Dashboard → Edge Functions →
+*Deploy a new function* → name it exactly `notify-refills` → paste the entire
+contents of `supabase/functions/notify-refills/index.ts` → Deploy.
 
-### 2. DB: store device tokens under RLS (PHI-adjacent)
-```sql
-create table fcm_tokens (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  token text not null unique,
-  created_at timestamptz default now()
-);
-alter table fcm_tokens enable row level security;
-create policy "own tokens" on fcm_tokens
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+**CLI (if you have it):**
 ```
-
-### 2b. DB: per-user notification preferences (quiet hours / lead time)
-```sql
-create table notification_prefs (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  push_enabled boolean not null default true,
-  -- How many days of lead time before a run-out to alert. Defaults to the
-  -- app's safety buffer (14) but the user can tune it on the Settings page.
-  lead_time_days integer not null default 14,
-  quiet_hours_start smallint default 22,  -- 0-23, local hour
-  quiet_hours_end   smallint default 8,
-  created_at timestamptz default now()
-);
-alter table notification_prefs enable row level security;
-create policy "own prefs" on notification_prefs
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+supabase functions deploy notify-refills --project-ref <PROJECT-REF>
 ```
+(Leave JWT verification ON — the default. The function additionally requires
+the service-role key itself, so ordinary user JWTs are rejected either way.)
 
-### 3. Edge Function: `notify-refills`
-- Reads each user's supplies, computes runway with the **same logic as
-  `src/lib/depletion.ts`** (keep them in sync — port `effectiveRunwayDays` /
-  `stockStatus`), finds items at/under the user's safety buffer.
-- For each, sends an FCM message via the HTTP v1 API using the service-account
-  JSON (store it as a Supabase secret, never in the repo).
-- Message copy should be specific and calm, e.g.
-  `"Omnipod runs low Thursday — reorder soon."` (matches §6 tone).
-- Respect quiet hours + per-user channel/threshold prefs once those exist.
-- **Reuse the engines already in the app** — port these two pure modules into the
-  function (Deno) so the server and client agree exactly:
-  - `src/lib/depletion.ts` → `effectiveRunwayDays` / `stockStatus` (run-out alerts)
-  - `src/lib/refill.ts` → `assessRefill` (the moat: alert on the `gap` state, i.e.
-    "you'll run out before insurance lets you refill — request an override").
+### 4. Set the secret (2 min)
+Dashboard → Edge Functions → notify-refills → **Secrets** → add:
 
-Skeleton (`supabase/functions/notify-refills/index.ts`):
-```ts
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-// Copy effectiveRunwayDays/stockStatus + assessRefill here (or import a shared file).
+| Name | Value |
+|---|---|
+| `FCM_SERVICE_ACCOUNT` | the entire contents of the JSON from step 1, pasted as one value |
 
-Deno.serve(async () => {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, // service role: bypasses RLS, server-only
-  )
+(CLI alternative: `supabase secrets set FCM_SERVICE_ACCOUNT="$(cat service-account.json)"`)
 
-  const { data: supplies } = await supabase.from('supplies').select('*')
-  const { data: prefs } = await supabase.from('notification_prefs').select('*')
-  const { data: tokens } = await supabase.from('fcm_tokens').select('*')
+### 5. Enable the scheduler (3 min)
+Dashboard → Database → **Extensions** → enable `pg_cron` **and** `pg_net`.
+Then open `supabase/cron.sql`, replace the two placeholders
+(`<PROJECT-REF>`, `<SERVICE-ROLE-KEY>` from Settings → API), and run it in the
+SQL editor once.
 
-  for (const s of supplies ?? []) {
-    const pref = prefs?.find((p) => p.user_id === s.user_id)
-    const lead = pref?.lead_time_days ?? 14
-    const runway = effectiveRunwayDays(s)               // from depletion.ts
-    const refill = assessRefill(runway, s.last_filled_date,
-      s.refill_interval_days ? { supplyDays: s.refill_interval_days } : null) // refill.ts
+### 6. Send yourself a test (2 min)
+1. In the app: Settings → enable push (the toggle stores your token).
+2. Trigger a scan manually — SQL editor:
+   ```sql
+   select net.http_post(
+     url     := 'https://<PROJECT-REF>.functions.supabase.co/notify-refills',
+     headers := jsonb_build_object('Authorization', 'Bearer <SERVICE-ROLE-KEY>')
+   );
+   ```
+3. Check the response in `select * from net._http_response order by id desc limit 1;`
+   — you should see `{"users":1,...,"sent":N}`. If an item is genuinely low,
+   the notification appears (close the tab first to see the background path).
+4. No low items? Temporarily set one supply's quantity to 0, re-run, restore it.
 
-    if (stockStatus(runway, lead) === 'ok' && refill.state !== 'gap') continue
-    const message = refill.state === 'gap' ? refill.message : `${s.name} runs low soon — reorder.`
+## How it decides to notify (so the alerts stay trustworthy)
 
-    for (const t of tokens?.filter((x) => x.user_id === s.user_id) ?? []) {
-      await sendFcm(t.token, message) // FCM HTTP v1 via the service-account JWT
-    }
-  }
-  return new Response('ok')
-})
-```
+- **Lead time**: `notification_prefs.lead_time_days`, else your profile's
+  safety buffer, else 14 — the same threshold the app's UI alarms against.
+- **Estimates never alarm**: items without a usage rate only alert on facts
+  (0 on hand, or a real expiration date inside the lead window) — identical to
+  the in-app `displayStatus` rule.
+- **Gap alerts** (insurance moat) fire only for items with a known rate AND a
+  refill cycle (days-between-refills + last-filled), when runway < eligibility.
+- **Dedupe**: one alert per item per kind per 3 days (`notification_log`).
+  Undelivered sends are not logged, so they retry the next day.
+- **Quiet hours**: per-user window (default 22:00–08:00 in your profile's
+  timezone); a user inside the window is skipped and caught up next run.
+- **Dead tokens** (uninstalled browser/profile) are deleted automatically.
 
-### 4. Schedule it with pg_cron (free)
-```sql
-select cron.schedule(
-  'notify-refills-daily',
-  '0 14 * * *',  -- 14:00 UTC daily
-  $$ select net.http_post(
-       url := 'https://<project-ref>.functions.supabase.co/notify-refills',
-       headers := '{"Authorization":"Bearer <service-role-or-function-secret>"}'::jsonb
-     ); $$
-);
-```
+## Secrets checklist (nothing committed)
+- Firebase **web** config + VAPID key: public by design, already in the repo
+  (`src/lib/firebase/config.ts`).
+- Firebase **service-account JSON** → only the `FCM_SERVICE_ACCOUNT` function
+  secret (step 4).
+- **service_role key** → only inside the pg_cron job's SQL (step 5) and your
+  test call. Never in the repo, never in the browser.
+- Keep the Supabase project awake (free tier pauses after ~7 idle days) — the
+  daily cron call itself counts as activity once this is set up.
 
-## Secrets checklist (none committed)
-- `NEXT_PUBLIC_FIREBASE_*` (public web config) → `.env.local` / Vercel
-- `NEXT_PUBLIC_FIREBASE_VAPID_KEY` → `.env.local` / Vercel
-- Firebase service-account JSON → **Supabase Edge Function secret**, not the repo
-- Keep the Supabase project warm (it pauses after ~7 days idle) — a free GitHub
-  Actions weekly ping works, or upgrade later.
-
-## When you're ready
-Provide the Firebase web config + VAPID public key and confirm `pg_cron` is
-enabled, and the client + Edge Function pieces can be built against them.
+## Kept in sync by hand (note for future changes)
+`notify-refills/index.ts` embeds ports of `src/lib/depletion.ts` and
+`src/lib/refill.ts` (pure logic, no imports available across that boundary).
+If either module changes, re-port — the function's header comment says the same.
