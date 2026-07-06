@@ -1,130 +1,130 @@
-category,brand,product_name,common_names,gtin,unit,units_per_box,typical_usage_per_day,default_refill_interval_days,rx_required,notes,source_url,last_verified
-cgm_sensor,Dexcom,Dexcom G7 Sensor,g7|dexcom g7|dex g7,00386270002839,sensors,3,0.10,90,yes,10-day wear; 1 sensor / 10 days = 0.10/day. Transmitter integrated into sensor,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%22&limit=10,2026-06-18
-cgm_sensor,Dexcom,Dexcom G6 Sensor,g6|dexcom g6|dex g6,,sensors,3,0.10,90,yes,10-day wear = 0.10/day. Separate transmitter required,,
-cgm_sensor,Dexcom,Dexcom G6 Transmitter,g6 transmitter|dexcom transmitter,00386270001627,transmitters,1,0.011,90,yes,Transmitter lasts ~90 days. One per 90 days,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G6%22&limit=10,2026-06-18
-cgm_sensor,Dexcom,Dexcom G7 15-Day Sensor,g7 15 day|g7 15-day|dexcom 15 day,00386270004765,sensors,2,0.067,90,yes,~15-day wear = 0.067/day. Verify box count,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%2015-Day%22&limit=10,2026-06-18
-cgm_sensor,Dexcom,Dexcom ONE+ Sensor,dexcom one|dexcom one plus|one+,,sensors,3,0.10,90,yes,10-day wear. Available outside US,,
-cgm_sensor,Dexcom,Dexcom Stelo Sensor,stelo|dexcom stelo,,sensors,2,0.067,30,no,OTC glucose biosensor (non-insulin users). ~15-day wear,,
-cgm_sensor,Abbott,FreeStyle Libre 3 Sensor,libre 3|freestyle libre 3|fsl3,00357599818005,sensors,1,0.067,90,yes,~14-15 day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18
-cgm_sensor,Abbott,FreeStyle Libre 3 Plus Sensor,libre 3 plus|fsl3 plus|libre3plus,00357599844004,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18
-cgm_sensor,Abbott,FreeStyle Libre 2 Plus Sensor,libre 2 plus|fsl2 plus|libre2plus,,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,,
-cgm_sensor,Abbott,FreeStyle Libre 2 Sensor,libre 2|freestyle libre 2|fsl2,00357599801007,sensors,1,0.071,90,yes,14-day wear = 0.071/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18
-cgm_sensor,Abbott,FreeStyle Libre 14 Day Sensor,libre 14 day|freestyle libre 14,00357599001018,sensors,1,0.071,90,yes,14-day wear. Older generation,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%2014%22&limit=10,2026-06-18
-cgm_sensor,Abbott,FreeStyle Libre Rio,libre rio|rio,,sensors,1,0.067,30,no,OTC CGM (US). ~15-day wear,,
-cgm_sensor,Abbott,Lingo Sensor,lingo|abbott lingo,00357599853006,sensors,1,0.067,30,no,OTC wellness biosensor (non-medical). ~15-day wear,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Lingo%22&limit=10,2026-06-18
-cgm_sensor,Medtronic,Guardian 4 Sensor,guardian 4|guardian sensor 4,,sensors,5,0.143,90,yes,7-day wear = ~0.143/day. For MiniMed 780G,,
-cgm_sensor,Medtronic,Guardian Sensor 3,guardian 3|guardian sensor 3,,sensors,5,0.143,90,yes,7-day wear = ~0.143/day,,
-cgm_sensor,Medtronic,Simplera Sensor,simplera|medtronic simplera,00763000565039,sensors,1,0.143,90,yes,"7-day wear, disposable all-in-one. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%22&limit=10,2026-06-18
-cgm_sensor,Medtronic,Simplera Sync Sensor,simplera sync,00763000956394,sensors,1,0.143,90,yes,"7-day wear, for MiniMed AID. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%20Sync%22&limit=10,2026-06-18
-cgm_sensor,Medtronic,Guardian Link Transmitter,guardian transmitter|guardian link,,transmitters,1,0.0027,365,yes,"Rechargeable transmitter, lasts ~1 year",,
-cgm_sensor,Senseonics,Eversense E3 Sensor,eversense e3|eversense,00817491022967,sensors,1,0.0055,180,yes,"Implantable, ~180-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20E3%22&limit=10,2026-06-18
-cgm_sensor,Senseonics,Eversense 365 Sensor,eversense 365,00817491024299,sensors,1,0.00274,365,yes,"Implantable, ~365-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20365%22&limit=10,2026-06-18
-cgm_sensor,Senseonics,Eversense Smart Transmitter,eversense transmitter,00817491024800,transmitters,1,0.00274,365,yes,"Removable external transmitter, reusable ~1 year",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%22&limit=10,2026-06-18
-patch_pump,Insulet,Omnipod 5 Pod,omnipod 5|op5|pod 5|omnipod5,,pods,5,0.33,90,yes,~3-day (72h) wear = 0.33/day. AID with Dexcom/Libre,,
-patch_pump,Insulet,Omnipod DASH Pod,omnipod dash|dash pod,10385082000023,pods,5,0.33,90,yes,~3-day wear = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%20DASH%22&limit=10,2026-06-18
-patch_pump,Insulet,Omnipod Pod (classic),omnipod classic|omnipod eros,10385081120005,pods,10,0.33,90,yes,~3-day wear = 0.33/day. Legacy system,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%22&limit=10,2026-06-18
-patch_pump,Insulet,Omnipod GO Pod,omnipod go,10385084000250,pods,1,0.014,90,no,"Basal-only patch, ~72h... verify wear/replacement schedule",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%20GO%22&limit=10,2026-06-18
-infusion_set,Tandem,t:slim X2 Cartridge,tslim cartridge|tandem cartridge|x2 cartridge,,cartridges,10,0.33,90,yes,Changed with set ~every 3 days = 0.33/day,,
-infusion_set,Tandem,Tandem Mobi Cartridge,mobi cartridge|tandem mobi cartridge,00389152773759,cartridges,10,0.33,90,yes,For Tandem Mobi micro-pump. Verify change interval,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Tandem%20Mobi%22&limit=10,2026-06-18
-infusion_set,Tandem,AutoSoft 90 Infusion Set,autosoft 90|tandem autosoft 90,00389152857572,sets,10,0.33,90,yes,Soft cannula 90-deg. ~3-day change = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22AutoSoft%22&limit=10,2026-06-18
-infusion_set,Tandem,AutoSoft 30 Infusion Set,autosoft 30|tandem autosoft 30,00389152707679,sets,10,0.33,90,yes,Soft cannula 30-deg. ~3-day change = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22AutoSoft%2030%22&limit=10,2026-06-18
-infusion_set,Tandem,TruSteel Infusion Set,trusteel|tandem trusteel,05705244018518,sets,10,0.5,90,yes,"Steel cannula, change ~every 2 days = 0.5/day",https://api.fda.gov/device/udi.json?search=brand_name%3A%22TruSteel%22&limit=10,2026-06-18
-infusion_set,Tandem,VariSoft Infusion Set,varisoft|tandem varisoft,05705244018693,sets,10,0.33,90,yes,Angled soft cannula. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22VariSoft%22&limit=10,2026-06-18
-infusion_set,Medtronic,MiniMed Reservoir,minimed reservoir|medtronic reservoir,,reservoirs,10,0.33,90,yes,Changed with set ~every 3 days = 0.33/day,,
-infusion_set,Medtronic,Mio Advance Infusion Set,mio advance|medtronic mio,05705244016293,sets,10,0.33,90,yes,All-in-one soft cannula. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Mio%22&limit=10,2026-06-18
-infusion_set,Medtronic,Quick-set Infusion Set,quick-set|quickset|medtronic quickset,05705244018068,sets,10,0.33,90,yes,Soft cannula 90-deg. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Quick-set%22&limit=10,2026-06-18
-infusion_set,Medtronic,Silhouette Infusion Set,silhouette|medtronic silhouette,,sets,10,0.33,90,yes,Angled soft cannula. ~3-day change,,
-infusion_set,Medtronic,Sure-T Infusion Set,sure-t|suret|medtronic sure-t,05705244019324,sets,10,0.5,90,yes,"Steel cannula, change ~every 2 days = 0.5/day",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Sure-T%22&limit=10,2026-06-18
-infusion_set,Medtronic,Extended Infusion Set,extended infusion|medtronic extended,,sets,10,0.143,90,yes,Wear up to 7 days = ~0.143/day,,
-infusion_set,Beta Bionics,iLet Cartridge,ilet cartridge|beta bionics cartridge,,cartridges,10,0.33,90,yes,For iLet Bionic Pancreas. Verify change interval,,
-infusion_set,Beta Bionics,iLet Infusion Set,ilet set|ilet infusion set,00850050080305,sets,10,0.33,90,yes,~3-day change. Verify,https://api.fda.gov/device/udi.json?search=brand_name%3A%22iLet%22&limit=10,2026-06-18
-patch_pump,Beta Bionics,iLet Bionic Pancreas,ilet|beta bionics ilet,00850050080183,devices,1,,,yes,"Durable AID pump (equipment, not consumable)",https://api.fda.gov/device/udi.json?search=brand_name%3A%22iLet%22&limit=10,2026-06-18
-infusion_set,Ypsomed,mylife YpsoPump Cartridge,ypsopump cartridge|mylife cartridge,,cartridges,10,0.33,90,yes,For YpsoPump (EU). Verify change interval,,
-infusion_set,Ypsomed,mylife Orbit Infusion Set,mylife orbit|orbit set,,sets,10,0.33,90,yes,Rotatable set (EU). ~3-day change,,
-insulin,Eli Lilly,Humalog (insulin lispro),humalog|lispro,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock once opened. Per-person dosing (collect TDD at onboarding),,
-insulin,Eli Lilly,Lyumjev (insulin lispro-aabc),lyumjev|lispro aabc,,vials,1,,30,yes,Ultra-rapid. 28-day in-use clock. Per-person dosing,,
-insulin,Sanofi,Admelog (insulin lispro),admelog,,vials,1,,30,yes,Rapid-acting biosimilar. 28-day in-use clock. Per-person dosing,,
-insulin,Novo Nordisk,NovoLog (insulin aspart),novolog|aspart|novorapid,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,
-insulin,Novo Nordisk,Fiasp (faster insulin aspart),fiasp|faster aspart,,vials,1,,30,yes,Ultra-rapid. 28-day in-use clock. Per-person dosing,,
-insulin,Sanofi,Apidra (insulin glulisine),apidra|glulisine,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,
-insulin,Sanofi,Lantus (insulin glargine U-100),lantus|glargine,,vials,1,,30,yes,Long-acting basal. 28-day in-use clock. Per-person dosing,,
-insulin,Eli Lilly,Basaglar (insulin glargine),basaglar,,pens,5,,30,yes,Long-acting basal (glargine biosimilar). Per-person dosing,,
-insulin,Viatris/Biocon,Semglee (insulin glargine),semglee,,pens,5,,30,yes,Interchangeable glargine biosimilar. Per-person dosing,,
-insulin,Sanofi,Toujeo (insulin glargine U-300),toujeo|glargine u300,,pens,3,,30,yes,Concentrated long-acting basal U-300. Per-person dosing,,
-insulin,Novo Nordisk,Levemir (insulin detemir),levemir|detemir,,vials,1,,30,yes,Long-acting basal. Per-person dosing. Note: being discontinued in some markets,,
-insulin,Novo Nordisk,Tresiba (insulin degludec),tresiba|degludec,,pens,5,,30,yes,Ultra-long-acting basal. In-use up to 56 days. Per-person dosing,,
-insulin,Eli Lilly,Humulin R (regular insulin),humulin r|regular insulin,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,
-insulin,Novo Nordisk,Novolin R (regular insulin),novolin r,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,
-insulin,Eli Lilly,Humulin N (NPH insulin),humulin n|nph,,vials,1,,30,no,Intermediate-acting NPH. Per-person dosing. OTC in some US states,,
-insulin,Novo Nordisk,Novolin N (NPH insulin),novolin n,,vials,1,,30,no,Intermediate-acting NPH. Per-person dosing. OTC in some US states,,
-insulin,Eli Lilly,Humulin R U-500 (concentrated),humulin u500|u-500,,vials,1,,30,yes,Concentrated regular U-500. High-dose. Per-person dosing,,
-insulin,Eli Lilly,Humalog Mix 75/25,humalog mix|mix 75/25,,pens,5,,30,yes,Premixed. Per-person dosing,,
-insulin,Novo Nordisk,NovoLog Mix 70/30,novolog mix|mix 70/30,,pens,5,,30,yes,Premixed. Per-person dosing,,
-insulin,Eli Lilly,Humulin 70/30,humulin 70/30,,vials,1,,30,no,Premixed. Per-person dosing,,
-mdi_supply,BD,BD Ultra-Fine Pen Needles,bd pen needles|ultra-fine pen needles,00382903201198,needles,90,,90,no,Single-use pen needles. Per-person usage (injections/day). Gauges/lengths vary (4/5/6/8mm),https://api.fda.gov/device/udi.json?search=brand_name%3A%22BD%20Ultra-Fine%22&limit=10,2026-06-18
-mdi_supply,Novo Nordisk,NovoFine Pen Needles,novofine|novofine plus,00301691856502,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoFine%22&limit=10,2026-06-18
-mdi_supply,Novo Nordisk,NovoTwist Pen Needles,novotwist,00301691853891,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoTwist%22&limit=10,2026-06-18
-mdi_supply,Ypsomed,mylife Clickfine Pen Needles,clickfine|mylife pen needles,07613117032302,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Clickfine%22&limit=10,2026-06-18
-mdi_supply,BD,BD Insulin Syringes (Ultra-Fine),bd syringes|insulin syringes,00382908411035,syringes,90,,90,no,Single-use syringes. Per-person usage. Capacities 0.3/0.5/1 mL,https://api.fda.gov/device/udi.json?search=brand_name%3A%22BD%20Ultra-Fine%22&limit=10,2026-06-18
-mdi_supply,Medtronic,InPen Smart Insulin Pen,inpen|smart pen,00763000645298,devices,1,,,yes,Reusable smart pen (durable equipment). Uses standard cartridges,https://api.fda.gov/device/udi.json?search=brand_name%3A%22InPen%22&limit=10,2026-06-18
-mdi_supply,Novo Nordisk,NovoPen 6,novopen 6|novopen,,devices,1,,,yes,Reusable smart pen (durable). Uses Penfill cartridges,,
-mdi_supply,Novo Nordisk,NovoPen Echo Plus,novopen echo|echo plus,00301691854591,devices,1,,,yes,Reusable smart pen with half-unit dosing (durable),https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoPen%20Echo%22&limit=10,2026-06-18
-insulin,Novo Nordisk,Penfill Insulin Cartridge (3mL),penfill|insulin cartridge,,cartridges,5,,30,yes,3mL cartridges for reusable pens. Per-person dosing,,
-bg_supply,LifeScan,OneTouch Verio Reflect Meter,onetouch verio reflect|verio reflect,00353885012959,devices,1,,,no,BG meter (durable). Pairs with Verio strips,https://api.fda.gov/device/udi.json?search=brand_name%3A%22OneTouch%20Verio%20Reflect%22&limit=10,2026-06-18
-bg_supply,LifeScan,OneTouch Verio Test Strips,onetouch verio strips|verio strips,00353885009768,strips,100,,90,yes,Per-person usage (fingerstick frequency). Often Rx for coverage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22OneTouch%20Verio%22&limit=10,2026-06-18
-bg_supply,LifeScan,OneTouch Ultra Test Strips,onetouch ultra strips|ultra strips,,strips,100,,90,yes,Per-person usage,,
-bg_supply,Roche,Accu-Chek Guide Meter,accu-chek guide|accuchek guide,00365702702066,devices,1,,,no,BG meter (durable),https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Guide%22&limit=10,2026-06-18
-bg_supply,Roche,Accu-Chek Guide Test Strips,accu-chek guide strips|accuchek strips,00365702703230,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Guide%22&limit=10,2026-06-18
-bg_supply,Roche,Accu-Chek Aviva Test Strips,aviva strips|accu-chek aviva,00365702407107,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Aviva%22&limit=10,2026-06-18
-bg_supply,Ascensia,Contour Next Test Strips,contour next strips|contour strips,,strips,100,,90,yes,Per-person usage. Used by some pumps for calibration,,
-bg_supply,Ascensia,Contour Next One Meter,contour next one|contour one,,devices,1,,,no,"BG meter (durable), Bluetooth",,
-bg_supply,Trividia,TRUE METRIX Test Strips,true metrix strips|truemetrix,00021292007836,strips,100,,90,no,Per-person usage. Low-cost option,https://api.fda.gov/device/udi.json?search=brand_name%3A%22TRUE%20METRIX%22&limit=10,2026-06-18
-bg_supply,Abbott,FreeStyle Lite Test Strips,freestyle lite strips|freestyle strips,00699073708274,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Lite%22&limit=10,2026-06-18
-bg_supply,Generic,Lancets (universal),lancets|blood lancets,,lancets,100,,90,no,Single-use. Per-person usage. Gauges 28-33g,,
-bg_supply,Generic,Lancing Device,lancing device|lancet device,,devices,1,,,no,Reusable lancing pen (durable),,
-bg_supply,Generic,BG Control Solution,control solution|glucose control solution,,bottles,1,,,no,For meter accuracy checks. Track expiration,,
-ketone_supply,Abbott,FreeStyle Precision Neo Meter,precision neo|freestyle neo,,devices,1,,,no,Blood glucose + ketone meter (durable),,
-ketone_supply,Abbott,Precision/FreeStyle Blood Ketone Strips,ketone strips|blood ketone strips|precision ketone,,strips,10,,,yes,Blood beta-hydroxybutyrate strips. Use during illness/high BG. Track expiration,,
-ketone_supply,Keto-Mojo,Keto-Mojo Blood Ketone Strips,keto-mojo strips|ketomojo,00858538007004,strips,50,,,no,Blood ketone strips. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Keto-Mojo%22&limit=10,2026-06-18
-ketone_supply,Bayer/Ascensia,Ketostix Urine Ketone Strips,ketostix|urine ketone strips,10301932880508,strips,50,,,no,Urine ketone test strips. Track expiration,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Ketostix%22&limit=10,2026-06-18
-glucagon,Eli Lilly,Baqsimi (nasal glucagon),baqsimi|nasal glucagon,,devices,1,,365,yes,Emergency rescue (nasal). Track EXPIRATION not daily use,,
-glucagon,Xeris,Gvoke HypoPen (glucagon),gvoke|gvoke hypopen|glucagon pen,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,
-glucagon,Zealand,Zegalogue (dasiglucagon),zegalogue|dasiglucagon,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,
-glucagon,Novo Nordisk,GlucaGen HypoKit (glucagon),glucagen|glucagen hypokit|glucagon kit,,devices,1,,365,yes,Emergency rescue (reconstituted injection). Track EXPIRATION,,
-hypo_treatment,Dex4,Dex4 Glucose Tablets,glucose tablets|dex4|glucose tabs,,tablets,50,,,no,Fast-acting carbs for lows (~4g/tab). Track expiration,,
-hypo_treatment,ReliOn,ReliOn Glucose Tablets,relion glucose tablets|relion tabs,,tablets,50,,,no,Fast-acting carbs for lows. Low-cost,,
-hypo_treatment,Dex4,Glucose Gel,glucose gel|dex4 gel,,tubes,3,,,no,Fast-acting carbs for lows. Track expiration,,
-hypo_treatment,Generic,Glucose Liquid Shots,glucose shots|glucose liquid,,bottles,6,,,no,Fast-acting carbs for lows. Track expiration,,
-skin_care,Skin Tac,Skin Tac Adhesive Wipes,skin tac|skin-tac|adhesive wipes,,wipes,50,,,no,Adhesive prep to improve sensor/pod stickiness. Per-person usage,,
-skin_care,Smith+Nephew,Skin-Prep Protective Wipes,skin prep|skin-prep,00040565120300,wipes,50,,,no,Skin barrier/prep wipes. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Skin-Prep%22&limit=10,2026-06-18
-skin_care,Generic,Adhesive Patches/Overlays,skin grip|simpatch|cgm patch|adhesive patch,,patches,20,,,no,Overlay patches to extend sensor/pod wear. Per-person usage,,
-skin_care,Generic,Adhesive Remover Wipes,adhesive remover|tac away|unisolve,00854137001719,wipes,50,,,no,Removes adhesive residue. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Adhesive%20Remover%22&limit=10,2026-06-18
-skin_care,Generic,Alcohol Prep Pads,alcohol pads|alcohol prep|alcohol swabs,00850003506081,pads,100,,,no,Site cleaning before insertion/injection. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Alcohol%20Prep%22&limit=10,2026-06-18
-skin_care,3M,Cavilon Barrier Wipes,cavilon|barrier wipes,30707387509744,wipes,30,,,no,No-sting skin barrier. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Cavilon%22&limit=10,2026-06-18
-other,Generic,Sharps Disposal Container,sharps container|sharps bin|needle disposal,00382903054879,containers,1,,,no,For safe disposal of needles/lancets/used sets. Equipment,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Sharps%22&limit=10,2026-06-18
-patch_pump,Tandem,t:slim X2 Insulin Pump,tslim x2|t slim x2|tandem x2|tslim,,devices,1,,,yes,"Durable tubed AID pump (equipment). Uses t:slim cartridges + infusion sets",,
-patch_pump,Tandem,Tandem Mobi Pump,tandem mobi|mobi pump,,devices,1,,,yes,"Durable miniature AID pump. Uses Mobi cartridges + infusion sets",,
-patch_pump,Medtronic,MiniMed 780G Pump,minimed 780g|780g|medtronic 780g,,devices,1,,,yes,"Durable AID pump. Uses reservoirs + infusion sets + Guardian sensors",,
-patch_pump,Medtronic,MiniMed 770G Pump,minimed 770g|770g,,devices,1,,,yes,"Durable AID pump (predecessor to the 780G)",,
-patch_pump,Ypsomed,mylife YpsoPump,ypsopump|mylife pump,,devices,1,,,yes,"Durable pump (EU/intl). Uses YpsoPump cartridges + Orbit sets",,
-patch_pump,Insulet,Omnipod 5 Controller,omnipod 5 pdm|op5 controller|omnipod controller,,devices,1,,,yes,"Handheld controller for Omnipod 5 (or use the phone app)",,
-patch_pump,Sequel,twiist Insulin Pump,twiist|sequel twiist,,devices,1,,,yes,"Durable AID pump (2025). Works with FreeStyle Libre 3 Plus",,
-cgm_sensor,Abbott,FreeStyle Libre Reader,libre reader|freestyle reader,,devices,1,,,yes,"Optional handheld reader for users who don't scan with a phone",,
-cgm_sensor,Dexcom,Dexcom Receiver,dexcom receiver|g6 receiver|g7 receiver,,devices,1,,,yes,"Optional receiver for users who don't use a phone (G6/G7)",,
-infusion_set,Medtronic,Mio 30 Infusion Set,mio 30|medtronic mio 30,,sets,10,0.33,90,yes,"All-in-one angled soft cannula. ~3-day change",,
-infusion_set,Unomedical,Comfort Infusion Set,comfort|contact detach|unomedical comfort,,sets,10,0.33,90,yes,"Angled soft cannula (Contact Detach / Silhouette-type). ~3-day change",,
-insulin,MannKind,Afrezza (inhaled insulin),afrezza|inhaled insulin,,cartridges,90,,30,yes,"Ultra-rapid INHALED insulin. Per-person dosing. Cartridge cards (4/8/12u)",,
-insulin,Eli Lilly,Rezvoglar (insulin glargine),rezvoglar,,pens,5,,30,yes,"Long-acting basal (glargine biosimilar, interchangeable with Lantus). Per-person dosing",,
-insulin,Sanofi,Merilog (insulin aspart),merilog,,vials,1,,30,yes,"Rapid-acting aspart biosimilar (approved 2025). Per-person dosing",,
-insulin,AstraZeneca,Symlin (pramlintide),symlin|pramlintide|symlinpen,,pens,1,,30,yes,"Amylin analog ADJUNCT (not insulin); a mealtime injection some T1Ds add. Per-person dosing",,
-bg_supply,ReliOn,ReliOn Premier Test Strips,relion premier strips|relion strips|walmart strips,,strips,50,,90,no,"Low-cost OTC strips (Walmart). Per-person usage",,
-bg_supply,ReliOn,ReliOn Premier BLU Meter,relion premier|relion blu|relion meter,,devices,1,,,no,"Low-cost OTC Bluetooth BG meter (Walmart)",,
-bg_supply,Ascensia,Contour Next Link 2.4 Meter,contour next link|next link 2.4,,devices,1,,,no,"BG meter that links to Medtronic pumps for upload/calibration",,
-bg_supply,Roche,Accu-Chek Instant Test Strips,accu-chek instant|accuchek instant strips,,strips,50,,90,yes,"Per-person usage",,
-glucagon,Eli Lilly,Glucagon Emergency Kit,glucagon kit|lilly glucagon|red box glucagon,,kits,1,,365,yes,"Traditional injectable rescue kit (reconstitute powder + syringe). Track EXPIRATION",,
-skin_care,3M,Tegaderm Transparent Dressing,tegaderm|transparent dressing|film dressing,,dressings,100,,,no,"Clear film dressing to secure or overlay sensors and sets",,
-skin_care,Eloquest,Mastisol Liquid Adhesive,mastisol|liquid adhesive,,bottles,1,,,no,"Medical liquid adhesive to improve sensor/set stick",,
-skin_care,Smith+Nephew,OpSite Flexifix Tape,opsite|flexifix|opsite flexifix,,rolls,1,,,no,"Adhesive film roll cut to overlay sensors/sets",,
-other,Frio,Frio Insulin Cooling Wallet,frio|insulin cooler|cooling wallet,,wallets,1,,,no,"Evaporative (water-activated) insulin cooling for travel; reusable, no fridge",,
-other,Generic,Insulin Travel Cooler,insulin travel case|insulin cooler case,,cases,1,,,no,"Insulated case for transporting insulin",,
-other,Medtronic,Pump AA Battery,pump battery|aa battery,,batteries,2,,,no,"Some MiniMed pumps use a single AA (lithium recommended); keep spares",,
+category,brand,product_name,common_names,gtin,unit,units_per_box,typical_usage_per_day,default_refill_interval_days,rx_required,notes,source_url,last_verified,in_use_days
+cgm_sensor,Dexcom,Dexcom G7 Sensor,g7|dexcom g7|dex g7,00386270002839,sensors,3,0.10,90,yes,10-day wear; 1 sensor / 10 days = 0.10/day. Transmitter integrated into sensor,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%22&limit=10,2026-06-18,
+cgm_sensor,Dexcom,Dexcom G6 Sensor,g6|dexcom g6|dex g6,,sensors,3,0.10,90,yes,10-day wear = 0.10/day. Separate transmitter required,,,
+cgm_sensor,Dexcom,Dexcom G6 Transmitter,g6 transmitter|dexcom transmitter,00386270001627,transmitters,1,0.011,90,yes,Transmitter lasts ~90 days. One per 90 days,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G6%22&limit=10,2026-06-18,
+cgm_sensor,Dexcom,Dexcom G7 15-Day Sensor,g7 15 day|g7 15-day|dexcom 15 day,00386270004765,sensors,2,0.067,90,yes,~15-day wear = 0.067/day. Verify box count,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%2015-Day%22&limit=10,2026-06-18,
+cgm_sensor,Dexcom,Dexcom ONE+ Sensor,dexcom one|dexcom one plus|one+,,sensors,3,0.10,90,yes,10-day wear. Available outside US,,,
+cgm_sensor,Dexcom,Dexcom Stelo Sensor,stelo|dexcom stelo,,sensors,2,0.067,30,no,OTC glucose biosensor (non-insulin users). ~15-day wear,,,
+cgm_sensor,Abbott,FreeStyle Libre 3 Sensor,libre 3|freestyle libre 3|fsl3,00357599818005,sensors,1,0.067,90,yes,~14-15 day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,
+cgm_sensor,Abbott,FreeStyle Libre 3 Plus Sensor,libre 3 plus|fsl3 plus|libre3plus,00357599844004,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,
+cgm_sensor,Abbott,FreeStyle Libre 2 Plus Sensor,libre 2 plus|fsl2 plus|libre2plus,,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,,,
+cgm_sensor,Abbott,FreeStyle Libre 2 Sensor,libre 2|freestyle libre 2|fsl2,00357599801007,sensors,1,0.071,90,yes,14-day wear = 0.071/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,
+cgm_sensor,Abbott,FreeStyle Libre 14 Day Sensor,libre 14 day|freestyle libre 14,00357599001018,sensors,1,0.071,90,yes,14-day wear. Older generation,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%2014%22&limit=10,2026-06-18,
+cgm_sensor,Abbott,FreeStyle Libre Rio,libre rio|rio,,sensors,1,0.067,30,no,OTC CGM (US). ~15-day wear,,,
+cgm_sensor,Abbott,Lingo Sensor,lingo|abbott lingo,00357599853006,sensors,1,0.067,30,no,OTC wellness biosensor (non-medical). ~15-day wear,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Lingo%22&limit=10,2026-06-18,
+cgm_sensor,Medtronic,Guardian 4 Sensor,guardian 4|guardian sensor 4,,sensors,5,0.143,90,yes,7-day wear = ~0.143/day. For MiniMed 780G,,,
+cgm_sensor,Medtronic,Guardian Sensor 3,guardian 3|guardian sensor 3,,sensors,5,0.143,90,yes,7-day wear = ~0.143/day,,,
+cgm_sensor,Medtronic,Simplera Sensor,simplera|medtronic simplera,00763000565039,sensors,1,0.143,90,yes,"7-day wear, disposable all-in-one. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%22&limit=10,2026-06-18,
+cgm_sensor,Medtronic,Simplera Sync Sensor,simplera sync,00763000956394,sensors,1,0.143,90,yes,"7-day wear, for MiniMed AID. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%20Sync%22&limit=10,2026-06-18,
+cgm_sensor,Medtronic,Guardian Link Transmitter,guardian transmitter|guardian link,,transmitters,1,0.0027,365,yes,"Rechargeable transmitter, lasts ~1 year",,,
+cgm_sensor,Senseonics,Eversense E3 Sensor,eversense e3|eversense,00817491022967,sensors,1,0.0055,180,yes,"Implantable, ~180-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20E3%22&limit=10,2026-06-18,
+cgm_sensor,Senseonics,Eversense 365 Sensor,eversense 365,00817491024299,sensors,1,0.00274,365,yes,"Implantable, ~365-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20365%22&limit=10,2026-06-18,
+cgm_sensor,Senseonics,Eversense Smart Transmitter,eversense transmitter,00817491024800,transmitters,1,0.00274,365,yes,"Removable external transmitter, reusable ~1 year",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%22&limit=10,2026-06-18,
+patch_pump,Insulet,Omnipod 5 Pod,omnipod 5|op5|pod 5|omnipod5,,pods,5,0.33,90,yes,~3-day (72h) wear = 0.33/day. AID with Dexcom/Libre,,,
+patch_pump,Insulet,Omnipod DASH Pod,omnipod dash|dash pod,10385082000023,pods,5,0.33,90,yes,~3-day wear = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%20DASH%22&limit=10,2026-06-18,
+patch_pump,Insulet,Omnipod Pod (classic),omnipod classic|omnipod eros,10385081120005,pods,10,0.33,90,yes,~3-day wear = 0.33/day. Legacy system,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%22&limit=10,2026-06-18,
+patch_pump,Insulet,Omnipod GO Pod,omnipod go,10385084000250,pods,1,0.014,90,no,"Basal-only patch, ~72h... verify wear/replacement schedule",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Omnipod%20GO%22&limit=10,2026-06-18,
+infusion_set,Tandem,t:slim X2 Cartridge,tslim cartridge|tandem cartridge|x2 cartridge,,cartridges,10,0.33,90,yes,Changed with set ~every 3 days = 0.33/day,,,
+infusion_set,Tandem,Tandem Mobi Cartridge,mobi cartridge|tandem mobi cartridge,00389152773759,cartridges,10,0.33,90,yes,For Tandem Mobi micro-pump. Verify change interval,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Tandem%20Mobi%22&limit=10,2026-06-18,
+infusion_set,Tandem,AutoSoft 90 Infusion Set,autosoft 90|tandem autosoft 90,00389152857572,sets,10,0.33,90,yes,Soft cannula 90-deg. ~3-day change = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22AutoSoft%22&limit=10,2026-06-18,
+infusion_set,Tandem,AutoSoft 30 Infusion Set,autosoft 30|tandem autosoft 30,00389152707679,sets,10,0.33,90,yes,Soft cannula 30-deg. ~3-day change = 0.33/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22AutoSoft%2030%22&limit=10,2026-06-18,
+infusion_set,Tandem,TruSteel Infusion Set,trusteel|tandem trusteel,05705244018518,sets,10,0.5,90,yes,"Steel cannula, change ~every 2 days = 0.5/day",https://api.fda.gov/device/udi.json?search=brand_name%3A%22TruSteel%22&limit=10,2026-06-18,
+infusion_set,Tandem,VariSoft Infusion Set,varisoft|tandem varisoft,05705244018693,sets,10,0.33,90,yes,Angled soft cannula. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22VariSoft%22&limit=10,2026-06-18,
+infusion_set,Medtronic,MiniMed Reservoir,minimed reservoir|medtronic reservoir,,reservoirs,10,0.33,90,yes,Changed with set ~every 3 days = 0.33/day,,,
+infusion_set,Medtronic,Mio Advance Infusion Set,mio advance|medtronic mio,05705244016293,sets,10,0.33,90,yes,All-in-one soft cannula. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Mio%22&limit=10,2026-06-18,
+infusion_set,Medtronic,Quick-set Infusion Set,quick-set|quickset|medtronic quickset,05705244018068,sets,10,0.33,90,yes,Soft cannula 90-deg. ~3-day change,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Quick-set%22&limit=10,2026-06-18,
+infusion_set,Medtronic,Silhouette Infusion Set,silhouette|medtronic silhouette,,sets,10,0.33,90,yes,Angled soft cannula. ~3-day change,,,
+infusion_set,Medtronic,Sure-T Infusion Set,sure-t|suret|medtronic sure-t,05705244019324,sets,10,0.5,90,yes,"Steel cannula, change ~every 2 days = 0.5/day",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Sure-T%22&limit=10,2026-06-18,
+infusion_set,Medtronic,Extended Infusion Set,extended infusion|medtronic extended,,sets,10,0.143,90,yes,Wear up to 7 days = ~0.143/day,,,
+infusion_set,Beta Bionics,iLet Cartridge,ilet cartridge|beta bionics cartridge,,cartridges,10,0.33,90,yes,For iLet Bionic Pancreas. Verify change interval,,,
+infusion_set,Beta Bionics,iLet Infusion Set,ilet set|ilet infusion set,00850050080305,sets,10,0.33,90,yes,~3-day change. Verify,https://api.fda.gov/device/udi.json?search=brand_name%3A%22iLet%22&limit=10,2026-06-18,
+patch_pump,Beta Bionics,iLet Bionic Pancreas,ilet|beta bionics ilet,00850050080183,devices,1,,,yes,"Durable AID pump (equipment, not consumable)",https://api.fda.gov/device/udi.json?search=brand_name%3A%22iLet%22&limit=10,2026-06-18,
+infusion_set,Ypsomed,mylife YpsoPump Cartridge,ypsopump cartridge|mylife cartridge,,cartridges,10,0.33,90,yes,For YpsoPump (EU). Verify change interval,,,
+infusion_set,Ypsomed,mylife Orbit Infusion Set,mylife orbit|orbit set,,sets,10,0.33,90,yes,Rotatable set (EU). ~3-day change,,,
+insulin,Eli Lilly,Humalog (insulin lispro),humalog|lispro,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock once opened. Per-person dosing (collect TDD at onboarding),,,28
+insulin,Eli Lilly,Lyumjev (insulin lispro-aabc),lyumjev|lispro aabc,,vials,1,,30,yes,Ultra-rapid. 28-day in-use clock. Per-person dosing,,,28
+insulin,Sanofi,Admelog (insulin lispro),admelog,,vials,1,,30,yes,Rapid-acting biosimilar. 28-day in-use clock. Per-person dosing,,,28
+insulin,Novo Nordisk,NovoLog (insulin aspart),novolog|aspart|novorapid,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,,28
+insulin,Novo Nordisk,Fiasp (faster insulin aspart),fiasp|faster aspart,,vials,1,,30,yes,Ultra-rapid. 28-day in-use clock. Per-person dosing,,,28
+insulin,Sanofi,Apidra (insulin glulisine),apidra|glulisine,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,,28
+insulin,Sanofi,Lantus (insulin glargine U-100),lantus|glargine,,vials,1,,30,yes,Long-acting basal. 28-day in-use clock. Per-person dosing,,,28
+insulin,Eli Lilly,Basaglar (insulin glargine),basaglar,,pens,5,,30,yes,Long-acting basal (glargine biosimilar). Per-person dosing,,,28
+insulin,Viatris/Biocon,Semglee (insulin glargine),semglee,,pens,5,,30,yes,Interchangeable glargine biosimilar. Per-person dosing,,,28
+insulin,Sanofi,Toujeo (insulin glargine U-300),toujeo|glargine u300,,pens,3,,30,yes,Concentrated long-acting basal U-300. Per-person dosing,,,28
+insulin,Novo Nordisk,Levemir (insulin detemir),levemir|detemir,,vials,1,,30,yes,Long-acting basal. Per-person dosing. Note: being discontinued in some markets,,,28
+insulin,Novo Nordisk,Tresiba (insulin degludec),tresiba|degludec,,pens,5,,30,yes,Ultra-long-acting basal. In-use up to 56 days. Per-person dosing,,,56
+insulin,Eli Lilly,Humulin R (regular insulin),humulin r|regular insulin,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,,28
+insulin,Novo Nordisk,Novolin R (regular insulin),novolin r,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,,28
+insulin,Eli Lilly,Humulin N (NPH insulin),humulin n|nph,,vials,1,,30,no,Intermediate-acting NPH. Per-person dosing. OTC in some US states,,,28
+insulin,Novo Nordisk,Novolin N (NPH insulin),novolin n,,vials,1,,30,no,Intermediate-acting NPH. Per-person dosing. OTC in some US states,,,28
+insulin,Eli Lilly,Humulin R U-500 (concentrated),humulin u500|u-500,,vials,1,,30,yes,Concentrated regular U-500. High-dose. Per-person dosing,,,28
+insulin,Eli Lilly,Humalog Mix 75/25,humalog mix|mix 75/25,,pens,5,,30,yes,Premixed. Per-person dosing,,,28
+insulin,Novo Nordisk,NovoLog Mix 70/30,novolog mix|mix 70/30,,pens,5,,30,yes,Premixed. Per-person dosing,,,28
+insulin,Eli Lilly,Humulin 70/30,humulin 70/30,,vials,1,,30,no,Premixed. Per-person dosing,,,28
+mdi_supply,BD,BD Ultra-Fine Pen Needles,bd pen needles|ultra-fine pen needles,00382903201198,needles,90,,90,no,Single-use pen needles. Per-person usage (injections/day). Gauges/lengths vary (4/5/6/8mm),https://api.fda.gov/device/udi.json?search=brand_name%3A%22BD%20Ultra-Fine%22&limit=10,2026-06-18,
+mdi_supply,Novo Nordisk,NovoFine Pen Needles,novofine|novofine plus,00301691856502,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoFine%22&limit=10,2026-06-18,
+mdi_supply,Novo Nordisk,NovoTwist Pen Needles,novotwist,00301691853891,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoTwist%22&limit=10,2026-06-18,
+mdi_supply,Ypsomed,mylife Clickfine Pen Needles,clickfine|mylife pen needles,07613117032302,needles,100,,90,no,Single-use pen needles. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Clickfine%22&limit=10,2026-06-18,
+mdi_supply,BD,BD Insulin Syringes (Ultra-Fine),bd syringes|insulin syringes,00382908411035,syringes,90,,90,no,Single-use syringes. Per-person usage. Capacities 0.3/0.5/1 mL,https://api.fda.gov/device/udi.json?search=brand_name%3A%22BD%20Ultra-Fine%22&limit=10,2026-06-18,
+mdi_supply,Medtronic,InPen Smart Insulin Pen,inpen|smart pen,00763000645298,devices,1,,,yes,Reusable smart pen (durable equipment). Uses standard cartridges,https://api.fda.gov/device/udi.json?search=brand_name%3A%22InPen%22&limit=10,2026-06-18,
+mdi_supply,Novo Nordisk,NovoPen 6,novopen 6|novopen,,devices,1,,,yes,Reusable smart pen (durable). Uses Penfill cartridges,,,
+mdi_supply,Novo Nordisk,NovoPen Echo Plus,novopen echo|echo plus,00301691854591,devices,1,,,yes,Reusable smart pen with half-unit dosing (durable),https://api.fda.gov/device/udi.json?search=brand_name%3A%22NovoPen%20Echo%22&limit=10,2026-06-18,
+insulin,Novo Nordisk,Penfill Insulin Cartridge (3mL),penfill|insulin cartridge,,cartridges,5,,30,yes,3mL cartridges for reusable pens. Per-person dosing,,,28
+bg_supply,LifeScan,OneTouch Verio Reflect Meter,onetouch verio reflect|verio reflect,00353885012959,devices,1,,,no,BG meter (durable). Pairs with Verio strips,https://api.fda.gov/device/udi.json?search=brand_name%3A%22OneTouch%20Verio%20Reflect%22&limit=10,2026-06-18,
+bg_supply,LifeScan,OneTouch Verio Test Strips,onetouch verio strips|verio strips,00353885009768,strips,100,,90,yes,Per-person usage (fingerstick frequency). Often Rx for coverage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22OneTouch%20Verio%22&limit=10,2026-06-18,
+bg_supply,LifeScan,OneTouch Ultra Test Strips,onetouch ultra strips|ultra strips,,strips,100,,90,yes,Per-person usage,,,
+bg_supply,Roche,Accu-Chek Guide Meter,accu-chek guide|accuchek guide,00365702702066,devices,1,,,no,BG meter (durable),https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Guide%22&limit=10,2026-06-18,
+bg_supply,Roche,Accu-Chek Guide Test Strips,accu-chek guide strips|accuchek strips,00365702703230,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Guide%22&limit=10,2026-06-18,
+bg_supply,Roche,Accu-Chek Aviva Test Strips,aviva strips|accu-chek aviva,00365702407107,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Accu-Chek%20Aviva%22&limit=10,2026-06-18,
+bg_supply,Ascensia,Contour Next Test Strips,contour next strips|contour strips,,strips,100,,90,yes,Per-person usage. Used by some pumps for calibration,,,
+bg_supply,Ascensia,Contour Next One Meter,contour next one|contour one,,devices,1,,,no,"BG meter (durable), Bluetooth",,,
+bg_supply,Trividia,TRUE METRIX Test Strips,true metrix strips|truemetrix,00021292007836,strips,100,,90,no,Per-person usage. Low-cost option,https://api.fda.gov/device/udi.json?search=brand_name%3A%22TRUE%20METRIX%22&limit=10,2026-06-18,
+bg_supply,Abbott,FreeStyle Lite Test Strips,freestyle lite strips|freestyle strips,00699073708274,strips,100,,90,yes,Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Lite%22&limit=10,2026-06-18,
+bg_supply,Generic,Lancets (universal),lancets|blood lancets,,lancets,100,,90,no,Single-use. Per-person usage. Gauges 28-33g,,,
+bg_supply,Generic,Lancing Device,lancing device|lancet device,,devices,1,,,no,Reusable lancing pen (durable),,,
+bg_supply,Generic,BG Control Solution,control solution|glucose control solution,,bottles,1,,,no,For meter accuracy checks. Track expiration,,,
+ketone_supply,Abbott,FreeStyle Precision Neo Meter,precision neo|freestyle neo,,devices,1,,,no,Blood glucose + ketone meter (durable),,,
+ketone_supply,Abbott,Precision/FreeStyle Blood Ketone Strips,ketone strips|blood ketone strips|precision ketone,,strips,10,,,yes,Blood beta-hydroxybutyrate strips. Use during illness/high BG. Track expiration,,,
+ketone_supply,Keto-Mojo,Keto-Mojo Blood Ketone Strips,keto-mojo strips|ketomojo,00858538007004,strips,50,,,no,Blood ketone strips. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Keto-Mojo%22&limit=10,2026-06-18,
+ketone_supply,Bayer/Ascensia,Ketostix Urine Ketone Strips,ketostix|urine ketone strips,10301932880508,strips,50,,,no,Urine ketone test strips. Track expiration,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Ketostix%22&limit=10,2026-06-18,
+glucagon,Eli Lilly,Baqsimi (nasal glucagon),baqsimi|nasal glucagon,,devices,1,,365,yes,Emergency rescue (nasal). Track EXPIRATION not daily use,,,
+glucagon,Xeris,Gvoke HypoPen (glucagon),gvoke|gvoke hypopen|glucagon pen,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,,
+glucagon,Zealand,Zegalogue (dasiglucagon),zegalogue|dasiglucagon,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,,
+glucagon,Novo Nordisk,GlucaGen HypoKit (glucagon),glucagen|glucagen hypokit|glucagon kit,,devices,1,,365,yes,Emergency rescue (reconstituted injection). Track EXPIRATION,,,
+hypo_treatment,Dex4,Dex4 Glucose Tablets,glucose tablets|dex4|glucose tabs,,tablets,50,,,no,Fast-acting carbs for lows (~4g/tab). Track expiration,,,
+hypo_treatment,ReliOn,ReliOn Glucose Tablets,relion glucose tablets|relion tabs,,tablets,50,,,no,Fast-acting carbs for lows. Low-cost,,,
+hypo_treatment,Dex4,Glucose Gel,glucose gel|dex4 gel,,tubes,3,,,no,Fast-acting carbs for lows. Track expiration,,,
+hypo_treatment,Generic,Glucose Liquid Shots,glucose shots|glucose liquid,,bottles,6,,,no,Fast-acting carbs for lows. Track expiration,,,
+skin_care,Skin Tac,Skin Tac Adhesive Wipes,skin tac|skin-tac|adhesive wipes,,wipes,50,,,no,Adhesive prep to improve sensor/pod stickiness. Per-person usage,,,
+skin_care,Smith+Nephew,Skin-Prep Protective Wipes,skin prep|skin-prep,00040565120300,wipes,50,,,no,Skin barrier/prep wipes. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Skin-Prep%22&limit=10,2026-06-18,
+skin_care,Generic,Adhesive Patches/Overlays,skin grip|simpatch|cgm patch|adhesive patch,,patches,20,,,no,Overlay patches to extend sensor/pod wear. Per-person usage,,,
+skin_care,Generic,Adhesive Remover Wipes,adhesive remover|tac away|unisolve,00854137001719,wipes,50,,,no,Removes adhesive residue. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Adhesive%20Remover%22&limit=10,2026-06-18,
+skin_care,Generic,Alcohol Prep Pads,alcohol pads|alcohol prep|alcohol swabs,00850003506081,pads,100,,,no,Site cleaning before insertion/injection. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Alcohol%20Prep%22&limit=10,2026-06-18,
+skin_care,3M,Cavilon Barrier Wipes,cavilon|barrier wipes,30707387509744,wipes,30,,,no,No-sting skin barrier. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Cavilon%22&limit=10,2026-06-18,
+other,Generic,Sharps Disposal Container,sharps container|sharps bin|needle disposal,00382903054879,containers,1,,,no,For safe disposal of needles/lancets/used sets. Equipment,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Sharps%22&limit=10,2026-06-18,
+patch_pump,Tandem,t:slim X2 Insulin Pump,tslim x2|t slim x2|tandem x2|tslim,,devices,1,,,yes,Durable tubed AID pump (equipment). Uses t:slim cartridges + infusion sets,,,
+patch_pump,Tandem,Tandem Mobi Pump,tandem mobi|mobi pump,,devices,1,,,yes,Durable miniature AID pump. Uses Mobi cartridges + infusion sets,,,
+patch_pump,Medtronic,MiniMed 780G Pump,minimed 780g|780g|medtronic 780g,,devices,1,,,yes,Durable AID pump. Uses reservoirs + infusion sets + Guardian sensors,,,
+patch_pump,Medtronic,MiniMed 770G Pump,minimed 770g|770g,,devices,1,,,yes,Durable AID pump (predecessor to the 780G),,,
+patch_pump,Ypsomed,mylife YpsoPump,ypsopump|mylife pump,,devices,1,,,yes,Durable pump (EU/intl). Uses YpsoPump cartridges + Orbit sets,,,
+patch_pump,Insulet,Omnipod 5 Controller,omnipod 5 pdm|op5 controller|omnipod controller,,devices,1,,,yes,Handheld controller for Omnipod 5 (or use the phone app),,,
+patch_pump,Sequel,twiist Insulin Pump,twiist|sequel twiist,,devices,1,,,yes,Durable AID pump (2025). Works with FreeStyle Libre 3 Plus,,,
+cgm_sensor,Abbott,FreeStyle Libre Reader,libre reader|freestyle reader,,devices,1,,,yes,Optional handheld reader for users who don't scan with a phone,,,
+cgm_sensor,Dexcom,Dexcom Receiver,dexcom receiver|g6 receiver|g7 receiver,,devices,1,,,yes,Optional receiver for users who don't use a phone (G6/G7),,,
+infusion_set,Medtronic,Mio 30 Infusion Set,mio 30|medtronic mio 30,,sets,10,0.33,90,yes,All-in-one angled soft cannula. ~3-day change,,,
+infusion_set,Unomedical,Comfort Infusion Set,comfort|contact detach|unomedical comfort,,sets,10,0.33,90,yes,Angled soft cannula (Contact Detach / Silhouette-type). ~3-day change,,,
+insulin,MannKind,Afrezza (inhaled insulin),afrezza|inhaled insulin,,cartridges,90,,30,yes,Ultra-rapid INHALED insulin. Per-person dosing. Cartridge cards (4/8/12u),,,28
+insulin,Eli Lilly,Rezvoglar (insulin glargine),rezvoglar,,pens,5,,30,yes,"Long-acting basal (glargine biosimilar, interchangeable with Lantus). Per-person dosing",,,28
+insulin,Sanofi,Merilog (insulin aspart),merilog,,vials,1,,30,yes,Rapid-acting aspart biosimilar (approved 2025). Per-person dosing,,,28
+insulin,AstraZeneca,Symlin (pramlintide),symlin|pramlintide|symlinpen,,pens,1,,30,yes,Amylin analog ADJUNCT (not insulin); a mealtime injection some T1Ds add. Per-person dosing,,,28
+bg_supply,ReliOn,ReliOn Premier Test Strips,relion premier strips|relion strips|walmart strips,,strips,50,,90,no,Low-cost OTC strips (Walmart). Per-person usage,,,
+bg_supply,ReliOn,ReliOn Premier BLU Meter,relion premier|relion blu|relion meter,,devices,1,,,no,Low-cost OTC Bluetooth BG meter (Walmart),,,
+bg_supply,Ascensia,Contour Next Link 2.4 Meter,contour next link|next link 2.4,,devices,1,,,no,BG meter that links to Medtronic pumps for upload/calibration,,,
+bg_supply,Roche,Accu-Chek Instant Test Strips,accu-chek instant|accuchek instant strips,,strips,50,,90,yes,Per-person usage,,,
+glucagon,Eli Lilly,Glucagon Emergency Kit,glucagon kit|lilly glucagon|red box glucagon,,kits,1,,365,yes,Traditional injectable rescue kit (reconstitute powder + syringe). Track EXPIRATION,,,
+skin_care,3M,Tegaderm Transparent Dressing,tegaderm|transparent dressing|film dressing,,dressings,100,,,no,Clear film dressing to secure or overlay sensors and sets,,,
+skin_care,Eloquest,Mastisol Liquid Adhesive,mastisol|liquid adhesive,,bottles,1,,,no,Medical liquid adhesive to improve sensor/set stick,,,
+skin_care,Smith+Nephew,OpSite Flexifix Tape,opsite|flexifix|opsite flexifix,,rolls,1,,,no,Adhesive film roll cut to overlay sensors/sets,,,
+other,Frio,Frio Insulin Cooling Wallet,frio|insulin cooler|cooling wallet,,wallets,1,,,no,"Evaporative (water-activated) insulin cooling for travel; reusable, no fridge",,,
+other,Generic,Insulin Travel Cooler,insulin travel case|insulin cooler case,,cases,1,,,no,Insulated case for transporting insulin,,,
+other,Medtronic,Pump AA Battery,pump battery|aa battery,,batteries,2,,,no,Some MiniMed pumps use a single AA (lithium recommended); keep spares,,,

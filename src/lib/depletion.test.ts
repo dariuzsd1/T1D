@@ -7,6 +7,7 @@ import {
   daysPerUnitFromRate,
   daysOfStock,
   daysUntilExpiration,
+  inUseDaysRemaining,
   effectiveRunwayDays,
   stockStatus,
   displayStatus,
@@ -92,9 +93,61 @@ describe('daysUntilExpiration', () => {
   })
 })
 
+describe('inUseDaysRemaining (insulin open-vial clock)', () => {
+  it('is null unless both an opened date and a window are set', () => {
+    expect(inUseDaysRemaining(null, 28)).toBeNull()
+    expect(inUseDaysRemaining(isoInDays(-5), null)).toBeNull()
+    expect(inUseDaysRemaining(isoInDays(-5), 0)).toBeNull()
+    expect(inUseDaysRemaining('not-a-date', 28)).toBeNull()
+  })
+  it('counts down from the opened date across the window', () => {
+    // opened 20 days ago, 28-day window → ~8 days left before discard.
+    const left = inUseDaysRemaining(isoInDays(-20), 28)
+    expect(left).toBeGreaterThanOrEqual(7)
+    expect(left).toBeLessThanOrEqual(8)
+  })
+  it('is negative once past the discard date', () => {
+    expect(inUseDaysRemaining(isoInDays(-30), 28)).toBeLessThan(0)
+  })
+})
+
 describe('effectiveRunwayDays', () => {
   it('uses stock alone when there is no expiry', () => {
     expect(effectiveRunwayDays({ quantity: 9, usageRatePerDay: 0.1 })).toBe(90)
+  })
+
+  it('caps a single open vial at its discard date (in-use clock)', () => {
+    // 1 vial, 40u/day of 1000u = 0.04/day → 25 days of insulin, but opened 20
+    // days ago on a 28-day clock → must be tossed in ~8 days. Discard wins.
+    const runway = effectiveRunwayDays({
+      quantity: 1,
+      usageRatePerDay: 0.04,
+      openedDate: isoInDays(-20),
+      inUseDays: 28,
+    })
+    expect(runway).toBeGreaterThanOrEqual(7)
+    expect(runway).toBeLessThanOrEqual(8)
+  })
+
+  it('does NOT let the open-vial clock shrink runway when sealed backups exist', () => {
+    // Same open vial, but 3 on hand: opening the next one resets the clock, so
+    // folding the discard date in would be a false "reorder now". Stock wins.
+    const runway = effectiveRunwayDays({
+      quantity: 3,
+      usageRatePerDay: 0.04,
+      openedDate: isoInDays(-20),
+      inUseDays: 28,
+    })
+    expect(runway).toBe(75) // 3 / 0.04
+  })
+
+  it('an already-past discard on the last vial reads as out (0)', () => {
+    expect(effectiveRunwayDays({
+      quantity: 1,
+      usageRatePerDay: 0.04,
+      openedDate: isoInDays(-40),
+      inUseDays: 28,
+    })).toBe(0)
   })
   it('is capped by an earlier expiry (the sooner of the two)', () => {
     // 4 sensors at 0.07/day = ~57 days of stock, but expires in ~20 days

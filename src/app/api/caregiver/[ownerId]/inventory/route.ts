@@ -58,6 +58,8 @@ export async function GET(
         quantity: Number(supply.quantity) || 0,
         usageRatePerDay,
         expirationDate: supply.expiration_date,
+        openedDate: supply.opened_date ?? null,
+        inUseDays: supply.in_use_days ?? null,
       })
       return {
         id: supply.id,
@@ -74,6 +76,8 @@ export async function GET(
         copay: supply.copay ?? null,
         deviceId: supply.device_id ?? null,
         prescriptionId: supply.prescription_id ?? null,
+        openedDate: supply.opened_date ?? null,
+        inUseDays: supply.in_use_days ?? null,
       }
     })
 
