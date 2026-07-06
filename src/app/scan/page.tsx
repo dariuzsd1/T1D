@@ -572,7 +572,7 @@ export default function ScanPage() {
               {preview && (
                 <div>
                   <img src={preview} alt="Supply reference" className="max-h-56 rounded-xl shadow-md mx-auto" />
-                  <p className="text-center text-xs text-faint mt-2">For reference only — this photo isn&apos;t stored.</p>
+                  <p className="text-center text-xs text-faint mt-2">For reference only. This photo isn&apos;t stored.</p>
                 </div>
               )}
 
@@ -674,7 +674,7 @@ export default function ScanPage() {
               </div>
 
               <p className="text-sm text-muted">
-                Review and edit if anything looks off — all fields are editable.
+                Review and edit if anything looks off. All fields are editable.
               </p>
 
               <div className="space-y-5">

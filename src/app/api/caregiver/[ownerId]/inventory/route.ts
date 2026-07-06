@@ -109,8 +109,13 @@ export async function PATCH(
     }
 
     const { supplyId, quantity } = await request.json()
-    if (!supplyId || quantity == null) {
-      return NextResponse.json({ error: 'supplyId and quantity required' }, { status: 400 })
+    // Validate before writing: a bad client (or a tampered request) must not be
+    // able to store a negative or non-numeric quantity.
+    if (typeof supplyId !== 'string' || !supplyId) {
+      return NextResponse.json({ error: 'supplyId required' }, { status: 400 })
+    }
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity < 0) {
+      return NextResponse.json({ error: 'quantity must be a number ≥ 0' }, { status: 400 })
     }
 
     // RLS "caregiver can manage shared supplies" enforces manage-role check.

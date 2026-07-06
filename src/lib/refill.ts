@@ -108,7 +108,7 @@ export function assessRefill(
       daysUntilEligible: 0,
       eligibleDate,
       shortfallDays: 0,
-      message: 'Refill-eligible now — tap to reorder.',
+      message: 'Refill-eligible now. Tap to reorder.',
     }
   }
 

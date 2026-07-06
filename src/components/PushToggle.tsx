@@ -40,7 +40,7 @@ export function PushToggle() {
 
       // Show foreground messages as in-app toasts (the SW only handles background).
       unsub = await onForegroundMessage((title, body) =>
-        showToast(body ? `${title} — ${body}` : title, 'info')
+        showToast(body ? `${title}: ${body}` : title, 'info')
       )
     })()
 
@@ -102,7 +102,7 @@ export function PushToggle() {
       <div className="rounded-2xl bg-surface-2 border border-line p-4 flex gap-3 text-sm text-muted leading-relaxed">
         <Database className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
         <p>
-          Almost there — the table that stores your device needs to be created once.
+          Almost there. The table that stores your device needs to be created once.
           Run <span className="font-semibold text-ink">supabase/setup.sql</span> in your Supabase
           dashboard (see <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>),
           then reload and try again.
@@ -138,7 +138,7 @@ export function PushToggle() {
         </div>
         <p className="text-xs text-muted leading-relaxed">
           You’ll get alerts even when the app is closed. The daily refill check that
-          decides <em>when</em> to alert runs on the server — that scheduled piece
+          decides <em>when</em> to alert runs on the server. That scheduled piece
           (Supabase <span className="font-medium">pg_cron</span> → Edge Function) is
           the last setup step in <span className="font-medium">docs/PUSH_NOTIFICATIONS.md</span>.
           To confirm delivery now, send a test message from the Firebase console.

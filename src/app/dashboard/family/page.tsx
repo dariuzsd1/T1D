@@ -136,7 +136,7 @@ export default function FamilyPage() {
         <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Care circle</h2>
         <h1 className="text-3xl font-bold tracking-tight text-ink">People I care for</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
-          A calm view of the supplies people have shared with you. Open anyone to see details — and,
+          A calm view of the supplies people have shared with you. Open anyone to see details and,
           if they gave you permission, help them reorder or log use.
         </p>
       </header>
@@ -157,7 +157,7 @@ export default function FamilyPage() {
             onClick={load}
             className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it — reload
+            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
           </button>
         </div>
       )}
@@ -229,7 +229,7 @@ export default function FamilyPage() {
           </div>
           <p className="text-ink font-semibold">No one has shared with you yet</p>
           <p className="text-muted text-sm max-w-sm mx-auto leading-relaxed">
-            When someone with diabetes adds you as a caregiver — using the email you signed in with —
+            When someone with diabetes adds you as a caregiver (using the email you signed in with),
             they&apos;ll appear here. Ask them to add you from their <span className="font-semibold text-ink">Sharing</span> page.
           </p>
         </div>

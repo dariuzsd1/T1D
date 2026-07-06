@@ -151,7 +151,7 @@ export default function AppointmentsPage() {
             onClick={load}
             className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it — reload
+            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
           </button>
         </div>
       )}

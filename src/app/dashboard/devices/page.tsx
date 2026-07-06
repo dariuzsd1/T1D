@@ -507,7 +507,7 @@ function CareLinkImportSection({
       {summary && (
         <div className="space-y-4">
           <p className="text-sm font-semibold text-ink">
-            Review before applying — nothing is saved until you click &quot;Apply&quot;
+            Review before applying. Nothing is saved until you click &quot;Apply&quot;
           </p>
 
           <div className="rounded-2xl border border-line overflow-hidden">

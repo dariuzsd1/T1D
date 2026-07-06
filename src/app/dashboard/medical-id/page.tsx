@@ -83,7 +83,7 @@ export default function MedicalIdPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      showToast('Couldn’t copy — select and copy the link manually.', 'caution')
+      showToast('Couldn’t copy. Select and copy the link manually.', 'caution')
     }
   }
 
@@ -101,11 +101,11 @@ export default function MedicalIdPage() {
           <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
             The Medical ID is new. Re-run <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
-            in your Supabase dashboard (it only adds the new table — see{' '}
+            in your Supabase dashboard (it only adds the new table, see{' '}
             <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>), then reload.
           </p>
           <button onClick={load} className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors">
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it — reload
+            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
           </button>
         </div>
       </div>
@@ -302,7 +302,7 @@ function EmergencyCard({ profile }: { profile: MedicalProfile }) {
     <div className="rounded-3xl border-2 border-urgent/30 bg-white shadow-sm overflow-hidden">
       <div className="bg-urgent text-white px-5 py-3 flex items-center gap-2">
         <HeartPulse className="w-5 h-5" />
-        <span className="font-bold tracking-wide">MEDICAL ID — TYPE 1 DIABETES</span>
+        <span className="font-bold tracking-wide">MEDICAL ID: TYPE 1 DIABETES</span>
       </div>
       <div className="p-5 space-y-4">
         <div>
