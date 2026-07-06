@@ -28,7 +28,7 @@ export function RiskAlertBanner() {
     : 'bg-caution-soft text-caution border-caution/30'
 
   const message = isUrgent
-    ? `You're out of ${items[0].name}${others > 0 ? ` and ${others} other item${others > 1 ? 's' : ''}` : ''} — reorder now.`
+    ? `You're out of ${items[0].name}${others > 0 ? ` and ${others} other item${others > 1 ? 's' : ''}` : ''}. Reorder now.`
     : `${items[0].name} is running low (${items[0].remainingDays} days left)${others > 0 ? `, plus ${others} other item${others > 1 ? 's' : ''}` : ''}.`
 
   return (

@@ -51,7 +51,7 @@ export default async function PublicMedicalIdPage({
       <div className="w-full max-w-md rounded-3xl border-2 border-urgent/30 bg-white shadow-lg overflow-hidden">
         <div className="bg-urgent text-white px-5 py-4 flex items-center gap-2">
           <HeartPulse className="w-6 h-6" />
-          <span className="font-bold tracking-wide">MEDICAL ID — TYPE 1 DIABETES</span>
+          <span className="font-bold tracking-wide">MEDICAL ID: TYPE 1 DIABETES</span>
         </div>
 
         <div className="p-6 space-y-5">

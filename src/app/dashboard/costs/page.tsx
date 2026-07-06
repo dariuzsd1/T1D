@@ -49,7 +49,7 @@ export default function CostsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-ink">Your out-of-pocket</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
           Estimated from the copays and refill cycles you&apos;ve entered. Items without
-          both aren&apos;t counted — nothing here is a guessed price.
+          both aren&apos;t counted, and nothing here is a guessed price.
         </p>
       </header>
 
@@ -133,7 +133,7 @@ export default function CostsPage() {
           {uncounted > 0 && (
             <p className="flex items-start gap-2 text-xs text-faint px-1">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              {uncounted} item{uncounted === 1 ? '' : 's'} not counted — add a copay and supply
+              {uncounted} item{uncounted === 1 ? '' : 's'} not counted. Add a copay and supply
               length on each (via Edit) to include {uncounted === 1 ? 'it' : 'them'}.
             </p>
           )}

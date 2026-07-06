@@ -101,6 +101,11 @@ alter table public.supplies
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 
+-- Quantity is a count of units on hand — it can never be negative. Enforced in
+-- the DB so no client (or a tampered request) can store a bad value. Idempotent.
+alter table public.supplies drop constraint if exists supplies_quantity_nonneg;
+alter table public.supplies add constraint supplies_quantity_nonneg check (quantity >= 0);
+
 alter table public.supplies enable row level security;
 
 drop policy if exists "own supplies" on public.supplies;

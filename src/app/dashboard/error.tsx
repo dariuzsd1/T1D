@@ -23,7 +23,7 @@ export default function DashboardError({
       </div>
       <h2 className="text-lg font-semibold mb-2 text-ink">Couldn’t load this view</h2>
       <p className="text-sm text-muted mb-6">
-        Something went wrong fetching your supplies. Your data is safe — try again.
+        Something went wrong fetching your supplies. Your data is safe. Try again.
       </p>
       <button
         onClick={() => unstable_retry()}

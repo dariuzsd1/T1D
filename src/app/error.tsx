@@ -30,7 +30,7 @@ export default function Error({
         <p className="text-sm text-muted mb-6 leading-relaxed">
           {isConfig
             ? error.message
-            : 'An unexpected error occurred. Your data is safe — try again in a moment.'}
+            : 'An unexpected error occurred. Your data is safe. Try again in a moment.'}
         </p>
         <button
           onClick={() => unstable_retry()}
