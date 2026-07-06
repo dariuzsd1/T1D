@@ -85,6 +85,66 @@ export function isMissingTableError(error: { code?: string; message?: string } |
   )
 }
 
+/**
+ * Reconcile a supply's runway with the prescription that covers it — the one
+ * sentence a clinician would want the patient to see ("you're about to run out
+ * AND you have no refills left" is the call-the-office moment, and neither app
+ * surface shows it alone).
+ *
+ * Facts only (CLAUDE.md §9): refill counts and expiration dates are real user
+ * input; the "runs out in ~N days" clause is included only when the usage rate
+ * is real (an estimated runway must not be stated as a deadline).
+ * Returns null when nothing is actionable.
+ *
+ * `level` maps to tone: 'act' = renewal needed now (caution), 'plan' = renewal
+ * coming up (muted). Never urgent-red — that stays reserved for stockouts.
+ */
+export interface RxSupplyStatus {
+  level: 'act' | 'plan'
+  message: string
+}
+
+export function rxSupplyStatus(opts: {
+  supplyName: string
+  runwayDays: number
+  rateEstimated: boolean
+  prescription: Pick<Prescription, 'expirationDate' | 'refillsRemaining'>
+  now?: Date
+}): RxSupplyStatus | null {
+  const { supplyName, runwayDays, rateEstimated, prescription: rx, now = new Date() } = opts
+
+  const expired =
+    rx.expirationDate != null && new Date(rx.expirationDate).getTime() < now.getTime()
+  const daysClause =
+    !rateEstimated && runwayDays > 0
+      ? ` It runs out in about ${runwayDays} day${runwayDays === 1 ? '' : 's'}.`
+      : ''
+
+  if (expired) {
+    const when = new Date(rx.expirationDate as string).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    })
+    return {
+      level: 'act',
+      message: `The prescription for ${supplyName} expired ${when}.${daysClause} Ask for a renewal before reordering.`,
+    }
+  }
+  if (rx.refillsRemaining === 0) {
+    return {
+      level: 'act',
+      message: `No refills left on the prescription for ${supplyName}.${daysClause} Ask for a renewal.`,
+    }
+  }
+  if (rx.refillsRemaining === 1) {
+    return {
+      level: 'plan',
+      message: `One refill left on the prescription for ${supplyName}. Plan a renewal at your next visit.`,
+    }
+  }
+  return null
+}
+
 export type RenewalStatus = 'ok' | 'due-soon' | 'needs-renewal'
 
 /**

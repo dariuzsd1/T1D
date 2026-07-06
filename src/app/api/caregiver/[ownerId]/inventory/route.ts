@@ -73,6 +73,7 @@ export async function GET(
         lastFilledDate: supply.last_filled_date ?? null,
         copay: supply.copay ?? null,
         deviceId: supply.device_id ?? null,
+        prescriptionId: supply.prescription_id ?? null,
       }
     })
 

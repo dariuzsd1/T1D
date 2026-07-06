@@ -26,6 +26,9 @@ export interface Product {
   // The device this consumable feeds (pump/CGM), if any. Optional until the
   // device_id column lands via supabase/setup.sql — see src/lib/devices.ts.
   deviceId?: string | null;
+  // The prescription that covers this supply, if any (powers the runway ↔
+  // refills-left reconciliation, src/lib/prescriptions.ts rxSupplyStatus).
+  prescriptionId?: string | null;
 }
 
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
@@ -93,7 +96,8 @@ export const useStore = create<T1DStore>()((set) => ({
       updates.refillIntervalDays !== undefined ||
       updates.lastFilledDate !== undefined ||
       updates.copay !== undefined ||
-      updates.deviceId !== undefined
+      updates.deviceId !== undefined ||
+      updates.prescriptionId !== undefined
     ) {
       const optionalPayload: Record<string, unknown> = {}
       if (updates.usageRatePerDay !== undefined)
@@ -110,6 +114,8 @@ export const useStore = create<T1DStore>()((set) => ({
       if (updates.deviceId !== undefined)
         // NULL when unlinked. Best-effort like the others (column may be pre-migration).
         optionalPayload.device_id = updates.deviceId || null
+      if (updates.prescriptionId !== undefined)
+        optionalPayload.prescription_id = updates.prescriptionId || null
 
       const { error: optionalError } = await supabase
         .from('supplies')

@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Pill, Plus, Pencil, Trash2, Database, CalendarClock, RefreshCw } from 'lucide-react'
+import { Pill, Plus, Pencil, Trash2, Database, CalendarClock, RefreshCw, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import { PrescriptionModal } from '@/components/prescriptions/PrescriptionModal'
+import { isRateEstimated } from '@/lib/depletion'
+import type { Product } from '@/lib/store'
 import {
   type Prescription,
   rowToPrescription,
@@ -35,6 +37,7 @@ export default function PrescriptionsPage() {
   const { showToast } = useToast()
 
   const [items, setItems] = useState<Prescription[]>([])
+  const [supplies, setSupplies] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [needsMigration, setNeedsMigration] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +68,12 @@ export default function PrescriptionsPage() {
 
   useEffect(() => {
     load()
+    // Linked supplies (best-effort): lets each prescription show what it covers
+    // and how long that stock lasts. A failure just hides the section.
+    fetch('/api/inventory')
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res) => setSupplies(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {})
   }, [load])
 
   const handleSave = async (values: Partial<Prescription>) => {
@@ -221,12 +230,38 @@ export default function PrescriptionsPage() {
                   </div>
                 </dl>
 
+                {/* What this prescription covers, with honest runway per supply.
+                    Linked from each supply's Edit dialog on the Supplies page. */}
+                {(() => {
+                  const covered = supplies.filter((s) => s.prescriptionId === rx.id)
+                  if (covered.length === 0) return null
+                  return (
+                    <div className="mt-3 rounded-xl bg-surface-2 border border-line p-3">
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint mb-1.5">
+                        <Package className="w-3.5 h-3.5" /> Covers
+                      </p>
+                      <ul className="space-y-1">
+                        {covered.map((s) => (
+                          <li key={s.id} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="font-medium text-ink truncate">{s.name}</span>
+                            <span className="text-muted text-xs shrink-0">
+                              {isRateEstimated(s.usageRatePerDay)
+                                ? `${s.quantity} on hand`
+                                : `about ${s.remainingDays} day${s.remainingDays === 1 ? '' : 's'} left`}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })()}
+
                 {status !== 'ok' && (
                   <p className="mt-3 flex items-center gap-2 text-xs font-medium text-caution">
                     <CalendarClock className="w-3.5 h-3.5" />
                     {status === 'needs-renewal'
-                      ? 'No refills left or past its expiration — ask your prescriber for a renewal.'
-                      : 'Coming up for renewal soon — plan ahead so you don’t run short.'}
+                      ? 'No refills left or past its expiration. Ask your prescriber for a renewal.'
+                      : 'Coming up for renewal soon. Plan ahead so you don’t run short.'}
                   </p>
                 )}
               </div>

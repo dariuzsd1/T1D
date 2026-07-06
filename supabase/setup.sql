@@ -177,6 +177,15 @@ drop trigger if exists prescriptions_set_updated_at on public.prescriptions;
 create trigger prescriptions_set_updated_at before update on public.prescriptions
   for each row execute function public.set_updated_at();
 
+-- Link a supply to the prescription that covers it (nullable — most supplies
+-- start unlinked; set from the supply's Edit dialog). on delete set null so
+-- deleting a prescription never deletes the supply. Created here, after
+-- prescriptions exists, so the FK resolves on a fresh run (device_id pattern).
+alter table public.supplies
+  add column if not exists prescription_id uuid references public.prescriptions(id) on delete set null;
+
+create index if not exists supplies_prescription_id_idx on public.supplies(prescription_id);
+
 
 -- ============================================================================
 -- 5. CAREGIVER SHARES  (who the patient has granted access to)

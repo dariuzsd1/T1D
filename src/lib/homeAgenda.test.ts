@@ -64,6 +64,52 @@ describe('buildAgenda — content & ordering', () => {
   })
 })
 
+describe('buildAgenda — Rx ↔ supply link', () => {
+  it('uses a linked supply run-out as the renewal deadline when refills are 0', () => {
+    // Rx expires far out (Aug 1) but its linked supply (known rate) runs out in
+    // 5 days — with 0 refills, that run-out IS the renewal cliff.
+    const items = buildAgenda({
+      inventory: [product({ id: 's1', name: 'Humalog vials', prescriptionId: 'r', remainingDays: 5, usageRatePerDay: 0.1 })],
+      appointments: [],
+      prescriptions: [rx({ id: 'r', refillsRemaining: 0, expirationDate: '2026-08-01' })],
+      now: NOW,
+    })
+    expect(items).toHaveLength(1)
+    expect(items[0].label).toBe('Renew Humalog before Humalog vials runs out')
+    expect(items[0].date.getTime()).toBeLessThan(new Date('2026-08-01').getTime())
+  })
+
+  it('surfaces an UNDATED Rx with 0 refills via its linked supply', () => {
+    const items = buildAgenda({
+      inventory: [product({ id: 's1', name: 'Humalog vials', prescriptionId: 'r', remainingDays: 9, usageRatePerDay: 0.1 })],
+      appointments: [],
+      prescriptions: [rx({ id: 'r', refillsRemaining: 0, expirationDate: null })],
+      now: NOW,
+    })
+    expect(items).toHaveLength(1)
+    expect(items[0].kind).toBe('prescription')
+  })
+
+  it('never derives the deadline from an estimated rate or with refills left', () => {
+    // Estimated rate → the run-out would be a guess → only the real expiry counts.
+    const estimated = buildAgenda({
+      inventory: [product({ id: 's1', name: 'Vials', prescriptionId: 'r', remainingDays: 5, usageRatePerDay: 0 })],
+      appointments: [],
+      prescriptions: [rx({ id: 'r', refillsRemaining: 0, expirationDate: '2026-08-01' })],
+      now: NOW,
+    })
+    expect(estimated[0].label).toBe('Renew Humalog')
+    // Refills remaining → no cliff; the expiry stays the deadline.
+    const withRefills = buildAgenda({
+      inventory: [product({ id: 's1', name: 'Vials', prescriptionId: 'r', remainingDays: 5, usageRatePerDay: 0.1 })],
+      appointments: [],
+      prescriptions: [rx({ id: 'r', refillsRemaining: 2, expirationDate: '2026-08-01' })],
+      now: NOW,
+    })
+    expect(withRefills[0].label).toBe('Renew Humalog')
+  })
+})
+
 describe('formatAgendaDate', () => {
   it('labels today and tomorrow', () => {
     expect(formatAgendaDate(new Date('2026-07-01T20:00:00Z'), NOW)).toBe('Today')

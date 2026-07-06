@@ -5,8 +5,9 @@ import { RefillStatusBar } from "./RefillStatusBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package, Trash2, Edit3, ShoppingCart, Minus, Loader2,
-  CalendarClock, ChevronDown, PackagePlus,
+  CalendarClock, ChevronDown, PackagePlus, Pill,
 } from "lucide-react";
+import { rxSupplyStatus, type Prescription } from "@/lib/prescriptions";
 import { useToast } from "@/components/ui/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,9 @@ import { format } from "date-fns";
 interface ProductCardProps {
   product: Product;
   bufferDays?: number;
+  /** The prescription this supply is linked to (if any) — enables the honest
+   *  runway ↔ refills-left reconciliation line. */
+  linkedRx?: Prescription | null;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => Promise<void>;
   onUpdate?: (id: string, updates: Partial<Product>) => Promise<void>;
@@ -34,6 +38,7 @@ interface ProductCardProps {
 export function ProductCard({
   product,
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
+  linkedRx = null,
   onEdit,
   onDelete,
   onUpdate,
@@ -66,6 +71,17 @@ export function ProductCard({
   // When the user hasn't set a real daily usage, the runway is a conservative
   // estimate — say so plainly rather than presenting a guess as fact (CLAUDE.md §9).
   const estimated = isRateEstimated(product.usageRatePerDay)
+
+  // Runway ↔ prescription reconciliation ("no refills left and it runs out in
+  // 9 days") — the moment to call the prescriber. Null when nothing actionable.
+  const rxNote = linkedRx
+    ? rxSupplyStatus({
+        supplyName: product.name,
+        runwayDays: product.remainingDays,
+        rateEstimated: estimated,
+        prescription: linkedRx,
+      })
+    : null
 
   const statusLabel =
     status === 'out' ? 'Out of stock'
@@ -239,6 +255,17 @@ export function ProductCard({
 
                   {/* Honest one-line summary */}
                   <p className="text-sm text-muted font-medium">{summary}</p>
+
+                  {/* Prescription reconciliation — only when actionable */}
+                  {rxNote && (
+                    <p className={cn(
+                      "flex items-start gap-1.5 text-xs font-medium",
+                      rxNote.level === 'act' ? "text-caution" : "text-muted"
+                    )}>
+                      <Pill className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      {rxNote.message}
+                    </p>
+                  )}
 
                   {/* Expiration + FEFO guidance (use oldest first) */}
                   {expiryDays !== null && (

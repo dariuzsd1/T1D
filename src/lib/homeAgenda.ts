@@ -14,9 +14,12 @@
  */
 
 import { nextEligibleRefillDate } from './refill'
+import { isRateEstimated } from './depletion'
 import type { Product } from './store'
 import type { Appointment } from './appointments'
 import type { Prescription } from './prescriptions'
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 export type AgendaKind = 'refill' | 'appointment' | 'prescription'
 
@@ -94,19 +97,38 @@ export function buildAgenda({
     })
   }
 
-  // 3. Next prescription renewal — the real expiration date only. A blank
-  //    expiration means we can't date it, so it's skipped.
-  const nextRx = prescriptions
-    .filter((p) => p.expirationDate)
-    .map((p) => ({ p, when: new Date(p.expirationDate as string) }))
-    .filter((x) => !Number.isNaN(x.when.getTime()) && x.when.getTime() >= today.getTime())
-    .sort((x, y) => x.when.getTime() - y.when.getTime())[0]
+  // 3. Next prescription renewal. Two real deadlines feed this:
+  //    - the prescription's own expiration date, and
+  //    - when the Rx has NO refills left, the run-out date of a linked supply
+  //      with a KNOWN rate (running dry with no refills is the renewal cliff —
+  //      today + stock÷rate is real math, not a guess; estimates stay out).
+  //    Whichever real date is sooner wins. Rx with neither date is skipped.
+  const rxCandidates: { p: Prescription; when: Date; viaSupply: string | null }[] = []
+  for (const p of prescriptions) {
+    let when: Date | null = p.expirationDate ? new Date(p.expirationDate) : null
+    if (when && Number.isNaN(when.getTime())) when = null
+    let viaSupply: string | null = null
+    if (p.refillsRemaining === 0) {
+      for (const s of inventory) {
+        if (s.prescriptionId !== p.id || isRateEstimated(s.usageRatePerDay)) continue
+        const runOut = new Date(today.getTime() + s.remainingDays * MS_PER_DAY)
+        if (!when || runOut.getTime() < when.getTime()) {
+          when = runOut
+          viaSupply = s.name
+        }
+      }
+    }
+    if (when && when.getTime() >= today.getTime()) rxCandidates.push({ p, when, viaSupply })
+  }
+  const nextRx = rxCandidates.sort((x, y) => x.when.getTime() - y.when.getTime())[0]
   if (nextRx) {
     items.push({
       key: 'prescription',
       date: nextRx.when,
       kind: 'prescription',
-      label: `Renew ${nextRx.p.medicationName}`,
+      label: nextRx.viaSupply
+        ? `Renew ${nextRx.p.medicationName} before ${nextRx.viaSupply} runs out`
+        : `Renew ${nextRx.p.medicationName}`,
       href: '/dashboard/prescriptions',
     })
   }

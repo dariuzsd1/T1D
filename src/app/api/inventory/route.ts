@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
         copay: supply.copay ?? null,
         // Device this consumable feeds (null until linked / column exists).
         deviceId: supply.device_id ?? null,
+        // Prescription covering this supply (null until linked / column exists).
+        prescriptionId: supply.prescription_id ?? null,
       }
     })
 
