@@ -58,7 +58,7 @@ export function QuickActionHub() {
   ]
 
   return (
-    <div className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 z-[110]">
+    <div className="print:hidden fixed bottom-20 right-5 lg:bottom-8 lg:right-8 z-[110]">
       <AnimatePresence>
         {isOpen && (
           <div className="flex flex-col-reverse gap-3 mb-4 items-end">
