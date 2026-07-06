@@ -26,20 +26,37 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [expirationDate, setExpirationDate] = useState(
     product.expirationDate ? product.expirationDate.slice(0, 10) : ''
   )
-  // Usage is captured two intuitive ways. "wear" = "each one lasts N days"
-  // (sensors/pods/sets — the common case); "rate" = "I use N per day"
-  // (consumption items like test strips). Both resolve to the single internal
-  // usageRatePerDay. Infer the starting mode from the stored rate: a rate of
-  // 1/day or less means a unit lasts at least a day → a wear item.
+  // Usage is captured three intuitive ways, all resolving to the single internal
+  // usageRatePerDay. "wear" = "each one lasts N days" (sensors/pods/sets);
+  // "rate" = "I use N per day" (test strips); "insulin" = "N units a day, each
+  // vial/pen holds M units" → rate = N/M vials-per-day (nobody thinks in
+  // vials/day). An in-use item (opened date / discard window set) starts on the
+  // insulin tab; otherwise infer from the rate (≤1/day → a wear item).
   const initialDaysPerUnit = daysPerUnitFromRate(product.usageRatePerDay)
-  const [trackMode, setTrackMode] = useState<'wear' | 'rate'>(
-    product.usageRatePerDay > 1 ? 'rate' : 'wear'
+  const startInsulin = product.inUseDays != null || product.openedDate != null
+  const [trackMode, setTrackMode] = useState<'wear' | 'rate' | 'insulin'>(
+    startInsulin ? 'insulin' : product.usageRatePerDay > 1 ? 'rate' : 'wear'
   )
   const [perUnitDays, setPerUnitDays] = useState<string>(
     initialDaysPerUnit != null ? String(initialDaysPerUnit) : ''
   )
   const [perDay, setPerDay] = useState<string>(
     product.usageRatePerDay > 1 ? String(product.usageRatePerDay) : ''
+  )
+  // Insulin dosing. Container defaults to a 1000-unit vial; prefill units/day
+  // from the stored rate so the insulin tab round-trips (N = rate × 1000).
+  const [insulinUnitsPerContainer, setInsulinUnitsPerContainer] = useState<string>('1000')
+  const [insulinUnitsPerDay, setInsulinUnitsPerDay] = useState<string>(
+    startInsulin && product.usageRatePerDay > 0
+      ? String(Math.round(product.usageRatePerDay * 1000))
+      : ''
+  )
+  // In-use clock: when the current vial/pen was opened + its discard window.
+  const [openedDate, setOpenedDate] = useState(
+    product.openedDate ? product.openedDate.slice(0, 10) : ''
+  )
+  const [inUseDays, setInUseDays] = useState<string>(
+    product.inUseDays != null ? String(product.inUseDays) : ''
   )
   const [refillIntervalDays, setRefillIntervalDays] = useState<string>(
     product.refillIntervalDays != null ? String(product.refillIntervalDays) : ''
@@ -85,12 +102,23 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   }, [])
 
   // Resolve the active mode to the single internal rate. 0 = "not set" → estimate.
+  const insulinN = parseFloat(insulinUnitsPerDay) || 0
+  const insulinM = parseFloat(insulinUnitsPerContainer) || 0
   const resolvedRate =
     trackMode === 'wear'
       ? rateFromDaysPerUnit(parseFloat(perUnitDays) || 0)
-      : parseFloat(perDay) > 0
-        ? parseFloat(perDay)
-        : 0
+      : trackMode === 'insulin'
+        ? (insulinN > 0 && insulinM > 0 ? insulinN / insulinM : 0)
+        : parseFloat(perDay) > 0
+          ? parseFloat(perDay)
+          : 0
+
+  // Switching to the insulin tab offers the standard 28-day discard window if
+  // the user hasn't set one (most insulins; they can change it, e.g. 56 Tresiba).
+  const selectInsulinMode = () => {
+    setTrackMode('insulin')
+    if (!inUseDays) setInUseDays('28')
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -106,6 +134,10 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         copay: copay ? parseFloat(copay) : null,
         deviceId: deviceId || null,
         prescriptionId: prescriptionId || null,
+        // In-use clock: only meaningful on the insulin tab. Elsewhere the fields
+        // aren't shown, so their (untouched) values pass through unchanged.
+        openedDate: openedDate || null,
+        inUseDays: inUseDays ? parseInt(inUseDays, 10) : null,
       })
       onSaved?.(product.name)
       onClose()
@@ -161,26 +193,34 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Usage (optional)</label>
-            {/* Two intuitive ways to express the same thing. "Each one lasts" suits
-                worn items (sensors/pods/sets); "I use per day" suits consumables. */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 border border-line rounded-xl mb-3">
+            {/* Three intuitive ways to express the same thing. "Each one lasts"
+                suits worn items (sensors/pods/sets); "I use per day" suits
+                consumables; "Insulin" lets you think in units/day and units/vial. */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-surface-2 border border-line rounded-xl mb-3">
               <button
                 type="button"
                 onClick={() => setTrackMode('wear')}
                 className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'wear' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
               >
-                Each one lasts
+                Each lasts
               </button>
               <button
                 type="button"
                 onClick={() => setTrackMode('rate')}
                 className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'rate' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
               >
-                I use per day
+                Per day
+              </button>
+              <button
+                type="button"
+                onClick={selectInsulinMode}
+                className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'insulin' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+              >
+                Insulin
               </button>
             </div>
 
-            {trackMode === 'wear' ? (
+            {trackMode === 'wear' && (
               <div className="relative">
                 <input
                   id="edit-usage-days"
@@ -195,7 +235,8 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">days</span>
               </div>
-            ) : (
+            )}
+            {trackMode === 'rate' && (
               <div className="relative">
                 <input
                   id="edit-usage-rate"
@@ -211,13 +252,89 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">/ day</span>
               </div>
             )}
+            {trackMode === 'insulin' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="edit-insulin-dose" className="block text-[11px] font-medium text-muted mb-1.5">Units a day</label>
+                  <div className="relative">
+                    <input
+                      id="edit-insulin-dose"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      placeholder="e.g. 40"
+                      value={insulinUnitsPerDay}
+                      onChange={(e) => setInsulinUnitsPerDay(e.target.value)}
+                      className="w-full bg-surface border border-line rounded-xl p-3 pr-10 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">u</span>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="edit-insulin-container" className="block text-[11px] font-medium text-muted mb-1.5">Units per vial/pen</label>
+                  <div className="relative">
+                    <input
+                      id="edit-insulin-container"
+                      type="number"
+                      min="0"
+                      step="100"
+                      inputMode="numeric"
+                      placeholder="1000 vial · 300 pen"
+                      value={insulinUnitsPerContainer}
+                      onChange={(e) => setInsulinUnitsPerContainer(e.target.value)}
+                      className="w-full bg-surface border border-line rounded-xl p-3 pr-10 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">u</span>
+                  </div>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-faint mt-1.5">
               {resolvedRate > 0
                 ? `Makes "days remaining" exact — about ${Math.floor(quantity / resolvedRate)} days at this rate.`
                 : trackMode === 'wear'
                   ? 'Days you wear or use one before replacing it. Until set, days remaining is a rough estimate.'
-                  : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
+                  : trackMode === 'insulin'
+                    ? 'A vial is usually 1000 units (10 mL), a pen 300. Until set, days remaining is a rough estimate.'
+                    : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
             </p>
+
+            {/* In-use clock — only on the insulin tab. An opened vial/pen must be
+                discarded after its in-use window even if the printed expiry is
+                later. Both optional; the clock only applies when both are set. */}
+            {trackMode === 'insulin' && (
+              <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-surface-2 border border-line p-3">
+                <div>
+                  <label htmlFor="edit-opened-date" className="block text-[11px] font-medium text-muted mb-1.5">Opened on</label>
+                  <input
+                    id="edit-opened-date"
+                    type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                    value={openedDate}
+                    onChange={(e) => setOpenedDate(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-lg p-2.5 text-sm font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-in-use-days" className="block text-[11px] font-medium text-muted mb-1.5">Discard after (days)</label>
+                  <input
+                    id="edit-in-use-days"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    placeholder="28"
+                    value={inUseDays}
+                    onChange={(e) => setInUseDays(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-lg p-2.5 text-sm font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                </div>
+                <p className="col-span-2 text-[11px] text-faint">
+                  Most insulins keep about 28 days once opened (Tresiba 56). Leave the date blank until you open one.
+                </p>
+              </div>
+            )}
           </div>
           <div>
             <label htmlFor="edit-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration date (optional)</label>

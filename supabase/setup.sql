@@ -78,6 +78,11 @@ create table if not exists public.supplies (
   -- Barcode/GS1 scan capture (src/lib/gs1.ts):
   barcode         text,
   lot_number      text,
+  -- Insulin in-use clock (src/lib/depletion.ts). opened_date = when the current
+  -- vial/pen was first used; in_use_days = the discard window (28 for most
+  -- insulins). Both NULL = not tracked → the clock simply doesn't apply.
+  opened_date     date,
+  in_use_days     integer,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -90,7 +95,9 @@ alter table public.supplies
   add column if not exists refill_interval_days integer,
   add column if not exists last_filled_date      date,
   add column if not exists barcode               text,
-  add column if not exists lot_number            text;
+  add column if not exists lot_number            text,
+  add column if not exists opened_date           date,
+  add column if not exists in_use_days           integer;
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 
@@ -493,11 +500,18 @@ create table if not exists public.products (
   typical_usage_per_day        numeric,
   default_refill_interval_days integer,
   rx_required                  boolean default false,
+  -- Discard window once opened (in-use clock), from data/diabetes_catalog.csv.
+  -- 28 for most insulins, 56 for Tresiba; blank for items with no in-use limit.
+  -- A smart default the app can offer; the working value lives on supplies.
+  in_use_days                  integer,
   notes                        text,
   source_url                   text,
   last_verified                date,
   created_at                   timestamptz not null default now()
 );
+
+-- For catalogs imported before in_use_days existed:
+alter table public.products add column if not exists in_use_days integer;
 
 -- Partial index: only rows with a real GTIN need to be looked up by GTIN.
 create index if not exists products_gtin_idx on public.products(gtin) where gtin is not null;

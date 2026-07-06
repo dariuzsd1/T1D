@@ -29,6 +29,10 @@ export interface Product {
   // The prescription that covers this supply, if any (powers the runway ↔
   // refills-left reconciliation, src/lib/prescriptions.ts rxSupplyStatus).
   prescriptionId?: string | null;
+  // Insulin in-use clock (src/lib/depletion.ts inUseDaysRemaining): when the
+  // current vial/pen was opened and its discard window (usually 28 days).
+  openedDate?: string | null;
+  inUseDays?: number | null;
 }
 
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
@@ -97,7 +101,9 @@ export const useStore = create<T1DStore>()((set) => ({
       updates.lastFilledDate !== undefined ||
       updates.copay !== undefined ||
       updates.deviceId !== undefined ||
-      updates.prescriptionId !== undefined
+      updates.prescriptionId !== undefined ||
+      updates.openedDate !== undefined ||
+      updates.inUseDays !== undefined
     ) {
       const optionalPayload: Record<string, unknown> = {}
       if (updates.usageRatePerDay !== undefined)
@@ -116,6 +122,10 @@ export const useStore = create<T1DStore>()((set) => ({
         optionalPayload.device_id = updates.deviceId || null
       if (updates.prescriptionId !== undefined)
         optionalPayload.prescription_id = updates.prescriptionId || null
+      if (updates.openedDate !== undefined)
+        optionalPayload.opened_date = updates.openedDate || null
+      if (updates.inUseDays !== undefined)
+        optionalPayload.in_use_days = updates.inUseDays && updates.inUseDays > 0 ? updates.inUseDays : null
 
       const { error: optionalError } = await supabase
         .from('supplies')

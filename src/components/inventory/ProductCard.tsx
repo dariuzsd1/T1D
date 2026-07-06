@@ -5,7 +5,7 @@ import { RefillStatusBar } from "./RefillStatusBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package, Trash2, Edit3, ShoppingCart, Minus, Loader2,
-  CalendarClock, ChevronDown, PackagePlus, Pill,
+  CalendarClock, ChevronDown, PackagePlus, Pill, Droplet,
 } from "lucide-react";
 import { rxSupplyStatus, type Prescription } from "@/lib/prescriptions";
 import { useToast } from "@/components/ui/Toast";
@@ -16,6 +16,7 @@ import {
   displayStatus,
   reorderByDate,
   daysUntilExpiration,
+  inUseDaysRemaining,
   isRateEstimated,
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from "@/lib/depletion";
@@ -67,6 +68,28 @@ export function ProductCard({
   const reorderBy = reorderByDate(product.remainingDays, bufferDays)
   const expiryDays = daysUntilExpiration(product.expirationDate)
   const reorder = reorderTargetFor(product)
+
+  // Insulin in-use clock: an opened vial/pen must be tossed after its window
+  // even if the printed expiry is later. Shown as its own line + a one-tap
+  // "Opened today" reset. Only relevant once a discard window is set.
+  const tracksInUse = product.inUseDays != null && product.inUseDays > 0
+  const inUseLeft = inUseDaysRemaining(product.openedDate, product.inUseDays)
+  const [isMarkingOpened, setIsMarkingOpened] = useState(false)
+
+  const handleMarkOpened = async () => {
+    setIsMarkingOpened(true)
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      await onUpdate?.(product.id, { openedDate: today })
+      void logActivity('supply_used', product.name)
+      showToast(`Marked ${product.name} opened today.`, 'success')
+    } catch (err) {
+      console.error('Failed to mark opened:', err)
+      showToast(`Couldn't update ${product.name}. Please try again.`, 'caution')
+    } finally {
+      setIsMarkingOpened(false)
+    }
+  }
 
   // When the user hasn't set a real daily usage, the runway is a conservative
   // estimate — say so plainly rather than presenting a guess as fact (CLAUDE.md §9).
@@ -275,9 +298,29 @@ export function ProductCard({
                     )}>
                       <CalendarClock className="w-3.5 h-3.5" />
                       {expiryDays <= 0
-                        ? `Expired ${format(new Date(product.expirationDate!), 'MMM d, yyyy')} — do not use`
+                        ? `Expired ${format(new Date(product.expirationDate!), 'MMM d, yyyy')} · do not use`
                         : `Expires ${format(new Date(product.expirationDate!), 'MMM d, yyyy')} · use oldest first`}
                     </p>
+                  )}
+
+                  {/* In-use (opened-vial) clock — insulin's 28-day discard window */}
+                  {tracksInUse && (
+                    inUseLeft === null ? (
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
+                        <Droplet className="w-3.5 h-3.5" />
+                        Not opened yet · discard {product.inUseDays} days after opening
+                      </p>
+                    ) : (
+                      <p className={cn(
+                        "flex items-center gap-1.5 text-xs font-medium",
+                        inUseLeft <= 0 ? "text-urgent" : inUseLeft <= 5 ? "text-caution" : "text-muted"
+                      )}>
+                        <Droplet className="w-3.5 h-3.5" />
+                        {inUseLeft <= 0
+                          ? `Opened over ${product.inUseDays} days ago · discard this one`
+                          : `Opened ${product.inUseDays! - inUseLeft} day${product.inUseDays! - inUseLeft === 1 ? '' : 's'} ago · discard in ${inUseLeft} day${inUseLeft === 1 ? '' : 's'}`}
+                      </p>
+                    )
                   )}
 
                   <div className="bg-surface-2 rounded-xl p-4 border border-line">
@@ -309,6 +352,20 @@ export function ProductCard({
                       {isRestocking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PackagePlus className="w-3.5 h-3.5" />}
                       Restock
                     </button>
+
+                    {/* One-tap reset of the in-use clock when a new vial/pen is opened */}
+                    {tracksInUse && (
+                      <button
+                        onClick={handleMarkOpened}
+                        disabled={isMarkingOpened}
+                        aria-label={`Mark ${product.name} opened today`}
+                        title="Start the discard clock for a newly opened vial or pen"
+                        className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {isMarkingOpened ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplet className="w-3.5 h-3.5" />}
+                        Opened today
+                      </button>
+                    )}
 
                     <a
                       href={reorder.url}

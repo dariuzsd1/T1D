@@ -28,6 +28,10 @@ export interface RunwayInput {
   quantity: number
   usageRatePerDay: number
   expirationDate?: string | null
+  // Insulin in-use clock: when the current vial/pen was opened, and how many
+  // days it stays good once opened (28 for most insulins). Both optional.
+  openedDate?: string | null
+  inUseDays?: number | null
 }
 
 /** True when the runway rests on the fallback rate rather than a user-entered one. */
@@ -70,12 +74,40 @@ export function daysUntilExpiration(expirationDate?: string | null): number | nu
   return Math.floor((ms - Date.now()) / MS_PER_DAY)
 }
 
-/** The honest runway: the sooner of "stock runs out" and "stock expires". */
+/**
+ * Days until an opened vial/pen must be discarded (the in-use clock — insulin
+ * stays good ~28 days once opened, regardless of the printed expiry). Negative
+ * means it's already past the discard date; null when the item isn't tracked
+ * this way (no opened date or no in-use window). Never fabricated.
+ */
+export function inUseDaysRemaining(
+  openedDate?: string | null,
+  inUseDays?: number | null
+): number | null {
+  if (!openedDate || !inUseDays || inUseDays <= 0) return null
+  const opened = new Date(openedDate).getTime()
+  if (Number.isNaN(opened)) return null
+  const discardAt = opened + inUseDays * MS_PER_DAY
+  return Math.floor((discardAt - Date.now()) / MS_PER_DAY)
+}
+
+/**
+ * The honest runway: the soonest of "stock runs out", "stock expires", and —
+ * when there's no sealed backup — "the open vial must be discarded".
+ *
+ * The in-use clock only caps the aggregate runway when quantity <= 1 (a single
+ * open container, where the discard date genuinely IS the runway). With spare
+ * sealed containers on hand, folding it in would fire a false "reorder now" —
+ * so for those the discard date is surfaced separately on the card instead
+ * (ProductCard), never blended into this number. Nothing here is fabricated.
+ */
 export function effectiveRunwayDays(p: RunwayInput): number {
-  const stock = daysOfStock(p.quantity, p.usageRatePerDay)
+  const caps = [daysOfStock(p.quantity, p.usageRatePerDay)]
   const exp = daysUntilExpiration(p.expirationDate)
-  if (exp === null) return stock
-  return Math.max(0, Math.min(stock, exp))
+  if (exp !== null) caps.push(exp)
+  const inUse = inUseDaysRemaining(p.openedDate, p.inUseDays)
+  if (inUse !== null && p.quantity <= 1) caps.push(inUse)
+  return Math.max(0, Math.min(...caps))
 }
 
 export type StockStatus = 'out' | 'low' | 'ok'

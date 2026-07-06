@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
         quantity: Number(supply.quantity) || 0,
         usageRatePerDay,
         expirationDate: supply.expiration_date,
+        openedDate: supply.opened_date ?? null,
+        inUseDays: supply.in_use_days ?? null,
       })
 
       return {
@@ -72,6 +74,9 @@ export async function GET(request: NextRequest) {
         deviceId: supply.device_id ?? null,
         // Prescription covering this supply (null until linked / column exists).
         prescriptionId: supply.prescription_id ?? null,
+        // Insulin in-use clock (null until set / columns exist).
+        openedDate: supply.opened_date ?? null,
+        inUseDays: supply.in_use_days ?? null,
       }
     })
 
