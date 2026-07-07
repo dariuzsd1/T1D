@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { LANG_COOKIE, normalizeLang } from "@/lib/i18n/shared";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
+import { QueryProvider } from "@/components/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,9 +46,11 @@ export default async function RootLayout({
             route (scan, login, public pages), not just under the dashboard
             layout. The StarterKitModal's useToast() crashed on /scan before this. */}
         <LanguageProvider initialLang={lang}>
-          <ToastProvider>
-            <ConfirmProvider>{children}</ConfirmProvider>
-          </ToastProvider>
+          <QueryProvider>
+            <ToastProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </ToastProvider>
+          </QueryProvider>
         </LanguageProvider>
       </body>
     </html>

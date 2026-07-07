@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useStore } from '@/lib/store'
+import { useInventory } from '@/lib/useInventory'
 import { createClient } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/inventory/ProductCard'
 import { EditProductModal } from '@/components/inventory/EditProductModal'
@@ -15,11 +16,17 @@ import { useI18n } from '@/lib/i18n'
 import { Plus } from 'lucide-react'
 
 export default function SuppliesPage() {
-  const { inventory, setInventory, updateProduct, removeProduct, safetyBufferDays } = useStore()
+  const { inventory, updateProduct, removeProduct, safetyBufferDays } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // TanStack Query POC (BACKLOG.md): cached + deduplicated with the Home
+  // page, refetches on window focus. Still write-throughs into the zustand
+  // store, so `inventory`/`updateProduct`/`removeProduct` are unchanged.
+  const inventoryQuery = useInventory()
+  const loading = inventoryQuery.isLoading
+  const error = inventoryQuery.error
+    ? inventoryQuery.error instanceof Error ? inventoryQuery.error.message : 'Failed to load inventory'
+    : null
   const [editingId, setEditingId] = useState<string | null>(null)
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
 
@@ -37,23 +44,6 @@ export default function SuppliesPage() {
     )
 
   useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/inventory')
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const result = await response.json()
-        setInventory(result.data || [])
-        setError(null)
-      } catch (err: any) {
-        console.error('Failed to fetch inventory:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchInventory()
-
     // Prescriptions power the runway ↔ refills-left line on each card.
     // Best-effort: a missing table just means no reconciliation lines.
     createClient()
@@ -62,7 +52,6 @@ export default function SuppliesPage() {
       .then(({ data }) => {
         if (data) setPrescriptions(data.map(rowToPrescription))
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Three honest groups: real alarms (out/low on facts), unknown-rate items
