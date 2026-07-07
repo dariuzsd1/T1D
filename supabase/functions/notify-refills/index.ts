@@ -303,11 +303,34 @@ interface LogRow {
 const DEDUPE_DAYS = 3
 
 Deno.serve(async (req) => {
-  // Only the scheduler (or an operator) with the service-role key may trigger a
-  // scan — a signed-in user's JWT passes platform verification but not this.
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  if (req.headers.get('Authorization') !== `Bearer ${serviceKey}`) {
-    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
+  // Who may trigger a scan. Preferred: a shared secret YOU choose, set as the
+  // CRON_SECRET function secret and sent as the `x-cron-secret` header from
+  // supabase/cron.sql. Because you control both sides, they always match — it
+  // does not depend on Supabase's service-role key, whose dashboard value and
+  // injected value can differ on newer projects (that mismatch is the usual
+  // "403 Forbidden" here). We still accept the service-role key in the
+  // Authorization header for older setups that already work.
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const cronSecret = Deno.env.get('CRON_SECRET')
+  const headerSecret = req.headers.get('x-cron-secret')
+  const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
+  const authorized =
+    (!!cronSecret && headerSecret === cronSecret) ||
+    (!!serviceKey && bearer === serviceKey)
+  if (!authorized) {
+    return new Response(
+      JSON.stringify({
+        error: 'Forbidden',
+        hint: 'Set a CRON_SECRET function secret and send the same value as the x-cron-secret header (docs/PUSH_NOTIFICATIONS.md step 5).',
+      }),
+      { status: 403 }
+    )
+  }
+  if (!serviceKey) {
+    return new Response(
+      JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY is not available to this function.' }),
+      { status: 500 }
+    )
   }
 
   const saRaw = Deno.env.get('FCM_SERVICE_ACCOUNT')

@@ -41,38 +41,48 @@ contents of `supabase/functions/notify-refills/index.ts` → Deploy.
 
 **CLI (if you have it):**
 ```
-supabase functions deploy notify-refills --project-ref <PROJECT-REF>
+supabase functions deploy notify-refills --no-verify-jwt --project-ref <PROJECT-REF>
 ```
-(Leave JWT verification ON — the default. The function additionally requires
-the service-role key itself, so ordinary user JWTs are rejected either way.)
+Turn **JWT verification OFF** for this function (dashboard: Edge Functions →
+notify-refills → its settings → toggle *Verify JWT* off). The function is
+instead protected by a secret you set in the next step, sent as a custom header
+— this avoids the service-role-key mismatch that causes a "403 Forbidden".
 
-### 4. Set the secret (2 min)
-Dashboard → Edge Functions → notify-refills → **Secrets** → add:
+### 4. Set the secrets (3 min)
+Dashboard → Edge Functions → notify-refills → **Secrets** → add **two**:
 
 | Name | Value |
 |---|---|
 | `FCM_SERVICE_ACCOUNT` | the entire contents of the JSON from step 1, pasted as one value |
+| `CRON_SECRET` | any long password YOU make up (e.g. a random 30+ char string). You'll reuse this exact value in steps 5 and 6. |
 
-(CLI alternative: `supabase secrets set FCM_SERVICE_ACCOUNT="$(cat service-account.json)"`)
+(CLI alternative: `supabase secrets set FCM_SERVICE_ACCOUNT="$(cat service-account.json)" CRON_SECRET="your-long-password"`)
 
 ### 5. Enable the scheduler (3 min)
 Dashboard → Database → **Extensions** → enable `pg_cron` **and** `pg_net`.
-Then open `supabase/cron.sql`, replace the two placeholders
-(`<PROJECT-REF>`, `<SERVICE-ROLE-KEY>` from Settings → API), and run it in the
-SQL editor once.
+Then open `supabase/cron.sql`, replace the two placeholders (`<PROJECT-REF>`,
+and `<CRON-SECRET>` = the same password you set above), and run it in the SQL
+editor once. (Already scheduled an older version? Run
+`select cron.unschedule('notify-refills-daily');` first.)
 
 ### 6. Send yourself a test (2 min)
 1. In the app: Settings → enable push (the toggle stores your token).
-2. Trigger a scan manually — SQL editor:
+2. Trigger a scan manually — SQL editor (same `<CRON-SECRET>` as above):
    ```sql
    select net.http_post(
      url     := 'https://<PROJECT-REF>.functions.supabase.co/notify-refills',
-     headers := jsonb_build_object('Authorization', 'Bearer <SERVICE-ROLE-KEY>')
+     headers := jsonb_build_object(
+       'Content-Type',  'application/json',
+       'x-cron-secret', '<CRON-SECRET>'
+     ),
+     body    := '{}'::jsonb
    );
    ```
-3. Check the response in `select * from net._http_response order by id desc limit 1;`
-   — you should see `{"users":1,...,"sent":N}`. If an item is genuinely low,
-   the notification appears (close the tab first to see the background path).
+3. Check the response in
+   `select status_code, content from net._http_response order by id desc limit 1;`
+   — you should see `200` and `{"users":1,...,"sent":N}`. If an item is
+   genuinely low, the notification appears (close the tab first to see the
+   background path).
 4. No low items? Temporarily set one supply's quantity to 0, re-run, restore it.
 
 ## How it decides to notify (so the alerts stay trustworthy)
