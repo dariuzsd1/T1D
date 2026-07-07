@@ -31,6 +31,8 @@ interface RunwayInput {
   quantity: number
   usageRatePerDay: number
   expirationDate?: string | null
+  openedDate?: string | null
+  inUseDays?: number | null
 }
 
 function isRateEstimated(usageRatePerDay?: number | null): boolean {
@@ -49,11 +51,28 @@ function daysUntilExpiration(expirationDate?: string | null): number | null {
   return Math.floor((ms - Date.now()) / MS_PER_DAY)
 }
 
+function inUseDaysRemaining(
+  openedDate?: string | null,
+  inUseDays?: number | null
+): number | null {
+  if (!openedDate || !inUseDays || inUseDays <= 0) return null
+  const opened = new Date(openedDate).getTime()
+  if (Number.isNaN(opened)) return null
+  const discardAt = opened + inUseDays * MS_PER_DAY
+  return Math.floor((discardAt - Date.now()) / MS_PER_DAY)
+}
+
 function effectiveRunwayDays(p: RunwayInput): number {
-  const stock = daysOfStock(p.quantity, p.usageRatePerDay)
+  // Soonest of "stock runs out", "stock expires", and — only when there's no
+  // sealed backup (quantity <= 1) — "the open vial must be discarded". Matches
+  // src/lib/depletion.ts exactly, including the quantity gate that keeps a spare
+  // sealed vial from firing a false "reorder now".
+  const caps = [daysOfStock(p.quantity, p.usageRatePerDay)]
   const exp = daysUntilExpiration(p.expirationDate)
-  if (exp === null) return stock
-  return Math.max(0, Math.min(stock, exp))
+  if (exp !== null) caps.push(exp)
+  const inUse = inUseDaysRemaining(p.openedDate, p.inUseDays)
+  if (inUse !== null && p.quantity <= 1) caps.push(inUse)
+  return Math.max(0, Math.min(...caps))
 }
 
 type StockStatus = 'out' | 'low' | 'ok'
@@ -255,6 +274,8 @@ interface SupplyRow {
   expiration_date: string | null
   refill_interval_days: number | null
   last_filled_date: string | null
+  opened_date: string | null
+  in_use_days: number | null
 }
 interface PrefsRow {
   user_id: string
@@ -305,7 +326,7 @@ Deno.serve(async (req) => {
   const [tokensRes, suppliesRes, prefsRes, profilesRes, logRes] = await Promise.all([
     supabase.from('fcm_tokens').select('id, user_id, token'),
     supabase.from('supplies').select(
-      'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date'
+      'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days'
     ),
     supabase.from('notification_prefs').select('*'),
     supabase.from('profiles').select('id, timezone, safety_buffer_days'),
@@ -356,6 +377,8 @@ Deno.serve(async (req) => {
         quantity: s.quantity,
         usageRatePerDay: s.usage_rate_per_day ?? 0,
         expirationDate: s.expiration_date,
+        openedDate: s.opened_date,
+        inUseDays: s.in_use_days,
       }
       const status = displayStatus(input, lead)
       const runway = effectiveRunwayDays(input)
