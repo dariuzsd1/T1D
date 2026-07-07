@@ -6,10 +6,12 @@ import { AlertTriangle, Clock, ArrowRight, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useI18n } from '@/lib/i18n'
 
 export function RiskAlertBanner() {
   const { inventory, safetyBufferDays } = useStore()
   const [dismissed, setDismissed] = useState(false)
+  const { t } = useI18n()
 
   // displayStatus: items with an estimated rate stay out of this banner entirely —
   // an app-wide alarm may only rest on facts (real rate, real 0, real expiry).
@@ -28,8 +30,16 @@ export function RiskAlertBanner() {
     : 'bg-caution-soft text-caution border-caution/30'
 
   const message = isUrgent
-    ? `You're out of ${items[0].name}${others > 0 ? ` and ${others} other item${others > 1 ? 's' : ''}` : ''}. Reorder now.`
-    : `${items[0].name} is running low (${items[0].remainingDays} days left)${others > 0 ? `, plus ${others} other item${others > 1 ? 's' : ''}` : ''}.`
+    ? (others === 0
+        ? t('riskBanner.outMessage', { name: items[0].name })
+        : others === 1
+          ? t('riskBanner.outMessagePlusOne', { name: items[0].name })
+          : t('riskBanner.outMessagePlusMany', { name: items[0].name, count: others }))
+    : (others === 0
+        ? t('riskBanner.lowMessage', { name: items[0].name, days: items[0].remainingDays })
+        : others === 1
+          ? t('riskBanner.lowMessagePlusOne', { name: items[0].name, days: items[0].remainingDays })
+          : t('riskBanner.lowMessagePlusMany', { name: items[0].name, days: items[0].remainingDays, count: others }))
 
   return (
     <motion.div
@@ -49,12 +59,12 @@ export function RiskAlertBanner() {
             href="/dashboard"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-surface px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           >
-            Review
+            {t('riskBanner.review')}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
           <button
             onClick={() => setDismissed(true)}
-            aria-label="Dismiss alert"
+            aria-label={t('riskBanner.dismiss')}
             className="rounded-full p-1.5 transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           >
             <X className="w-4 h-4" />

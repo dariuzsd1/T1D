@@ -13,11 +13,12 @@
  */
 
 import type { Product } from './store'
+import type { TKey } from './i18n/dictionaries'
 
 export interface SetupStep {
   key: string
-  /** Plain, supportive label. */
-  label: string
+  /** Translation key for the plain, supportive label — render with t(). */
+  label: TKey
   /** Backed by real stored data — never assumed. */
   done: boolean
   /** Where tapping the step takes the user to complete it. */
@@ -40,10 +41,10 @@ export function setupSteps({ inventory, deviceCount }: SetupInputs): SetupStep[]
   // supply + device are what the onboarding flow collects, so those steps route
   // into it; usage + refill are per-supply, edited on the Supplies page.
   return [
-    { key: 'supply', label: 'Add your first supply', done: hasSupply, href: '/dashboard/onboarding' },
-    { key: 'device', label: 'Add your pump or CGM', done: hasDevice, href: '/dashboard/onboarding' },
-    { key: 'usage', label: 'Set how fast you use a supply', done: hasUsage, href: '/dashboard/supplies' },
-    { key: 'refill', label: 'Add a refill cycle', done: hasRefill, href: '/dashboard/supplies' },
+    { key: 'supply', label: 'setup.stepSupply', done: hasSupply, href: '/dashboard/onboarding' },
+    { key: 'device', label: 'setup.stepDevice', done: hasDevice, href: '/dashboard/onboarding' },
+    { key: 'usage', label: 'setup.stepUsage', done: hasUsage, href: '/dashboard/supplies' },
+    { key: 'refill', label: 'setup.stepRefill', done: hasRefill, href: '/dashboard/supplies' },
   ]
 }
 

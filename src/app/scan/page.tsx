@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/client'
 import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
+import { useI18n } from '@/lib/i18n'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -40,6 +41,7 @@ type ScanStep = 'UPLOAD' | 'MANUAL' | 'BARCODE_CONFIRM' | 'CATALOG_CONFIRM'
  * unmatched product (its runway stays a labelled estimate; fine-tune in Edit).
  */
 function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
+  const { t } = useI18n()
   const days = daysPerUnitFromRate(rate)
   if (days == null) return null
   const runway = Math.floor(quantity * days)
@@ -47,15 +49,14 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
     <div className="flex items-start gap-2.5 rounded-xl bg-surface-2 border border-line p-3.5">
       <Clock className="w-4 h-4 text-teal shrink-0 mt-0.5" aria-hidden="true" />
       <p className="text-xs text-muted leading-relaxed">
-        <span className="font-semibold text-ink">Each one lasts about {days} days</span>
-        {' '}(from our catalog), so {quantity} should last around{' '}
-        <span className="font-semibold text-ink">{runway} days</span>. You can fine-tune this later.
+        {t('scan.wearReadout', { days, quantity, runway })}
       </p>
     </div>
   )
 }
 
 export default function ScanPage() {
+  const { t } = useI18n()
   const [step, setStep] = useState<ScanStep>('UPLOAD')
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -114,9 +115,7 @@ export default function ScanPage() {
     if (raw) {
       handleBarcodeDetected(raw)
     } else {
-      setPhotoNote(
-        "We couldn't find a barcode in that photo. Try a closer, sharper shot of the barcode itself, or enter the details below.",
-      )
+      setPhotoNote(t('scan.photoNoBarcode'))
     }
   }
 
@@ -132,7 +131,7 @@ export default function ScanPage() {
   ) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.id) {
-      setError('Not authenticated')
+      setError(t('scan.errNotAuthenticated'))
       return false
     }
 
@@ -151,7 +150,7 @@ export default function ScanPage() {
       .single()
 
     if (insertError) {
-      setError(`Failed to save: ${insertError.message}`)
+      setError(t('scan.errSaveFailed', { error: insertError.message }))
       return false
     }
 
@@ -219,7 +218,7 @@ export default function ScanPage() {
 
   const handleSaveCatalog = async () => {
     if (!bcName.trim()) {
-      setError('Please enter the product name.')
+      setError(t('scan.errEnterName'))
       return
     }
     setSaving(true)
@@ -231,7 +230,7 @@ export default function ScanPage() {
       )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
-      setError(err?.message || 'Failed to save supply')
+      setError(err?.message || t('scan.errGenericSave'))
     } finally {
       setSaving(false)
     }
@@ -272,7 +271,7 @@ export default function ScanPage() {
 
   const handleManualSave = async () => {
     if (!manualName.trim()) {
-      setError('Please enter the product name.')
+      setError(t('scan.errEnterName'))
       return
     }
     setSaving(true)
@@ -284,7 +283,7 @@ export default function ScanPage() {
       )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
-      setError(err?.message || 'Failed to save supply')
+      setError(err?.message || t('scan.errGenericSave'))
     } finally {
       setSaving(false)
     }
@@ -370,7 +369,7 @@ export default function ScanPage() {
   const handleSaveBarcode = async () => {
     if (!scanned) return
     if (!bcName.trim()) {
-      setError('Please enter the product name.')
+      setError(t('scan.errEnterName'))
       return
     }
     setSaving(true)
@@ -386,7 +385,7 @@ export default function ScanPage() {
       )
       if (ok) router.push('/dashboard')
     } catch (err: any) {
-      setError(err?.message || 'Failed to save supply')
+      setError(err?.message || t('scan.errGenericSave'))
     } finally {
       setSaving(false)
     }
@@ -396,10 +395,10 @@ export default function ScanPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <BackButton fallbackHref="/dashboard" label="Dashboard" />
+      <BackButton fallbackHref="/dashboard" label={t('nav.home')} />
       <header className="mb-10">
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Add a supply</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Add a supply</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('scan.title')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('scan.title')}</h1>
       </header>
 
       {showScanner && (
@@ -444,9 +443,9 @@ export default function ScanPage() {
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-0.5">Quick start</h3>
+                  <h3 className="text-lg font-semibold text-white mb-0.5">{t('scan.quickStart')}</h3>
                   <p className="text-white/85 text-sm">
-                    New here? Pick your pump and CGM, and we&apos;ll add your usual supplies in one tap.
+                    {t('scan.quickStartBody')}
                   </p>
                 </div>
                 <ChevronRight className="w-6 h-6 text-white/80" />
@@ -463,10 +462,9 @@ export default function ScanPage() {
                   <ScanBarcode className="w-8 h-8 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-ink mb-1">Scan the barcode</h3>
+                  <h3 className="text-xl font-semibold text-ink mb-1">{t('scan.scanBarcodeTitle')}</h3>
                   <p className="text-muted text-sm">
-                    Point your camera at the barcode on the box or pharmacy label. If the
-                    label includes an expiration date, we&apos;ll read it for you.
+                    {t('scan.scanBarcodeBody')}
                   </p>
                 </div>
                 <ChevronRight className="w-6 h-6 text-faint group-hover:text-primary transition-colors" />
@@ -480,19 +478,17 @@ export default function ScanPage() {
                   <PencilLine className="w-8 h-8 text-muted" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-ink mb-1">No barcode? Add it manually</h3>
+                  <h3 className="text-xl font-semibold text-ink mb-1">{t('scan.manualTitle')}</h3>
                   <p className="text-muted text-sm mb-5">
-                    Type the details from the box. Or add a photo of the barcode and we&apos;ll try to
-                    read it for you. If we can&apos;t, the photo stays on screen as a reference while
-                    you type.
+                    {t('scan.manualBody')}
                   </p>
 
                   {preview && (
                     <div className="relative inline-block mb-5">
-                      <img src={preview} alt="Supply reference" className="max-h-48 rounded-xl shadow-md" />
+                      <img src={preview} alt={t('scan.referenceOnly')} className="max-h-48 rounded-xl shadow-md" />
                       <button
                         onClick={() => { setPreview(null); setPhotoNote(null) }}
-                        aria-label="Remove photo"
+                        aria-label={t('scan.removePhoto')}
                         className="absolute -top-3 -right-3 bg-surface border border-line text-ink p-1.5 rounded-full shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         <X className="w-4 h-4" />
@@ -502,7 +498,7 @@ export default function ScanPage() {
 
                   {decodingPhoto && (
                     <p className="mb-4 flex items-center gap-2 text-sm text-muted">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Reading the barcode in your photo…
+                      <Loader2 className="w-4 h-4 animate-spin" /> {t('scan.readingPhoto')}
                     </p>
                   )}
                   {photoNote && !decodingPhoto && (
@@ -514,12 +510,12 @@ export default function ScanPage() {
                       onClick={startManual}
                       className="bg-primary hover:bg-primary-deep text-white px-5 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                     >
-                      Enter details
+                      {t('scan.enterDetails')}
                       <ChevronRight className="w-5 h-5" />
                     </button>
                     <label className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink">
                       <Upload className="w-5 h-5" />
-                      Add photo
+                      {t('scan.addPhoto')}
                       <input type="file" className="hidden" accept="image/*" onChange={onFileChange} />
                     </label>
                     <button
@@ -528,7 +524,7 @@ export default function ScanPage() {
                       className="bg-surface-2 hover:bg-line border border-line px-5 py-3 rounded-xl font-semibold cursor-pointer transition-colors flex items-center gap-2 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <Camera className="w-5 h-5" />
-                      Take photo
+                      {t('scan.takePhoto')}
                     </button>
                   </div>
                 </div>
@@ -544,8 +540,8 @@ export default function ScanPage() {
                 <LayoutGrid className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-ink">Browse the supply catalog</p>
-                <p className="text-muted text-sm">Find your product by category and tap to add it.</p>
+                <p className="font-semibold text-ink">{t('scan.browseCatalogTitle')}</p>
+                <p className="text-muted text-sm">{t('scan.browseCatalogBody')}</p>
               </div>
               <ChevronRight className="w-5 h-5 text-faint group-hover:text-primary transition-colors" />
             </button>
@@ -567,23 +563,23 @@ export default function ScanPage() {
             className="max-w-xl mx-auto"
           >
             <div className="bg-surface border border-line rounded-3xl p-8 shadow-sm space-y-6">
-              <h3 className="text-xl font-semibold text-ink">Enter the details</h3>
+              <h3 className="text-xl font-semibold text-ink">{t('scan.enterTheDetails')}</h3>
 
               {preview && (
                 <div>
-                  <img src={preview} alt="Supply reference" className="max-h-56 rounded-xl shadow-md mx-auto" />
-                  <p className="text-center text-xs text-faint mt-2">For reference only. This photo isn&apos;t stored.</p>
+                  <img src={preview} alt={t('scan.referenceOnly')} className="max-h-56 rounded-xl shadow-md mx-auto" />
+                  <p className="text-center text-xs text-faint mt-2">{t('scan.referenceOnly')}</p>
                 </div>
               )}
 
               <div className="space-y-5">
                 <div>
-                  <label htmlFor="m-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Product name</label>
+                  <label htmlFor="m-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.productName')}</label>
                   <input
                     id="m-name"
                     type="text"
                     autoFocus
-                    placeholder="e.g. Omnipod 5 Pods"
+                    placeholder={t('scan.namePlaceholder')}
                     value={manualName}
                     onChange={(e) => setManualName(e.target.value)}
                     onBlur={(e) => detectWearByName(e.target.value)}
@@ -591,11 +587,11 @@ export default function ScanPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="m-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
+                  <label htmlFor="m-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.brandOptional')}</label>
                   <input
                     id="m-brand"
                     type="text"
-                    placeholder="e.g. Insulet"
+                    placeholder={t('scan.brandPlaceholder')}
                     value={manualBrand}
                     onChange={(e) => setManualBrand(e.target.value)}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
@@ -603,7 +599,7 @@ export default function ScanPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="m-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity</label>
+                    <label htmlFor="m-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
                     <input
                       id="m-quantity"
                       type="number"
@@ -614,7 +610,7 @@ export default function ScanPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="m-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration (optional)</label>
+                    <label htmlFor="m-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expirationOptional')}</label>
                     <input
                       id="m-expiration"
                       type="date"
@@ -626,7 +622,7 @@ export default function ScanPage() {
                 </div>
                 {detectingWear ? (
                   <p className="text-xs text-faint flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Checking how long this lasts…
+                    <Loader2 className="w-3 h-3 animate-spin" /> {t('scan.checkingDuration')}
                   </p>
                 ) : (
                   <WearReadout rate={autoRate} quantity={quantity} />
@@ -640,14 +636,14 @@ export default function ScanPage() {
                   className="w-full bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-4 rounded-2xl font-semibold text-lg transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Add to inventory
+                  {t('scan.addToInventory')}
                 </button>
                 <button
                   onClick={() => { setError(null); setStep('UPLOAD') }}
                   disabled={saving}
                   className="w-full bg-transparent hover:bg-surface-2 disabled:opacity-50 text-muted py-3 rounded-xl font-semibold text-sm transition-colors"
                 >
-                  Back
+                  {t('scan.back')}
                 </button>
                 {error && (
                   <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">
@@ -670,16 +666,16 @@ export default function ScanPage() {
             <div className="bg-surface border border-line rounded-3xl p-8 shadow-sm space-y-6">
               <div className="flex items-center gap-3 p-3 bg-success-soft border border-success/20 rounded-xl">
                 <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
-                <p className="text-sm font-semibold text-success">Selected from catalog</p>
+                <p className="text-sm font-semibold text-success">{t('scan.selectedFromCatalog')}</p>
               </div>
 
               <p className="text-sm text-muted">
-                Review and edit if anything looks off. All fields are editable.
+                {t('scan.reviewEditCatalog')}
               </p>
 
               <div className="space-y-5">
                 <div>
-                  <label htmlFor="cat-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Product name</label>
+                  <label htmlFor="cat-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.productName')}</label>
                   <input
                     id="cat-name"
                     type="text"
@@ -690,12 +686,12 @@ export default function ScanPage() {
                   />
                   {catalogMatch && (
                     <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Matched from catalog
+                      <CheckCircle2 className="w-3 h-3" /> {t('scan.matchedFromCatalog')}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label htmlFor="cat-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
+                  <label htmlFor="cat-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.brandOptional')}</label>
                   <input
                     id="cat-brand"
                     type="text"
@@ -706,7 +702,7 @@ export default function ScanPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="cat-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity</label>
+                    <label htmlFor="cat-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
                     <input
                       id="cat-quantity"
                       type="number"
@@ -717,7 +713,7 @@ export default function ScanPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="cat-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration (optional)</label>
+                    <label htmlFor="cat-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expirationOptional')}</label>
                     <input
                       id="cat-expiration"
                       type="date"
@@ -737,14 +733,14 @@ export default function ScanPage() {
                   className="w-full bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-4 rounded-2xl font-semibold text-lg transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Add to inventory
+                  {t('scan.addToInventory')}
                 </button>
                 <button
                   onClick={() => { setError(null); setShowCatalog(true) }}
                   disabled={saving}
                   className="w-full bg-transparent hover:bg-surface-2 disabled:opacity-50 text-muted py-3 rounded-xl font-semibold text-sm transition-colors"
                 >
-                  Back to catalog
+                  {t('scan.backToCatalog')}
                 </button>
                 {error && (
                   <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">
@@ -768,66 +764,65 @@ export default function ScanPage() {
               <div className="flex items-center gap-3 p-3 bg-success-soft border border-success/20 rounded-xl">
                 <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                 <div className="text-sm">
-                  <p className="font-semibold text-success">Barcode read</p>
+                  <p className="font-semibold text-success">{t('scan.barcodeRead')}</p>
                   <p className="text-success/80 font-mono text-xs break-all">{scannedCodeLabel}</p>
                 </div>
               </div>
 
               {scanned.lot && (
                 <p className="flex items-center gap-2 text-xs text-muted">
-                  <Tag className="w-3.5 h-3.5" /> Lot {scanned.lot}
+                  <Tag className="w-3.5 h-3.5" /> {t('scan.lotNumber', { lot: scanned.lot })}
                 </p>
               )}
 
               {catalogMatch ? (
                 <p className="text-sm text-muted">
-                  Matched in the product catalog. Review and edit anything that looks off.
+                  {t('scan.matchedCatalogBody')}
                 </p>
               ) : personalMatch ? (
                 <p className="text-sm text-teal flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  Recognized from your previous scans. Review and edit if needed.
+                  {t('scan.personalMatchBody')}
                 </p>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">
-                    This code isn&apos;t in our catalog yet. Pick the matching product so we track it
-                    correctly, with no typing. We&apos;ll remember this barcode against your supply.
+                    {t('scan.newCodeBody')}
                   </p>
                   <button
                     onClick={() => { setError(null); setShowCatalog(true) }}
                     className="w-full flex items-center justify-center gap-2 bg-surface-2 hover:bg-line border border-line rounded-xl py-3 font-semibold text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <LayoutGrid className="w-4 h-4" />
-                    Find it in the catalog
+                    {t('scan.findInCatalog')}
                   </button>
                 </div>
               )}
 
               <div className="space-y-5">
                 <div>
-                  <label htmlFor="bc-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Product name</label>
+                  <label htmlFor="bc-name" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.productName')}</label>
                   <input
                     id="bc-name"
                     type="text"
                     autoFocus
-                    placeholder="e.g. Omnipod 5 Pods"
+                    placeholder={t('scan.namePlaceholder')}
                     value={bcName}
                     onChange={(e) => { setBcName(e.target.value); setCatalogMatch(false); setPersonalMatch(false) }}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
                   {catalogMatch && (
                     <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Matched from catalog
+                      <CheckCircle2 className="w-3 h-3" /> {t('scan.matchedFromCatalog')}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label htmlFor="bc-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Brand (optional)</label>
+                  <label htmlFor="bc-brand" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.brandOptional')}</label>
                   <input
                     id="bc-brand"
                     type="text"
-                    placeholder="e.g. Insulet"
+                    placeholder={t('scan.brandPlaceholder')}
                     value={bcBrand}
                     onChange={(e) => setBcBrand(e.target.value)}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
@@ -835,7 +830,7 @@ export default function ScanPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="bc-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity</label>
+                    <label htmlFor="bc-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
                     <input
                       id="bc-quantity"
                       type="number"
@@ -846,7 +841,7 @@ export default function ScanPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="bc-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration</label>
+                    <label htmlFor="bc-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expiration')}</label>
                     <input
                       id="bc-expiration"
                       type="date"
@@ -856,7 +851,7 @@ export default function ScanPage() {
                     />
                     {expiryFromBarcode && (
                       <p className="mt-1.5 text-[11px] font-medium text-teal flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Read from the barcode
+                        <CheckCircle2 className="w-3 h-3" /> {t('scan.readFromBarcode')}
                       </p>
                     )}
                   </div>
@@ -871,14 +866,14 @@ export default function ScanPage() {
                   className="w-full bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-4 rounded-2xl font-semibold text-lg transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Add to inventory
+                  {t('scan.addToInventory')}
                 </button>
                 <button
                   onClick={() => { setError(null); setScanned(null); setStep('UPLOAD'); setShowScanner(true) }}
                   disabled={saving}
                   className="w-full bg-transparent hover:bg-surface-2 disabled:opacity-50 text-muted py-3 rounded-xl font-semibold text-sm transition-colors"
                 >
-                  Scan a different barcode
+                  {t('scan.scanDifferent')}
                 </button>
                 {error && (
                   <div className="p-4 bg-urgent-soft border border-urgent/20 rounded-xl text-urgent text-sm font-medium" role="status">

@@ -63,6 +63,15 @@ export const DEVICE_KIND_LABEL: Record<DeviceKind, string> = {
   meter: 'Blood glucose meter',
 }
 
+// Prefer `t(DEVICE_KIND_KEY[kind])` in the UI so this renders in the active
+// language; DEVICE_KIND_LABEL above remains the English fallback.
+export const DEVICE_KIND_KEY: Record<DeviceKind, import('./i18n/dictionaries').TKey> = {
+  pump: 'deviceKind.pump',
+  cgm: 'deviceKind.cgm',
+  pen: 'deviceKind.pen',
+  meter: 'deviceKind.meter',
+}
+
 export interface DevicePreset {
   brand: string
   model: string

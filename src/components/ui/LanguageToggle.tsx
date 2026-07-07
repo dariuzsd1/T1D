@@ -13,12 +13,12 @@ const LANGS: { code: Lang; label: string }[] = [
  * provider) so it persists and is read server-side on the next load.
  */
 export function LanguageToggle({ className }: { className?: string }) {
-  const { lang, setLang } = useI18n()
+  const { lang, setLang, t } = useI18n()
 
   return (
     <div
       role="group"
-      aria-label="Language"
+      aria-label={t('settings.language')}
       className={cn('inline-flex rounded-xl bg-surface-2 border border-line p-1 gap-1', className)}
     >
       {LANGS.map(({ code, label }) => (

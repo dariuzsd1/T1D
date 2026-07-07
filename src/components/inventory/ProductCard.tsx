@@ -23,6 +23,7 @@ import {
 import { reorderTargetFor } from "@/lib/suppliers";
 import { logActivity } from "@/lib/activity";
 import { format } from "date-fns";
+import { useI18n } from "@/lib/i18n";
 
 interface ProductCardProps {
   product: Product;
@@ -45,6 +46,7 @@ export function ProductCard({
   onUpdate,
   onOrder,
 }: ProductCardProps) {
+  const { t } = useI18n()
   // Semantic color: red is reserved for a true stockout; routine low stock is
   // amber; an unknown usage rate is neutral 'unset' (an estimate never alarms).
   const status = displayStatus(product, bufferDays)
@@ -82,10 +84,10 @@ export function ProductCard({
       const today = new Date().toISOString().slice(0, 10)
       await onUpdate?.(product.id, { openedDate: today })
       void logActivity('supply_used', product.name)
-      showToast(`Marked ${product.name} opened today.`, 'success')
+      showToast(t('product.toastMarkedOpened', { name: product.name }), 'success')
     } catch (err) {
       console.error('Failed to mark opened:', err)
-      showToast(`Couldn't update ${product.name}. Please try again.`, 'caution')
+      showToast(t('product.toastMarkOpenedFail', { name: product.name }), 'caution')
     } finally {
       setIsMarkingOpened(false)
     }
@@ -107,22 +109,26 @@ export function ProductCard({
     : null
 
   const statusLabel =
-    status === 'out' ? 'Out of stock'
-    : status === 'low' ? 'Reorder soon'
-    : status === 'unset' ? 'Usage not set'
-    : 'Well stocked'
+    status === 'out' ? t('row.outOfStock')
+    : status === 'low' ? t('row.reorderSoon')
+    : status === 'unset' ? t('row.unsetLabel')
+    : t('row.wellStocked')
 
   // One honest detail line: stock on hand · runway · when to reorder. An unset
   // item gets no reorder-by date — that date would rest on the guessed rate.
   const daysPhrase = estimated
-    ? `~${product.remainingDays} days (estimate)`
-    : `${product.remainingDays} days`
+    ? t('product.daysEstimate', { days: product.remainingDays })
+    : t('product.daysExact', { days: product.remainingDays })
   const summary =
     status === 'out'
-      ? 'Out of stock. Reorder now.'
+      ? t('product.summaryOut')
       : status === 'unset'
-      ? `${product.quantity} on hand · set usage to see days left`
-      : `${product.quantity} on hand · ${daysPhrase} · reorder by ${format(reorderBy, 'EEE, MMM d')}`
+      ? t('product.summaryUnset', { quantity: product.quantity })
+      : t('product.summaryKnown', {
+          quantity: product.quantity,
+          daysPhrase,
+          date: format(reorderBy, 'EEE, MMM d'),
+        })
 
   const handleUseOne = async () => {
     if (product.quantity > 0) {
@@ -132,7 +138,7 @@ export function ProductCard({
         void logActivity('supply_used', product.name)
       } catch (err) {
         console.error('Failed to update:', err)
-        showToast(`Couldn't save that. ${product.name} is unchanged.`, 'caution')
+        showToast(t('product.toastCouldntSave', { name: product.name }), 'caution')
       } finally {
         setIsUpdating(false)
       }
@@ -157,10 +163,10 @@ export function ProductCard({
       }
       await onUpdate?.(product.id, { quantity: product.quantity + boxSize })
       void logActivity('supply_restocked', product.name)
-      showToast(`Restocked ${product.name}: +${boxSize}.`, 'success')
+      showToast(t('product.toastRestocked', { name: product.name, count: boxSize }), 'success')
     } catch (err) {
       console.error('Failed to restock:', err)
-      showToast('Could not restock. Please try again.', 'caution')
+      showToast(t('product.toastRestockFail'), 'caution')
     } finally {
       setIsRestocking(false)
     }
@@ -172,7 +178,7 @@ export function ProductCard({
       await onDelete?.(product.id)
     } catch (err) {
       console.error('Failed to delete:', err)
-      showToast(`Couldn't delete ${product.name}. It's still in your list.`, 'caution')
+      showToast(t('product.toastDeleteFail', { name: product.name }), 'caution')
     } finally {
       setIsDeleting(false)
     }
@@ -214,7 +220,7 @@ export function ProductCard({
                   {estimated ? '~' : ''}{product.remainingDays}
                 </div>
                 <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
-                  {estimated ? 'est. days' : 'days'}
+                  {estimated ? t('product.estDaysLeft') : t('product.daysLeftLabel')}
                 </div>
               </div>
 
@@ -231,8 +237,8 @@ export function ProductCard({
             <button
               onClick={handleUseOne}
               disabled={isUpdating || product.quantity === 0}
-              aria-label={`Use one ${product.name}`}
-              title={product.quantity === 0 ? 'None on hand' : 'Log one used'}
+              aria-label={t('common.useOneAria', { name: product.name })}
+              title={product.quantity === 0 ? t('product.noneOnHandTitle') : t('product.logOneUsedTitle')}
               className="shrink-0 mr-4 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-line bg-surface-2 text-ink transition-colors hover:bg-line active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Minus className="w-4 h-4" />}
@@ -261,18 +267,18 @@ export function ProductCard({
                           : "bg-success-soft text-success border border-success/30"
                       )}
                     >
-                      {estimated ? 'Estimate' : 'Tracked'}
+                      {estimated ? t('product.estimateBadge') : t('product.trackedBadge')}
                     </span>
                     <span>
-                      {estimated ? 'Usage rate not set' : `${Math.round(product.usageRatePerDay * 10) / 10}/day`}
+                      {estimated ? t('product.usageNotSet') : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
                     </span>
                     <span aria-hidden="true">·</span>
                     <button
                       onClick={() => onEdit?.(product.id)}
-                      aria-label={estimated ? `Set usage rate for ${product.name}` : `Edit usage rate for ${product.name}`}
+                      aria-label={t('common.editAria', { name: product.name })}
                       className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
                     >
-                      {estimated ? 'Set rate' : 'Edit'}
+                      {estimated ? t('product.setRate') : t('common.edit')}
                     </button>
                   </div>
 
@@ -298,8 +304,8 @@ export function ProductCard({
                     )}>
                       <CalendarClock className="w-3.5 h-3.5" />
                       {expiryDays <= 0
-                        ? `Expired ${format(new Date(product.expirationDate!), 'MMM d, yyyy')} · do not use`
-                        : `Expires ${format(new Date(product.expirationDate!), 'MMM d, yyyy')} · use oldest first`}
+                        ? t('product.expiredOn', { date: format(new Date(product.expirationDate!), 'MMM d, yyyy') })
+                        : t('product.expiresOn', { date: format(new Date(product.expirationDate!), 'MMM d, yyyy') })}
                     </p>
                   )}
 
@@ -308,7 +314,7 @@ export function ProductCard({
                     inUseLeft === null ? (
                       <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
                         <Droplet className="w-3.5 h-3.5" />
-                        Not opened yet · discard {product.inUseDays} days after opening
+                        {t('product.notOpenedYet', { days: product.inUseDays! })}
                       </p>
                     ) : (
                       <p className={cn(
@@ -317,8 +323,8 @@ export function ProductCard({
                       )}>
                         <Droplet className="w-3.5 h-3.5" />
                         {inUseLeft <= 0
-                          ? `Opened over ${product.inUseDays} days ago · discard this one`
-                          : `Opened ${product.inUseDays! - inUseLeft} day${product.inUseDays! - inUseLeft === 1 ? '' : 's'} ago · discard in ${inUseLeft} day${inUseLeft === 1 ? '' : 's'}`}
+                          ? t('product.discardPast', { days: product.inUseDays! })
+                          : `${t(product.inUseDays! - inUseLeft === 1 ? 'product.openedDaysAgoOne' : 'product.openedDaysAgoOther', { days: product.inUseDays! - inUseLeft })} · ${t(inUseLeft === 1 ? 'product.discardInOne' : 'product.discardInOther', { days: inUseLeft })}`}
                       </p>
                     )
                   )}
@@ -332,25 +338,25 @@ export function ProductCard({
                     <button
                       onClick={handleUseOne}
                       disabled={isUpdating || product.quantity === 0}
-                      aria-label={`Use one ${product.name}`}
+                      aria-label={t('common.useOneAria', { name: product.name })}
                       className={cn(
                         "flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
                         tone.btn
                       )}
                     >
                       {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Minus className="w-3.5 h-3.5" />}
-                      Use one
+                      {t('product.useOne')}
                     </button>
 
                     <button
                       onClick={handleRestock}
                       disabled={isRestocking}
-                      aria-label={`Restock ${product.name}`}
-                      title="Add a box (after a reorder arrives)"
+                      aria-label={`${t('product.restock')} ${product.name}`}
+                      title={t('product.restockTitle')}
                       className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       {isRestocking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PackagePlus className="w-3.5 h-3.5" />}
-                      Restock
+                      {t('product.restock')}
                     </button>
 
                     {/* One-tap reset of the in-use clock when a new vial/pen is opened */}
@@ -358,12 +364,12 @@ export function ProductCard({
                       <button
                         onClick={handleMarkOpened}
                         disabled={isMarkingOpened}
-                        aria-label={`Mark ${product.name} opened today`}
-                        title="Start the discard clock for a newly opened vial or pen"
+                        aria-label={t('product.openedTodayAria', { name: product.name })}
+                        title={t('product.openedTodayTitle')}
                         className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         {isMarkingOpened ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplet className="w-3.5 h-3.5" />}
-                        Opened today
+                        {t('product.openedToday')}
                       </button>
                     )}
 
@@ -375,14 +381,14 @@ export function ProductCard({
                       className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />
-                      Reorder
+                      {t('row.reorder')}
                     </a>
 
                     <div className="ml-auto flex gap-1">
                       <button
                         onClick={() => onEdit?.(product.id)}
                         className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-surface-2 rounded-lg text-faint hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        aria-label={`Edit ${product.name}`}
+                        aria-label={t('common.editAria', { name: product.name })}
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -390,7 +396,7 @@ export function ProductCard({
                         onClick={handleDelete}
                         disabled={isDeleting}
                         className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-urgent-soft rounded-lg text-faint hover:text-urgent transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
-                        aria-label={`Delete ${product.name}`}
+                        aria-label={t('common.deleteAria', { name: product.name })}
                       >
                         {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </button>

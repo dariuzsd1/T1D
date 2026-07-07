@@ -170,7 +170,7 @@ export function AppNav() {
       {/* Mobile bottom tab bar */}
       <nav
         className="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-[105] bg-surface border-t border-line pb-[env(safe-area-inset-bottom)]"
-        aria-label="Primary"
+        aria-label={t('nav.primaryAria')}
       >
         <div className="flex items-stretch justify-around">
           {navItems.map((item) => {
@@ -210,7 +210,7 @@ export function AppNav() {
       {moreOpen && (
         <div className="lg:hidden fixed inset-0 z-[110]">
           <button
-            aria-label="Close menu"
+            aria-label={t('nav.closeMenu')}
             onClick={() => setMoreOpen(false)}
             className="absolute inset-0 bg-ink/40"
           />
@@ -241,7 +241,7 @@ function MoreSheet({ pathname, onClose, onLogout }: MoreSheetProps) {
       ref={ref}
       role="dialog"
       aria-modal="true"
-      aria-label="More navigation options"
+      aria-label={t('nav.moreNavAria')}
       tabIndex={-1}
       className="absolute bottom-0 inset-x-0 bg-surface border-t border-line rounded-t-3xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-lg focus:outline-none"
     >

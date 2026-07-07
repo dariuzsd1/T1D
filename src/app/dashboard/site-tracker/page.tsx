@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { logActivity } from '@/lib/activity'
 import type { Product } from '@/lib/store'
 import {
@@ -19,16 +20,22 @@ import {
   buildZoneViews,
   suggestedZoneId,
   hasZoneHistory,
-  zoneLabel,
-  zoneAria,
+  zoneLabelKey,
+  zoneAriaKey,
   zoneCenter,
-  elapsedText,
+  elapsedTextKey,
 } from '@/lib/siteRotation'
 import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
 
 export default function SiteTrackerPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const { t } = useI18n()
+  // Resolve a zone's elapsed text (never/unknown/N days) in the active language.
+  const elapsedLabel = (elapsed: ZoneView['elapsed']) => {
+    const { key, vars } = elapsedTextKey(elapsed)
+    return t(key, vars)
+  }
 
   const [view, setView] = useState<BodyView>('front')
   const [changes, setChanges] = useState<SiteChangeRow[]>([])
@@ -98,7 +105,7 @@ export default function SiteTrackerPage() {
 
   const handleSave = async (zone: BodyZone, input: SiteChangeInput) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('You appear to be signed out. Please sign in again.')
+    if (!user) throw new Error(t('siteTracker.errSignedOut'))
 
     // Core insert first; the zone is a best-effort attach so a pre-migration DB
     // still records the change (just without a zone) instead of failing.
@@ -112,7 +119,7 @@ export default function SiteTrackerPage() {
       })
       .select('id')
       .single()
-    if (error || !data) throw new Error(error?.message || 'Could not save this site change.')
+    if (error || !data) throw new Error(error?.message || t('siteTracker.errSaveGeneric'))
 
     const { error: zoneErr } = await supabase
       .from('site_changes')
@@ -142,16 +149,16 @@ export default function SiteTrackerPage() {
           prev.map((p) => (p.id === linked.id ? { ...p, quantity: nextQty } : p))
         )
         void logActivity('supply_used', linked.name)
-        usedLine = `1 ${linked.name} used, ${nextQty} left.`
+        usedLine = t('siteTracker.toastLoggedUsed', { name: linked.name, count: nextQty })
       }
     }
 
     await loadChanges()
     setJustLogged(Date.now())
     if (usedFailed) {
-      showToast(`Site logged, but ${usedFailed} wasn't updated. Adjust it on the Supplies page.`, 'caution')
+      showToast(t('siteTracker.toastLoggedButFailed', { name: usedFailed }), 'caution')
     } else {
-      showToast(usedLine ? `Logged. ${usedLine}` : 'Logged. Nice rotating.', 'success')
+      showToast(usedLine ?? t('siteTracker.toastLoggedPlain'), 'success')
     }
   }
 
@@ -160,16 +167,16 @@ export default function SiteTrackerPage() {
       <BackButton />
 
       <header className="text-center space-y-3">
-        <p className="text-muted text-xs font-semibold uppercase tracking-[0.2em]">Keep your sites healthy</p>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Rotation map</h1>
+        <p className="text-muted text-xs font-semibold uppercase tracking-[0.2em]">{t('siteTracker.kicker')}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('siteTracker.title')}</h1>
         <p className="text-muted max-w-md mx-auto leading-relaxed">
-          Rotating where you inject or place a site helps insulin absorb evenly. Pick a fresh spot each time.
+          {t('siteTracker.intro')}
         </p>
       </header>
 
       {/* Front / Back segmented control */}
       <div className="flex justify-center">
-        <div role="tablist" aria-label="Body view" className="inline-flex rounded-xl bg-surface-2 p-1">
+        <div role="tablist" aria-label={t('siteTracker.bodyViewAria')} className="inline-flex rounded-xl bg-surface-2 p-1">
           {(['front', 'back'] as BodyView[]).map((v) => (
             <button
               key={v}
@@ -181,7 +188,7 @@ export default function SiteTrackerPage() {
                 view === v ? 'bg-surface text-teal shadow-sm' : 'text-muted hover:text-ink'
               )}
             >
-              {v === 'front' ? 'Front' : 'Back'}
+              {v === 'front' ? t('siteTracker.front') : t('siteTracker.back')}
             </button>
           ))}
         </div>
@@ -196,13 +203,13 @@ export default function SiteTrackerPage() {
               className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success-soft px-4 py-1.5 text-sm font-medium text-success transition-colors hover:bg-success/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
             >
               <Sparkles className="w-4 h-4" aria-hidden="true" />
-              Suggested next: <span className="font-semibold">{zoneLabel(suggestedZone)}</span>
-              {suggestedZone.view !== view && <span className="text-success/70">· on the {suggestedZone.view} view</span>}
+              {t('siteTracker.suggestedNext')} <span className="font-semibold">{t(zoneLabelKey(suggestedZone))}</span>
+              {suggestedZone.view !== view && <span className="text-success/70">· {suggestedZone.view === 'front' ? t('siteTracker.onFrontView') : t('siteTracker.onBackView')}</span>}
             </button>
           ) : historyExists ? null : (
             <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-1.5 text-sm text-muted">
               <Info className="w-4 h-4 text-teal" aria-hidden="true" />
-              Tap any zone to log your first site change.
+              {t('siteTracker.tapToLog')}
             </p>
           )}
         </div>
@@ -220,7 +227,7 @@ export default function SiteTrackerPage() {
               viewBox="0 0 240 470"
               className="absolute inset-0 h-full w-full"
               role="group"
-              aria-label={`Body map, ${view} view`}
+              aria-label={view === 'front' ? t('siteTracker.bodyMapAriaFront') : t('siteTracker.bodyMapAriaBack')}
             >
               {/* Base figure — unchanged from Stage 1 (figure shapes not in scope). */}
               <g fill="var(--color-surface-2)" stroke="var(--color-line)" strokeWidth={2} strokeLinejoin="round">
@@ -248,6 +255,10 @@ export default function SiteTrackerPage() {
                   onActiveChange={(on) =>
                     setActiveId((cur) => (on ? zone.id : cur === zone.id ? null : cur))
                   }
+                  labelForAria={t(zoneAriaKey(zone))}
+                  elapsedLabel={elapsedLabel(views.get(zone.id)!.elapsed)}
+                  suggestedText={t('siteTracker.ariaSuggestedNext')}
+                  recentText={t('siteTracker.ariaRecentlyUsed')}
                 />
               ))}
             </svg>
@@ -263,9 +274,9 @@ export default function SiteTrackerPage() {
                   style={{ left: `${(cx / 240) * 100}%`, top: `${(cy / 470) * 100}%` }}
                 >
                   <div className="mb-2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-white shadow-md">
-                    <span className="block text-xs font-semibold">{zoneLabel(activeZone)}</span>
+                    <span className="block text-xs font-semibold">{t(zoneLabelKey(activeZone))}</span>
                     <span className="block text-[11px] text-white/80">
-                      {suggested ? 'Suggested next · ' : ''}{elapsedText(zv.elapsed)}
+                      {suggested ? t('siteTracker.suggestedNextPrefix') : ''}{elapsedLabel(zv.elapsed)}
                     </span>
                   </div>
                 </div>
@@ -280,15 +291,15 @@ export default function SiteTrackerPage() {
 
       {/* Color key */}
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <LegendItem label="Available" fill="var(--color-surface-2)" opacity={1} stroke="var(--color-faint)" />
-        <LegendItem label="Focused or selected" fill="var(--color-teal)" opacity={0.24} stroke="var(--color-teal)" />
-        <LegendItem label={`Recently used (last ${RECENT_USE_DAYS} days)`} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
-        <LegendItem label="Suggested next" fill="var(--color-success)" opacity={0.2} stroke="var(--color-success)" />
+        <LegendItem label={t('siteTracker.legendAvailable')} fill="var(--color-surface-2)" opacity={1} stroke="var(--color-faint)" />
+        <LegendItem label={t('siteTracker.legendFocused')} fill="var(--color-teal)" opacity={0.24} stroke="var(--color-teal)" />
+        <LegendItem label={t('siteTracker.legendRecentOther', { days: RECENT_USE_DAYS })} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
+        <LegendItem label={t('siteTracker.legendSuggested')} fill="var(--color-success)" opacity={0.2} stroke="var(--color-success)" />
       </div>
 
       <p className="flex items-start justify-center gap-2 text-center text-xs text-faint max-w-md mx-auto">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <span>Each zone&apos;s status comes from your logged history. A zone you haven&apos;t used shows &quot;Not yet logged.&quot;</span>
+        <span>{t('siteTracker.footNote')}</span>
       </p>
 
       {logZone && (
@@ -315,6 +326,10 @@ function ZoneShape({
   open,
   onOpen,
   onActiveChange,
+  labelForAria,
+  elapsedLabel,
+  suggestedText,
+  recentText,
 }: {
   zone: BodyZone
   zoneView: ZoneView
@@ -322,6 +337,12 @@ function ZoneShape({
   open: boolean
   onOpen: () => void
   onActiveChange: (active: boolean) => void
+  /** Pre-translated aria fragment for the zone (e.g. "Abdomen, left side"). */
+  labelForAria: string
+  /** Pre-translated elapsed text (e.g. "Last used 3 days ago"). */
+  elapsedLabel: string
+  suggestedText: string
+  recentText: string
 }) {
   const [hover, setHover] = useState(false)
   const [focus, setFocus] = useState(false)
@@ -354,10 +375,10 @@ function ZoneShape({
       ? 'var(--color-caution)'
       : null
 
-  const ariaParts = [zoneAria(zone)]
-  if (isSuggested) ariaParts.push('suggested next')
-  else if (zoneView.isRecent) ariaParts.push('recently used')
-  ariaParts.push(elapsedText(zoneView.elapsed).toLowerCase())
+  const ariaParts = [labelForAria]
+  if (isSuggested) ariaParts.push(suggestedText)
+  else if (zoneView.isRecent) ariaParts.push(recentText)
+  ariaParts.push(elapsedLabel.toLowerCase())
   const ariaLabel = ariaParts.join(', ')
 
   return (

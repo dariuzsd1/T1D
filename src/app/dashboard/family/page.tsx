@@ -11,11 +11,18 @@ import { createClient } from '@/lib/supabase/client'
 import { isMissingTableError } from '@/lib/prescriptions'
 import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 import { BackButton } from '@/components/ui/BackButton'
 import {
-  type SharedWithMe, type CaregiverShareRow,
-  rowToSharedWithMe, ROLE_LABEL,
+  type SharedWithMe, type CaregiverRole, type CaregiverShareRow,
+  rowToSharedWithMe,
 } from '@/lib/caregivers'
+
+const ROLE_LABEL_KEY: Record<CaregiverRole, TKey> = {
+  view: 'caregivers.roleLabelView',
+  manage: 'caregivers.roleLabelManage',
+}
 
 /** At-a-glance status of one patient's supplies, for the caregiver's calm view. */
 interface PatientStatus {
@@ -28,6 +35,7 @@ interface PatientStatus {
 export default function FamilyPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const [shares, setShares] = useState<SharedWithMe[]>([])
   const [pending, setPending] = useState<SharedWithMe[]>([])
@@ -113,16 +121,18 @@ export default function FamilyPage() {
     if (rErr || !data) {
       showToast(
         rErr?.message?.includes('function')
-          ? 'This needs the latest supabase/setup.sql. Run it, then try again.'
-          : "Couldn't save your response. Please try again.",
+          ? t('family.needsSetupSql')
+          : t('family.respondFail'),
         'caution'
       )
       return
     }
     showToast(
       accept
-        ? `You now see ${share.ownerEmail ?? 'their'} supplies.`
-        : 'Invite declined.',
+        ? (share.ownerEmail
+            ? t('family.nowSeeSuppliesNamed', { name: share.ownerEmail })
+            : t('family.nowSeeSuppliesGeneric'))
+        : t('family.declined'),
       accept ? 'success' : 'info'
     )
     await load()
@@ -133,11 +143,10 @@ export default function FamilyPage() {
       <BackButton />
 
       <header>
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Care circle</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">People I care for</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('family.kicker')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('family.title')}</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
-          A calm view of the supplies people have shared with you. Open anyone to see details and,
-          if they gave you permission, help them reorder or log use.
+          {t('family.intro')}
         </p>
       </header>
 
@@ -147,17 +156,15 @@ export default function FamilyPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Database className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('common.setupStepTitle')}</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-            Caregiver sharing needs its table created first. Run{' '}
-            <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
-            in your Supabase SQL editor, then reload.
+            {t('caregivers.migrationBody')}
           </p>
           <button
             onClick={load}
             className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
+            <RefreshCw className="w-4 h-4" /> {t('common.reload')}
           </button>
         </div>
       )}
@@ -170,7 +177,7 @@ export default function FamilyPage() {
 
       {error && (
         <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-          <p className="text-urgent font-semibold">Couldn&apos;t load</p>
+          <p className="text-urgent font-semibold">{t('family.errorTitle')}</p>
           <p className="text-urgent/80 text-sm mt-1">{error}</p>
         </div>
       )}
@@ -191,11 +198,11 @@ export default function FamilyPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-ink">
-                    {s.ownerEmail ?? 'Someone'} invited you to view their supplies
+                    {s.ownerEmail ?? t('family.someoneInvited')} {t('family.invitedYouBody')}
                   </p>
                   <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    {ROLE_LABEL[s.role]} · you see nothing until you accept
+                    {t(ROLE_LABEL_KEY[s.role])} · {t('family.seeNothingUntilAccept')}
                   </p>
                 </div>
               </div>
@@ -206,14 +213,14 @@ export default function FamilyPage() {
                   className="flex-1 inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                 >
                   {responding === s.shareId && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Accept
+                  {t('family.accept')}
                 </button>
                 <button
                   onClick={() => respond(s, false)}
                   disabled={responding === s.shareId}
                   className="px-5 py-2.5 rounded-xl font-semibold text-sm text-muted hover:bg-surface-2 border border-line transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  Decline
+                  {t('family.decline')}
                 </button>
               </div>
             </motion.div>
@@ -227,10 +234,9 @@ export default function FamilyPage() {
           <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto">
             <HeartHandshake className="w-7 h-7 text-muted" />
           </div>
-          <p className="text-ink font-semibold">No one has shared with you yet</p>
+          <p className="text-ink font-semibold">{t('family.emptyTitle')}</p>
           <p className="text-muted text-sm max-w-sm mx-auto leading-relaxed">
-            When someone with diabetes adds you as a caregiver (using the email you signed in with),
-            they&apos;ll appear here. Ask them to add you from their <span className="font-semibold text-ink">Sharing</span> page.
+            {t('family.emptyBody')}
           </p>
         </div>
       )}
@@ -240,7 +246,7 @@ export default function FamilyPage() {
         <section className="space-y-3">
           {shares.map((s) => {
             const st = statuses[s.ownerId]
-            const displayName = s.ownerEmail ?? `Patient (${s.ownerId.slice(0, 8)}…)`
+            const displayName = s.ownerEmail ?? t('family.patientFallback', { id: s.ownerId.slice(0, 8) })
             const allGood = st && !st.loading && !st.error && st.attention === 0
             const needs = st && !st.loading && !st.error && st.attention > 0
 
@@ -263,14 +269,14 @@ export default function FamilyPage() {
                     <p className="font-semibold text-ink truncate">{displayName}</p>
                     <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {ROLE_LABEL[s.role]}
+                      {t(ROLE_LABEL_KEY[s.role])}
                     </p>
                   </div>
                   <Link
                     href={`/dashboard/family/${s.ownerId}`}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-sm min-h-[36px] px-3 py-1.5 bg-surface-2 text-ink border border-line hover:bg-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary shrink-0"
                   >
-                    View supplies
+                    {t('family.viewSupplies')}
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -279,25 +285,25 @@ export default function FamilyPage() {
                 <div className="mt-4 flex items-center gap-2.5">
                   {(!st || st.loading) && (
                     <span className="flex items-center gap-2 text-sm text-muted">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Checking supplies…
+                      <Loader2 className="w-4 h-4 animate-spin" /> {t('family.checkingSupplies')}
                     </span>
                   )}
                   {st && st.error && (
-                    <span className="text-sm text-muted">Couldn&apos;t load their supplies.</span>
+                    <span className="text-sm text-muted">{t('family.couldntLoadTheirs')}</span>
                   )}
                   {allGood && (
                     <span className="flex items-center gap-2 text-success font-semibold">
                       <CheckCircle2 className="w-5 h-5" />
-                      All good
+                      {t('family.allGood')}
                       <span className="text-success/70 font-normal text-sm">
-                        · {st!.total} {st!.total === 1 ? 'supply' : 'supplies'} stocked
+                        · {t(st!.total === 1 ? 'family.stockedOne' : 'family.stockedOther', { count: st!.total })}
                       </span>
                     </span>
                   )}
                   {needs && (
                     <span className="flex items-center gap-2 text-caution font-semibold">
                       <AlertTriangle className="w-5 h-5" />
-                      {st!.attention} {st!.attention === 1 ? 'supply needs' : 'supplies need'} attention
+                      {t(st!.attention === 1 ? 'family.attentionOne' : 'family.attentionOther', { count: st!.attention })}
                     </span>
                   )}
                 </div>

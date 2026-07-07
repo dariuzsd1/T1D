@@ -5,6 +5,7 @@ import { Plus, Package, Scan, RefreshCcw } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/components/ui/Toast'
 import { logActivity } from '@/lib/activity'
+import { useI18n } from '@/lib/i18n'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,44 +14,45 @@ export function QuickActionHub() {
   const [isOpen, setIsOpen] = useState(false)
   const { inventory, updateProduct } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const handleManualDeplete = async (brand: string, label: string) => {
     const item = inventory.find((p) => p.brand?.toLowerCase().includes(brand.toLowerCase()))
     if (!item) {
-      showToast(`No ${label} in your inventory yet.`, 'info')
+      showToast(t('quickActions.noneYet', { label }), 'info')
     } else if (item.quantity > 0) {
       try {
         await updateProduct(item.id, { quantity: item.quantity - 1 })
         void logActivity('supply_used', item.name)
-        showToast(`Logged one ${item.name}. ${item.quantity - 1} left.`, 'success')
+        showToast(t('quickActions.loggedOne', { name: item.name, count: item.quantity - 1 }), 'success')
       } catch (err) {
         console.error('Failed to log usage:', err)
-        showToast(`Couldn't save that. ${item.name} is unchanged.`, 'caution')
+        showToast(t('quickActions.couldntSave', { name: item.name }), 'caution')
       }
     } else {
-      showToast(`You're out of ${item.name}.`, 'caution')
+      showToast(t('quickActions.outOf', { name: item.name }), 'caution')
     }
     setIsOpen(false)
   }
 
   const actions = [
     {
-      label: 'Pod change',
-      sub: '−1 pod',
+      label: t('quickActions.podChange'),
+      sub: t('quickActions.podChangeSub'),
       icon: RefreshCcw,
       onClick: () => handleManualDeplete('Insulet', 'pods'),
       color: 'bg-teal',
     },
     {
-      label: 'Scan a supply',
-      sub: 'Add to inventory',
+      label: t('quickActions.scanSupply'),
+      sub: t('quickActions.scanSupplySub'),
       icon: Scan,
       href: '/scan',
       color: 'bg-primary',
     },
     {
-      label: 'Log sensor',
-      sub: '−1 sensor',
+      label: t('quickActions.logSensor'),
+      sub: t('quickActions.logSensorSub'),
       icon: Package,
       onClick: () => handleManualDeplete('Dexcom', 'sensors'),
       color: 'bg-primary-deep',
@@ -98,7 +100,7 @@ export function QuickActionHub() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        aria-label={isOpen ? 'Close quick actions' : 'Open quick actions'}
+        aria-label={isOpen ? t('quickActions.closeAria') : t('quickActions.openAria')}
         aria-expanded={isOpen}
         className={cn(
           'p-4 rounded-2xl shadow-lg flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary',

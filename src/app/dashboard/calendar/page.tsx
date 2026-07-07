@@ -16,6 +16,7 @@ import { useStore } from '@/lib/store'
 import { displayStatus, stockStatus, type StockStatus } from '@/lib/depletion'
 import { assessRefill } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
+import { useI18n } from '@/lib/i18n'
 import {
   format,
   startOfMonth,
@@ -30,6 +31,7 @@ import {
 type DayEventKind = 'runout' | 'eligible'
 
 export default function CalendarPage() {
+  const { t } = useI18n()
   const { inventory, setInventory, safetyBufferDays } = useStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
@@ -105,13 +107,13 @@ export default function CalendarPage() {
       <BackButton />
       <header className="flex justify-between items-end">
         <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Refill forecast</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Run-out &amp; refill timing</h1>
+          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('calendar.kicker')}</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">{t('calendar.title')}</h1>
         </div>
         <div className="flex bg-surface border border-line rounded-xl overflow-hidden p-1">
           <button
             onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-            aria-label="Previous month"
+            aria-label={t('calendar.prevMonth')}
             className="p-2.5 hover:bg-surface-2 rounded-lg transition-colors text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -121,7 +123,7 @@ export default function CalendarPage() {
           </div>
           <button
             onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-            aria-label="Next month"
+            aria-label={t('calendar.nextMonth')}
             className="p-2.5 hover:bg-surface-2 rounded-lg transition-colors text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronRight className="w-5 h-5" />
@@ -131,8 +133,8 @@ export default function CalendarPage() {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-xs font-medium text-muted -mt-4">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-caution" /> Runs out</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal" /> Refill-eligible</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-caution" /> {t('calendar.legendRunsOut')}</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal" /> {t('calendar.legendRefillEligible')}</span>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -140,9 +142,9 @@ export default function CalendarPage() {
         <div className="xl:col-span-3">
           <div className="bg-surface border border-line rounded-3xl p-5 sm:p-8 shadow-sm">
             <div className="grid grid-cols-7 mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              {(['daySun', 'dayMon', 'dayTue', 'dayWed', 'dayThu', 'dayFri', 'daySat'] as const).map((day) => (
                 <div key={day} className="text-center text-xs font-semibold uppercase tracking-wide text-faint">
-                  {day}
+                  {t(`calendar.${day}`)}
                 </div>
               ))}
             </div>
@@ -193,7 +195,7 @@ export default function CalendarPage() {
 
         {/* Forecast Details */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted px-1">Upcoming</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted px-1">{t('calendar.upcoming')}</h3>
 
           {loading && items.length === 0 && (
             <div className="animate-pulse space-y-3" aria-hidden="true">
@@ -203,12 +205,12 @@ export default function CalendarPage() {
           )}
 
           {!loading && items.length === 0 && (
-            <p className="text-sm text-faint px-1">Add supplies to see when they&apos;ll run out.</p>
+            <p className="text-sm text-faint px-1">{t('calendar.emptyBody')}</p>
           )}
 
           {!loading && items.length > 0 && forecastable.length === 0 && (
             <p className="text-sm text-faint px-1">
-              No forecast yet. Set a usage rate on your supplies to see run-out dates here.
+              {t('calendar.noForecast')}
             </p>
           )}
 
@@ -233,7 +235,7 @@ export default function CalendarPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-faint mb-0.5">{format(runOutDate, 'EEE, MMM d, yyyy')}</p>
-                      <h4 className="font-semibold text-sm text-ink">{item.name} runs out</h4>
+                      <h4 className="font-semibold text-sm text-ink">{t('calendar.runsOut', { name: item.name })}</h4>
 
                       {/* Refill-window reconciliation (the moat). Only shows with a cycle. */}
                       {assessment.state !== 'unknown' && (
@@ -253,7 +255,7 @@ export default function CalendarPage() {
                         rel="noopener noreferrer"
                         className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:gap-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                       >
-                        {reorder.isDirect ? `Reorder via ${reorder.label}` : 'Find a supplier'}
+                        {reorder.isDirect ? t('common.reorderVia', { label: reorder.label }) : t('common.findSupplier')}
                         <ArrowRight className="w-3.5 h-3.5" />
                       </a>
                     </div>
@@ -264,9 +266,9 @@ export default function CalendarPage() {
 
           <div className="bg-surface-2 rounded-2xl p-4 border border-line">
             <p className="text-xs text-faint leading-relaxed">
-              Run-out dates use your current usage rate. Add each item&apos;s refill cycle to see when insurance lets you reorder.
+              {t('calendar.footNote')}
               {unsetCount > 0 &&
-                ` ${unsetCount === 1 ? '1 supply has' : `${unsetCount} supplies have`} no usage rate yet and ${unsetCount === 1 ? "isn't" : "aren't"} forecast.`}
+                t(unsetCount === 1 ? 'calendar.unsetNoteOne' : 'calendar.unsetNoteOther', { count: unsetCount })}
             </p>
           </div>
         </div>

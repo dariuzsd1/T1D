@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2, Syringe } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
 import type { Product } from '@/lib/store'
-import { type BodyZone, zoneLabel } from '@/lib/siteRotation'
+import { type BodyZone, zoneLabelKey } from '@/lib/siteRotation'
 
 /** Local YYYY-MM-DD (for the date input default — today, no timezone drift). */
 function todayLocal(): string {
@@ -37,6 +38,7 @@ export function LogSiteChangeModal({
   onClose: () => void
   onSave: (values: SiteChangeInput) => Promise<void>
 }) {
+  const { t } = useI18n()
   const [supplyId, setSupplyId] = useState('')
   const [appliedDate, setAppliedDate] = useState(todayLocal())
   const [notes, setNotes] = useState('')
@@ -51,7 +53,7 @@ export function LogSiteChangeModal({
 
   const handleSave = async () => {
     if (!appliedDate) {
-      setError('Please choose a date.')
+      setError(t('siteModal.errChooseDate'))
       return
     }
     setSaving(true)
@@ -60,7 +62,7 @@ export function LogSiteChangeModal({
       await onSave({ supplyId: supplyId || null, appliedDate, notes: notes.trim() })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save this site change.')
+      setError(err instanceof Error ? err.message : t('siteTracker.errSaveGeneric'))
       setSaving(false)
     }
   }
@@ -88,13 +90,13 @@ export function LogSiteChangeModal({
               <Syringe className="w-5 h-5 text-teal" />
             </div>
             <div>
-              <h2 id="log-site-title" className="text-xl font-bold text-ink leading-tight">Log a site change</h2>
-              <p className="text-sm text-muted">{zoneLabel(zone)}</p>
+              <h2 id="log-site-title" className="text-xl font-bold text-ink leading-tight">{t('siteModal.title')}</h2>
+              <p className="text-sm text-muted">{t(zoneLabelKey(zone))}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
           >
             <X className="w-5 h-5" />
@@ -103,7 +105,7 @@ export function LogSiteChangeModal({
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="site-supply" className={labelClass}>Device / consumable</label>
+            <label htmlFor="site-supply" className={labelClass}>{t('siteModal.deviceConsumable')}</label>
             <select
               ref={firstFieldRef}
               id="site-supply"
@@ -111,7 +113,7 @@ export function LogSiteChangeModal({
               onChange={(e) => setSupplyId(e.target.value)}
               className={fieldClass}
             >
-              <option value="">Not specified</option>
+              <option value="">{t('siteModal.notSpecified')}</option>
               {inventory.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.brand ? `${p.name} (${p.brand})` : p.name}
@@ -120,7 +122,7 @@ export function LogSiteChangeModal({
             </select>
             {inventory.length === 0 && (
               <p className="mt-1.5 text-xs text-faint">
-                No supplies tracked yet. You can still log the site and add the consumable later.
+                {t('siteModal.noSuppliesYet')}
               </p>
             )}
             {(() => {
@@ -129,15 +131,15 @@ export function LogSiteChangeModal({
               return (
                 <p className="mt-1.5 text-xs text-faint">
                   {selected.quantity > 0
-                    ? `Saving also logs 1 used (${selected.quantity - 1} left after).`
-                    : 'None on hand, so the count stays at 0.'}
+                    ? t('siteModal.willLogOne', { count: selected.quantity - 1 })
+                    : t('siteModal.noneOnHandStaysZero')}
                 </p>
               )
             })()}
           </div>
 
           <div>
-            <label htmlFor="site-date" className={labelClass}>Date</label>
+            <label htmlFor="site-date" className={labelClass}>{t('siteModal.date')}</label>
             <input
               id="site-date"
               type="date"
@@ -149,11 +151,11 @@ export function LogSiteChangeModal({
           </div>
 
           <div>
-            <label htmlFor="site-notes" className={labelClass}>Note (optional)</label>
+            <label htmlFor="site-notes" className={labelClass}>{t('siteModal.noteOptional')}</label>
             <textarea
               id="site-notes"
               rows={2}
-              placeholder="Anything worth remembering about this site…"
+              placeholder={t('siteModal.notePlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className={`${fieldClass} resize-none`}
@@ -174,14 +176,14 @@ export function LogSiteChangeModal({
             className="flex-1 bg-teal hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition-opacity flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Confirm
+            {t('siteModal.confirm')}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
             className="px-5 py-3 rounded-xl font-semibold text-muted hover:bg-surface-2 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </motion.div>

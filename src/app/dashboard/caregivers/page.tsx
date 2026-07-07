@@ -8,24 +8,32 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 import { isMissingTableError } from '@/lib/prescriptions'
 import { BackButton } from '@/components/ui/BackButton'
 import { Button } from '@/components/ui/button'
 import {
   type CaregiverShare, type CaregiverRole, type ShareStatus,
   type CaregiverShareRow,
-  rowToShare, isValidEmail, ROLE_LABEL,
+  rowToShare, isValidEmail,
 } from '@/lib/caregivers'
 
-const STATUS_STYLE: Record<ShareStatus, { label: string; cls: string }> = {
-  invited: { label: 'Invited', cls: 'bg-caution-soft text-caution border-caution/20' },
-  accepted: { label: 'Active', cls: 'bg-success-soft text-success border-success/20' },
-  revoked: { label: 'Revoked', cls: 'bg-surface-2 text-faint border-line' },
+const STATUS_STYLE: Record<ShareStatus, { labelKey: TKey; cls: string }> = {
+  invited: { labelKey: 'caregivers.statusInvited', cls: 'bg-caution-soft text-caution border-caution/20' },
+  accepted: { labelKey: 'caregivers.statusActive', cls: 'bg-success-soft text-success border-success/20' },
+  revoked: { labelKey: 'caregivers.statusRevoked', cls: 'bg-surface-2 text-faint border-line' },
+}
+
+const ROLE_LABEL_KEY: Record<CaregiverRole, TKey> = {
+  view: 'caregivers.roleLabelView',
+  manage: 'caregivers.roleLabelManage',
 }
 
 export default function SharingPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const [myShares, setMyShares] = useState<CaregiverShare[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,17 +74,17 @@ export default function SharingPage() {
   const handleInvite = async () => {
     const trimmed = email.trim().toLowerCase()
     if (!isValidEmail(trimmed)) {
-      showToast('Please enter a valid email address.', 'caution')
+      showToast(t('caregivers.errInvalidEmail'), 'caution')
       return
     }
     if (myShares.some(s => s.caregiverEmail.toLowerCase() === trimmed && s.status !== 'revoked')) {
-      showToast('That person is already invited or has access.', 'info')
+      showToast(t('caregivers.errAlreadyInvited'), 'info')
       return
     }
     setInviting(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.id) {
-      showToast('You are signed out. Please sign in again.', 'caution')
+      showToast(t('common.signedOutError'), 'caution')
       setInviting(false)
       return
     }
@@ -100,34 +108,33 @@ export default function SharingPage() {
         })
     setInviting(false)
     if (iErr) {
-      showToast(`Couldn't invite caregiver: ${iErr.message}`, 'caution')
+      showToast(t('caregivers.errInviteFail', { error: iErr.message }), 'caution')
       return
     }
     setEmail('')
     setRole('view')
-    showToast(`Invited ${trimmed}. They'll be asked to accept.`, 'success')
+    showToast(t('caregivers.toastInvited', { email: trimmed }), 'success')
     await load()
   }
 
   const handleRevoke = async (share: CaregiverShare) => {
     const { error: dErr } = await supabase.from('caregiver_shares').delete().eq('id', share.id)
     if (dErr) {
-      showToast(`Couldn't revoke: ${dErr.message}`, 'caution')
+      showToast(t('caregivers.errRevokeFail', { error: dErr.message }), 'caution')
       return
     }
     setMyShares(prev => prev.filter(s => s.id !== share.id))
-    showToast(`Removed ${share.caregiverEmail}.`, 'info')
+    showToast(t('common.toastRemoved', { name: share.caregiverEmail }), 'info')
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <BackButton />
       <header>
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Sharing</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Who can see my supplies</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('nav.sharing')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('caregivers.title')}</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
-          Invite a parent, partner, or care team member to see your supplies — and remove their
-          access anytime.
+          {t('caregivers.intro')}
         </p>
       </header>
 
@@ -136,17 +143,15 @@ export default function SharingPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Database className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('common.setupStepTitle')}</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-            Caregiver sharing needs its table created first. Run{' '}
-            <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
-            in your Supabase SQL editor, then reload.
+            {t('caregivers.migrationBody')}
           </p>
           <button
             onClick={load}
             className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it — reload
+            <RefreshCw className="w-4 h-4" /> {t('common.reload')}
           </button>
         </div>
       )}
@@ -156,11 +161,11 @@ export default function SharingPage() {
           {/* Add a caregiver */}
           <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm">
             <h3 className="font-semibold text-ink mb-4 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" /> Add a caregiver
+              <UserPlus className="w-5 h-5 text-primary" /> {t('caregivers.addTitle')}
             </h3>
             <div className="space-y-3">
               <div>
-                <label htmlFor="cg-email" className="block text-[11px] font-semibold uppercase tracking-widest text-muted mb-1.5">Their email</label>
+                <label htmlFor="cg-email" className="block text-[11px] font-semibold uppercase tracking-widest text-muted mb-1.5">{t('caregivers.theirEmail')}</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -174,29 +179,27 @@ export default function SharingPage() {
                 </div>
               </div>
               <div>
-                <label htmlFor="cg-role" className="block text-[11px] font-semibold uppercase tracking-widest text-muted mb-1.5">Access level</label>
+                <label htmlFor="cg-role" className="block text-[11px] font-semibold uppercase tracking-widest text-muted mb-1.5">{t('caregivers.accessLevel')}</label>
                 <select
                   id="cg-role"
                   value={role}
                   onChange={e => setRole(e.target.value as CaregiverRole)}
                   className="w-full bg-surface border border-line rounded-xl p-3 font-medium text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 >
-                  <option value="view">Can view — see supplies &amp; refill timing</option>
-                  <option value="manage">Can view &amp; manage — also log use and edit</option>
+                  <option value="view">{t('caregivers.roleView')}</option>
+                  <option value="manage">{t('caregivers.roleManage')}</option>
                 </select>
               </div>
               <Button onClick={handleInvite} disabled={inviting} className="w-full">
                 {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {inviting ? 'Inviting…' : 'Invite caregiver'}
+                {inviting ? t('caregivers.inviting') : t('caregivers.inviteBtn')}
               </Button>
             </div>
 
             <div className="mt-4 flex gap-2.5 rounded-2xl bg-surface-2 border border-line p-3.5 text-xs text-muted leading-relaxed">
               <Info className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
               <p>
-                They see nothing until they sign in with this exact email and accept your
-                invite. We don&apos;t send the invite automatically yet, so share the app link
-                with them directly.
+                {t('caregivers.inviteHint')}
               </p>
             </div>
           </section>
@@ -204,7 +207,7 @@ export default function SharingPage() {
           {/* People with access to MY supplies */}
           <section className="space-y-3">
             <h3 className="font-semibold text-ink flex items-center gap-2">
-              <Users className="w-5 h-5 text-muted" /> People with access to my supplies
+              <Users className="w-5 h-5 text-muted" /> {t('caregivers.peopleWithAccess')}
             </h3>
 
             {loading && (
@@ -214,14 +217,14 @@ export default function SharingPage() {
             )}
             {error && (
               <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-                <p className="text-urgent font-semibold">Couldn&apos;t load sharing</p>
+                <p className="text-urgent font-semibold">{t('caregivers.errorTitle')}</p>
                 <p className="text-urgent/80 text-sm mt-1">{error}</p>
               </div>
             )}
             {!loading && !error && myShares.length === 0 && (
               <div className="bg-surface border border-line rounded-2xl p-10 text-center">
                 <Users className="w-7 h-7 text-faint mx-auto mb-3" />
-                <p className="text-muted font-medium">No one has access yet</p>
+                <p className="text-muted font-medium">{t('caregivers.noAccessYet')}</p>
               </div>
             )}
             {myShares.map(s => {
@@ -231,16 +234,16 @@ export default function SharingPage() {
                   <div className="min-w-0">
                     <p className="font-semibold text-ink truncate">{s.caregiverEmail}</p>
                     <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
-                      <ShieldCheck className="w-3.5 h-3.5" /> {ROLE_LABEL[s.role]}
+                      <ShieldCheck className="w-3.5 h-3.5" /> {t(ROLE_LABEL_KEY[s.role])}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${style.cls}`}>
-                      {style.label}
+                      {t(style.labelKey)}
                     </span>
                     <button
                       onClick={() => handleRevoke(s)}
-                      aria-label={`Remove ${s.caregiverEmail}`}
+                      aria-label={t('common.removeAria', { name: s.caregiverEmail })}
                       className="rounded-lg p-2 text-faint hover:bg-urgent-soft hover:text-urgent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -260,8 +263,8 @@ export default function SharingPage() {
               <HeartHandshake className="w-5 h-5 text-teal" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-ink text-sm">Caring for someone else?</p>
-              <p className="text-xs text-muted">See supplies people have shared with you.</p>
+              <p className="font-semibold text-ink text-sm">{t('caregivers.caringForOther')}</p>
+              <p className="text-xs text-muted">{t('caregivers.seeShared')}</p>
             </div>
             <ArrowRight className="w-4 h-4 text-faint group-hover:text-primary transition-colors" />
           </Link>

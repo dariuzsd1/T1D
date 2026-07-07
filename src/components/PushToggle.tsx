@@ -10,6 +10,7 @@ import {
   registerAndGetToken,
   onForegroundMessage,
 } from '@/lib/firebase/messaging'
+import { useI18n } from '@/lib/i18n'
 
 type State =
   | 'checking'
@@ -22,6 +23,7 @@ type State =
 
 export function PushToggle() {
   const { showToast } = useToast()
+  const { t } = useI18n()
   const [state, setState] = useState<State>('checking')
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function PushToggle() {
 
       // Show foreground messages as in-app toasts (the SW only handles background).
       unsub = await onForegroundMessage((title, body) =>
-        showToast(body ? `${title}: ${body}` : title, 'info')
+        showToast(body ? t('push.foregroundMessage', { title, body }) : title, 'info')
       )
     })()
 
@@ -58,7 +60,7 @@ export function PushToggle() {
         const blocked = Notification.permission === 'denied'
         setState(blocked ? 'denied' : 'default')
         showToast(
-          blocked ? 'Notifications are blocked in your browser.' : 'Notifications were not enabled.',
+          blocked ? t('push.blocked') : t('push.notEnabled'),
           'caution'
         )
         return
@@ -68,7 +70,7 @@ export function PushToggle() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user?.id) {
         setState('default')
-        showToast('Please sign in again.', 'caution')
+        showToast(t('common.pleaseSignInAgain'), 'caution')
         return
       }
 
@@ -83,15 +85,15 @@ export function PushToggle() {
           return
         }
         setState('default')
-        showToast(`Couldn’t save your device: ${error.message}`, 'caution')
+        showToast(t('push.saveDeviceFail', { error: error.message }), 'caution')
         return
       }
 
       setState('enabled')
-      showToast('Notifications are on for this device.', 'success')
+      showToast(t('push.enabledToast'), 'success')
     } catch (err: any) {
       setState('default')
-      showToast(err?.message || 'Could not enable notifications.', 'caution')
+      showToast(err?.message || t('push.enableFail'), 'caution')
     }
   }
 
@@ -102,10 +104,7 @@ export function PushToggle() {
       <div className="rounded-2xl bg-surface-2 border border-line p-4 flex gap-3 text-sm text-muted leading-relaxed">
         <Database className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
         <p>
-          Almost there. The table that stores your device needs to be created once.
-          Run <span className="font-semibold text-ink">supabase/setup.sql</span> in your Supabase
-          dashboard (see <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>),
-          then reload and try again.
+          {t('push.migrationBody')}
         </p>
       </div>
     )
@@ -115,7 +114,7 @@ export function PushToggle() {
     return (
       <div className="rounded-2xl bg-surface-2 border border-line p-4 flex gap-3 text-sm text-muted leading-relaxed">
         <BellOff className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
-        <p>This browser doesn’t support push notifications. Try Chrome or Safari (on a phone, add the app to your home screen first).</p>
+        <p>{t('push.unsupportedBody')}</p>
       </div>
     )
   }
@@ -124,7 +123,7 @@ export function PushToggle() {
     return (
       <div className="rounded-2xl bg-caution-soft border border-caution/20 p-4 flex gap-3 text-sm text-caution leading-relaxed">
         <BellOff className="w-4 h-4 shrink-0 mt-0.5" />
-        <p>Notifications are blocked. Turn them on for this site in your browser settings, then reload this page.</p>
+        <p>{t('push.deniedBody')}</p>
       </div>
     )
   }
@@ -134,14 +133,10 @@ export function PushToggle() {
       <div className="space-y-3">
         <div className="rounded-2xl bg-success-soft border border-success/20 p-4 flex gap-3 text-sm text-success leading-relaxed">
           <BellRing className="w-4 h-4 shrink-0 mt-0.5" />
-          <p className="font-medium">Notifications are on for this device.</p>
+          <p className="font-medium">{t('push.enabledTitle')}</p>
         </div>
         <p className="text-xs text-muted leading-relaxed">
-          You’ll get alerts even when the app is closed. The daily refill check that
-          decides <em>when</em> to alert runs on the server. That scheduled piece
-          (Supabase <span className="font-medium">pg_cron</span> → Edge Function) is
-          the last setup step in <span className="font-medium">docs/PUSH_NOTIFICATIONS.md</span>.
-          To confirm delivery now, send a test message from the Firebase console.
+          {t('push.enabledDetail')}
         </p>
       </div>
     )
@@ -155,7 +150,7 @@ export function PushToggle() {
       className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white px-5 py-3 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
     >
       {state === 'working' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" />}
-      {state === 'working' ? 'Enabling…' : 'Enable notifications on this device'}
+      {state === 'working' ? t('push.enabling') : t('push.enableBtn')}
     </button>
   )
 }

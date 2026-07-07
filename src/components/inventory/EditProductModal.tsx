@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
 import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { rateFromDaysPerUnit, daysPerUnitFromRate } from '@/lib/depletion'
+import { useI18n } from '@/lib/i18n'
 
 interface EditProductModalProps {
   product: Product
@@ -21,6 +22,7 @@ interface EditProductModalProps {
  *  click to close). Edits the two fields the store can persist: quantity and
  *  expiration date — both feed the honest runway recompute. */
 export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditProductModalProps) {
+  const { t } = useI18n()
   const [quantity, setQuantity] = useState(product.quantity)
   // <input type="date"> wants YYYY-MM-DD; trim any time component.
   const [expirationDate, setExpirationDate] = useState(
@@ -145,7 +147,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
       // Keep the dialog open with the user's input intact — closing (or toasting
       // success) on a failed write would silently lose the change.
       console.error('Failed to save changes:', err)
-      setSaveError("Couldn't save your changes. Check your connection and try again.")
+      setSaveError(t('editModal.saveError'))
     } finally {
       setSaving(false)
     }
@@ -171,7 +173,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
           </div>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
@@ -180,7 +182,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
 
         <div className="space-y-5">
           <div>
-            <label htmlFor="edit-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quantity on hand</label>
+            <label htmlFor="edit-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.quantityLabel')}</label>
             <input
               ref={firstFieldRef}
               id="edit-quantity"
@@ -192,7 +194,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Usage (optional)</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.usageLabel')}</label>
             {/* Three intuitive ways to express the same thing. "Each one lasts"
                 suits worn items (sensors/pods/sets); "I use per day" suits
                 consumables; "Insulin" lets you think in units/day and units/vial. */}
@@ -202,21 +204,21 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                 onClick={() => setTrackMode('wear')}
                 className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'wear' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
               >
-                Each lasts
+                {t('editModal.tabWear')}
               </button>
               <button
                 type="button"
                 onClick={() => setTrackMode('rate')}
                 className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'rate' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
               >
-                Per day
+                {t('editModal.tabRate')}
               </button>
               <button
                 type="button"
                 onClick={selectInsulinMode}
                 className={`text-xs font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${trackMode === 'insulin' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
               >
-                Insulin
+                {t('editModal.tabInsulin')}
               </button>
             </div>
 
@@ -228,12 +230,12 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   min="0"
                   step="1"
                   inputMode="numeric"
-                  placeholder="e.g. 7 for a sensor, 3 for a pod"
+                  placeholder={t('editModal.wearPlaceholder')}
                   value={perUnitDays}
                   onChange={(e) => setPerUnitDays(e.target.value)}
                   className="w-full bg-surface border border-line rounded-xl p-3.5 pr-14 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">days</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">{t('editModal.wearUnit')}</span>
               </div>
             )}
             {trackMode === 'rate' && (
@@ -244,18 +246,18 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   min="0"
                   step="0.5"
                   inputMode="decimal"
-                  placeholder="e.g. 5 test strips a day"
+                  placeholder={t('editModal.ratePlaceholder')}
                   value={perDay}
                   onChange={(e) => setPerDay(e.target.value)}
                   className="w-full bg-surface border border-line rounded-xl p-3.5 pr-16 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">/ day</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-faint pointer-events-none">{t('editModal.rateUnit')}</span>
               </div>
             )}
             {trackMode === 'insulin' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="edit-insulin-dose" className="block text-[11px] font-medium text-muted mb-1.5">Units a day</label>
+                  <label htmlFor="edit-insulin-dose" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.insulinDoseLabel')}</label>
                   <div className="relative">
                     <input
                       id="edit-insulin-dose"
@@ -263,16 +265,16 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                       min="0"
                       step="1"
                       inputMode="numeric"
-                      placeholder="e.g. 40"
+                      placeholder={t('editModal.insulinDosePlaceholder')}
                       value={insulinUnitsPerDay}
                       onChange={(e) => setInsulinUnitsPerDay(e.target.value)}
                       className="w-full bg-surface border border-line rounded-xl p-3 pr-10 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">u</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">{t('editModal.unitSuffix')}</span>
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="edit-insulin-container" className="block text-[11px] font-medium text-muted mb-1.5">Units per vial/pen</label>
+                  <label htmlFor="edit-insulin-container" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.insulinContainerLabel')}</label>
                   <div className="relative">
                     <input
                       id="edit-insulin-container"
@@ -280,24 +282,24 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                       min="0"
                       step="100"
                       inputMode="numeric"
-                      placeholder="1000 vial · 300 pen"
+                      placeholder={t('editModal.insulinContainerPlaceholder')}
                       value={insulinUnitsPerContainer}
                       onChange={(e) => setInsulinUnitsPerContainer(e.target.value)}
                       className="w-full bg-surface border border-line rounded-xl p-3 pr-10 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">u</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint pointer-events-none">{t('editModal.unitSuffix')}</span>
                   </div>
                 </div>
               </div>
             )}
             <p className="text-xs text-faint mt-1.5">
               {resolvedRate > 0
-                ? `Makes "days remaining" exact — about ${Math.floor(quantity / resolvedRate)} days at this rate.`
+                ? t('editModal.hintExact', { days: Math.floor(quantity / resolvedRate) })
                 : trackMode === 'wear'
-                  ? 'Days you wear or use one before replacing it. Until set, days remaining is a rough estimate.'
+                  ? t('editModal.hintWear')
                   : trackMode === 'insulin'
-                    ? 'A vial is usually 1000 units (10 mL), a pen 300. Until set, days remaining is a rough estimate.'
-                    : 'How many you go through per day. Until set, days remaining is a rough estimate.'}
+                    ? t('editModal.hintInsulin')
+                    : t('editModal.hintRate')}
             </p>
 
             {/* In-use clock — only on the insulin tab. An opened vial/pen must be
@@ -306,7 +308,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             {trackMode === 'insulin' && (
               <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-surface-2 border border-line p-3">
                 <div>
-                  <label htmlFor="edit-opened-date" className="block text-[11px] font-medium text-muted mb-1.5">Opened on</label>
+                  <label htmlFor="edit-opened-date" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.openedOnLabel')}</label>
                   <input
                     id="edit-opened-date"
                     type="date"
@@ -317,27 +319,27 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-in-use-days" className="block text-[11px] font-medium text-muted mb-1.5">Discard after (days)</label>
+                  <label htmlFor="edit-in-use-days" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.discardAfterLabel')}</label>
                   <input
                     id="edit-in-use-days"
                     type="number"
                     min="1"
                     step="1"
                     inputMode="numeric"
-                    placeholder="28"
+                    placeholder={t('editModal.discardAfterPlaceholder')}
                     value={inUseDays}
                     onChange={(e) => setInUseDays(e.target.value)}
                     className="w-full bg-surface border border-line rounded-lg p-2.5 text-sm font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
                 </div>
                 <p className="col-span-2 text-[11px] text-faint">
-                  Most insulins keep about 28 days once opened (Tresiba 56). Leave the date blank until you open one.
+                  {t('editModal.discardHint')}
                 </p>
               </div>
             )}
           </div>
           <div>
-            <label htmlFor="edit-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Expiration date (optional)</label>
+            <label htmlFor="edit-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.expirationLabel')}</label>
             <input
               id="edit-expiration"
               type="date"
@@ -351,14 +353,14 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               page. Only shown once the user has added at least one device. */}
           {devices.length > 0 && (
             <div>
-              <label htmlFor="edit-device" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Part of a device (optional)</label>
+              <label htmlFor="edit-device" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.deviceLabel')}</label>
               <select
                 id="edit-device"
                 value={deviceId}
                 onChange={(e) => setDeviceId(e.target.value)}
                 className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
               >
-                <option value="">Not linked to a device</option>
+                <option value="">{t('editModal.deviceNone')}</option>
                 {devices.map(d => (
                   <option key={d.id} value={d.id}>{deviceLabel(d)}</option>
                 ))}
@@ -371,14 +373,14 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               in 9 days"). Only shown once at least one prescription exists. */}
           {prescriptions.length > 0 && (
             <div>
-              <label htmlFor="edit-prescription" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">Covered by a prescription (optional)</label>
+              <label htmlFor="edit-prescription" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.prescriptionLabel')}</label>
               <select
                 id="edit-prescription"
                 value={prescriptionId}
                 onChange={(e) => setPrescriptionId(e.target.value)}
                 className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
               >
-                <option value="">Not linked to a prescription</option>
+                <option value="">{t('editModal.prescriptionNone')}</option>
                 {prescriptions.map(rx => (
                   <option key={rx.id} value={rx.id}>
                     {rx.medicationName}{rx.dosage ? ` (${rx.dosage})` : ''}
@@ -391,23 +393,23 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
           {/* Refill cycle — powers the insurance refill-window engine. Saving
               requires the columns from docs/REFILL_RULES_MIGRATION.md. */}
           <div className="pt-5 border-t border-line">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Refill cycle (optional)</p>
-            <p className="text-xs text-faint mb-3">Lets the app tell you when insurance allows a refill.</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">{t('editModal.refillCycleTitle')}</p>
+            <p className="text-xs text-faint mb-3">{t('editModal.refillCycleBody')}</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="edit-refill-interval" className="block text-[11px] font-medium text-muted mb-1.5">Days between refills</label>
+                <label htmlFor="edit-refill-interval" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.refillIntervalLabel')}</label>
                 <input
                   id="edit-refill-interval"
                   type="number"
                   min="1"
-                  placeholder="e.g. 90"
+                  placeholder={t('editModal.refillIntervalPlaceholder')}
                   value={refillIntervalDays}
                   onChange={(e) => setRefillIntervalDays(e.target.value)}
                   className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
               </div>
               <div>
-                <label htmlFor="edit-last-filled" className="block text-[11px] font-medium text-muted mb-1.5">Last filled</label>
+                <label htmlFor="edit-last-filled" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.lastFilledLabel')}</label>
                 <input
                   id="edit-last-filled"
                   type="date"
@@ -417,13 +419,13 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                 />
               </div>
               <div>
-                <label htmlFor="edit-copay" className="block text-[11px] font-medium text-muted mb-1.5">Copay per refill ($)</label>
+                <label htmlFor="edit-copay" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.copayLabel')}</label>
                 <input
                   id="edit-copay"
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="e.g. 30"
+                  placeholder={t('editModal.copayPlaceholder')}
                   value={copay}
                   onChange={(e) => setCopay(e.target.value)}
                   className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
@@ -431,7 +433,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
               </div>
             </div>
             <p className="text-xs text-faint mt-2">
-              Copay + supply length power the Costs page&apos;s spending estimate.
+              {t('editModal.copayHint')}
             </p>
           </div>
         </div>
@@ -449,14 +451,14 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             className="flex-1 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Save changes
+            {t('common.saveChanges')}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
             className="px-5 py-3 rounded-xl font-semibold text-muted hover:bg-surface-2 transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </motion.div>

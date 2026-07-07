@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ShoppingCart, Stethoscope, Pill, ChevronRight } from 'lucide-react'
 import { type AgendaItem, type AgendaKind, formatAgendaDate } from '@/lib/homeAgenda'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * "What's Next" — a compact, glanceable list of the next real dated things
@@ -18,6 +19,7 @@ const KIND_ICON: Record<AgendaKind, typeof ShoppingCart> = {
 }
 
 export function WhatsNext({ items, now }: { items: AgendaItem[]; now?: Date }) {
+  const { t } = useI18n()
   if (items.length === 0) return null
 
   return (
@@ -26,7 +28,7 @@ export function WhatsNext({ items, now }: { items: AgendaItem[]; now?: Date }) {
         id="whats-next-heading"
         className="text-xs font-semibold uppercase tracking-widest text-muted mb-3"
       >
-        What&apos;s next
+        {t('whatsNext.title')}
       </h2>
       <ul className="divide-y divide-line">
         {items.map((item) => {

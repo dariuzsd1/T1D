@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { createSupplies } from '@/lib/addSupply'
 import { DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, type KitOption } from '@/lib/starterKits'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * Quick start: pick your insulin-delivery system and your CGM, and we add the
@@ -21,6 +22,7 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
   const supabase = useMemo(() => createClient(), [])
   const { addProduct } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const router = useRouter()
   const dialogRef = useDialog<HTMLDivElement>(onClose)
 
@@ -38,7 +40,7 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user?.id) {
-        setError('Please sign in again.')
+        setError(t('starterKit.errSignIn'))
         setSaving(false)
         return
       }
@@ -57,10 +59,10 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
         addProduct(p)
         void logActivity('supply_added', p.name)
       })
-      showToast(`Added ${created.length} ${created.length === 1 ? 'supply' : 'supplies'} to your inventory.`, 'success')
+      showToast(t(created.length === 1 ? 'starterKit.toastAddedOne' : 'starterKit.toastAddedOther', { count: created.length }), 'success')
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add your supplies. Please try again.')
+      setError(err instanceof Error ? err.message : t('starterKit.errGeneric'))
       setSaving(false)
     }
   }
@@ -79,22 +81,21 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
         className="relative w-full max-w-lg max-h-[88vh] overflow-y-auto bg-surface border border-line rounded-3xl p-7 shadow-lg"
       >
         <div className="flex items-start justify-between mb-1">
-          <h2 id="kit-title" className="text-xl font-bold text-ink">Quick start</h2>
+          <h2 id="kit-title" className="text-xl font-bold text-ink">{t('home.quickStart')}</h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         <p className="text-sm text-muted mb-6">
-          Pick what you use and we&apos;ll add the usual supplies, with box sizes and how long each
-          one lasts already filled in. You can edit anything later.
+          {t('onboarding.subtitle')}
         </p>
 
         <Group
-          title="Insulin delivery"
+          title={t('onboarding.delivery')}
           Icon={Zap}
           options={DELIVERY_OPTIONS}
           selected={deliveryId}
@@ -102,7 +103,7 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
         />
 
         <Group
-          title="Continuous glucose monitor"
+          title={t('onboarding.cgm')}
           Icon={Activity}
           options={CGM_OPTIONS}
           selected={cgmId}
@@ -113,15 +114,15 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
         {supplies.length > 0 && (
           <div className="mt-6 rounded-2xl bg-surface-2 border border-line p-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-muted mb-2 flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5" /> We&apos;ll add
+              <Package className="w-3.5 h-3.5" /> {t('onboarding.willAdd')}
             </p>
             <ul className="space-y-1.5">
               {supplies.map((s, i) => (
                 <li key={i} className="flex items-center justify-between text-sm">
                   <span className="font-medium text-ink">{s.name}</span>
                   <span className="text-muted text-xs">
-                    {s.unitsPerBox} per box
-                    {s.usageRatePerDay > 0 && ` · ~${Math.round(1 / s.usageRatePerDay)} days each`}
+                    {t('onboarding.perBox', { n: s.unitsPerBox })}
+                    {s.usageRatePerDay > 0 && ` · ${t('onboarding.daysEach', { n: Math.round(1 / s.usageRatePerDay) })}`}
                   </span>
                 </li>
               ))}
@@ -142,8 +143,8 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {supplies.length === 0
-            ? 'Pick what you use'
-            : `Add ${supplies.length} ${supplies.length === 1 ? 'supply' : 'supplies'}`}
+            ? t('onboarding.pickPrompt')
+            : t(supplies.length === 1 ? 'starterKit.addCountOne' : 'starterKit.addCountOther', { count: supplies.length })}
         </button>
       </motion.div>
     </div>
