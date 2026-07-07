@@ -7,6 +7,8 @@ import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat } from '@zxing/library'
 import { barcodeHints } from '@/lib/barcode'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 
 interface BarcodeScannerProps {
   /** Fires once with the decoded value when a barcode is read. */
@@ -28,11 +30,14 @@ type Phase = 'checking' | 'starting' | 'scanning' | 'unsupported' | 'denied' | '
  * every device. Always stops the camera track on close/unmount.
  */
 export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeScannerProps) {
+  const { t } = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
   const detectedRef = useRef(false)
   const [phase, setPhase] = useState<Phase>('checking')
-  const [message, setMessage] = useState<string | null>(null)
+  // Store a translation KEY, not a resolved string, so a mid-error language
+  // switch re-renders in the new language (the effect only runs once).
+  const [messageKey, setMessageKey] = useState<TKey | null>(null)
 
   const stopCamera = useCallback(() => {
     controlsRef.current?.stop()
@@ -106,13 +111,13 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         const name = (err as { name?: string })?.name
         if (name === 'NotAllowedError' || name === 'SecurityError') {
           setPhase('denied')
-          setMessage('Camera access was blocked. Allow it in your browser settings, or enter the supply manually.')
+          setMessageKey('barcodeScanner.denied')
         } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
           setPhase('error')
-          setMessage('No camera was found on this device. You can still add the supply manually.')
+          setMessageKey('barcodeScanner.noCamera')
         } else {
           setPhase('error')
-          setMessage('Could not start the camera. You can still add the supply manually.')
+          setMessageKey('barcodeScanner.error')
         }
       }
     }
@@ -143,11 +148,11 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <ScanBarcode className="w-5 h-5 text-primary" />
-            <h2 id="scanner-title" className="text-lg font-bold text-ink">Scan a barcode</h2>
+            <h2 id="scanner-title" className="text-lg font-bold text-ink">{t('barcodeScanner.title')}</h2>
           </div>
           <button
             onClick={handleClose}
-            aria-label="Close scanner"
+            aria-label={t('barcodeScanner.closeAria')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
@@ -176,7 +181,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           {(phase === 'checking' || phase === 'starting') && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/90">
               <Loader2 className="w-7 h-7 animate-spin" />
-              <p className="text-sm font-medium">Starting camera…</p>
+              <p className="text-sm font-medium">{t('camera.starting')}</p>
             </div>
           )}
 
@@ -185,8 +190,8 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
               <CameraOff className="w-8 h-8" />
               <p className="text-sm font-medium leading-relaxed">
                 {phase === 'unsupported'
-                  ? 'Scanning needs a camera and a secure (https) connection. You can enter the supply by hand instead.'
-                  : message}
+                  ? t('barcodeScanner.unsupported')
+                  : messageKey && t(messageKey)}
               </p>
             </div>
           )}
@@ -194,7 +199,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
 
         {phase === 'scanning' && (
           <p className="mt-4 text-center text-sm text-muted">
-            Hold the barcode on the box or pharmacy label inside the frame.
+            {t('barcodeScanner.hint')}
           </p>
         )}
 
@@ -203,8 +208,8 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           className="mt-4 w-full rounded-xl bg-surface-2 py-3 font-semibold text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {showOverlay && phase !== 'checking' && phase !== 'starting'
-            ? 'Enter manually instead'
-            : 'Cancel'}
+            ? t('barcodeScanner.enterManually')
+            : t('common.cancel')}
         </button>
       </motion.div>
     </div>

@@ -20,6 +20,7 @@ import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/li
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +41,7 @@ const KIND_ICON: Record<DeviceKind, LucideIcon> = {
 export default function DevicesPage() {
   const { safetyBufferDays } = useStore()
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const { t } = useI18n()
   const supabase = createClient()
 
@@ -72,6 +74,15 @@ export default function DevicesPage() {
   useEffect(() => { load() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
 
   const handleDelete = async (id: string) => {
+    const device = devices.find((d) => d.id === id)
+    const name = device ? deviceLabel(device) : ''
+    const ok = await confirm({
+      title: t('confirm.removeTitle', { name }),
+      body: t('confirm.removeDeviceBody', { name }),
+      confirmLabel: t('confirm.removeBtn'),
+      tone: 'danger',
+    })
+    if (!ok) return
     const { error } = await supabase.from('medical_devices').delete().eq('id', id)
     if (error) { showToast(t('devices.deviceRemoveFail'), 'caution'); return }
     setDevices(prev => prev.filter(d => d.id !== id))

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { rxSupplyStatus, type Prescription } from "@/lib/prescriptions";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -55,6 +56,7 @@ export function ProductCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isRestocking, setIsRestocking] = useState(false)
   const { showToast } = useToast()
+  const confirm = useConfirm()
   // Items that need real attention open by default; the rest stay tidy.
   const [expanded, setExpanded] = useState(status === 'out' || status === 'low')
 
@@ -173,6 +175,13 @@ export function ProductCard({
   }
 
   const handleDelete = async () => {
+    const ok = await confirm({
+      title: t('confirm.deleteTitle', { name: product.name }),
+      body: t('confirm.deleteSupplyBody', { name: product.name }),
+      confirmLabel: t('confirm.deleteBtn'),
+      tone: 'danger',
+    })
+    if (!ok) return
     setIsDeleting(true)
     try {
       await onDelete?.(product.id)

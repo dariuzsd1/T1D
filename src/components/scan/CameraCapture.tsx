@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Camera, CameraOff, Loader2 } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 
 type Phase = 'starting' | 'ready' | 'denied' | 'error' | 'unsupported'
 
@@ -21,10 +23,12 @@ export function CameraCapture({
   onCapture: (url: string) => void
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [phase, setPhase] = useState<Phase>('starting')
-  const [message, setMessage] = useState<string | null>(null)
+  // Store a translation KEY so a mid-error language switch re-renders correctly.
+  const [messageKey, setMessageKey] = useState<TKey | null>(null)
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -67,13 +71,13 @@ export function CameraCapture({
         const name = (err as { name?: string })?.name
         if (name === 'NotAllowedError' || name === 'SecurityError') {
           setPhase('denied')
-          setMessage('Camera access was blocked. Allow it in your browser settings, or use "Add photo" to choose a file.')
+          setMessageKey('cameraCapture.denied')
         } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
           setPhase('error')
-          setMessage('No camera was found. Use "Add photo" to choose a file instead.')
+          setMessageKey('cameraCapture.noCamera')
         } else {
           setPhase('error')
-          setMessage('Could not start the camera. Use "Add photo" to choose a file instead.')
+          setMessageKey('cameraCapture.error')
         }
       }
     }
@@ -124,11 +128,11 @@ export function CameraCapture({
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Camera className="w-5 h-5 text-primary" />
-            <h2 id="camera-title" className="text-lg font-bold text-ink">Take a photo</h2>
+            <h2 id="camera-title" className="text-lg font-bold text-ink">{t('cameraCapture.title')}</h2>
           </div>
           <button
             onClick={handleClose}
-            aria-label="Close camera"
+            aria-label={t('cameraCapture.closeAria')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
@@ -142,7 +146,7 @@ export function CameraCapture({
           {phase === 'starting' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/90">
               <Loader2 className="w-7 h-7 animate-spin" />
-              <p className="text-sm font-medium">Starting camera…</p>
+              <p className="text-sm font-medium">{t('camera.starting')}</p>
             </div>
           )}
 
@@ -151,8 +155,8 @@ export function CameraCapture({
               <CameraOff className="w-8 h-8" />
               <p className="text-sm font-medium leading-relaxed">
                 {phase === 'unsupported'
-                  ? 'Your browser can’t open the camera here. Use "Add photo" to choose a file instead.'
-                  : message}
+                  ? t('cameraCapture.unsupported')
+                  : messageKey && t(messageKey)}
               </p>
             </div>
           )}
@@ -160,7 +164,7 @@ export function CameraCapture({
 
         {phase === 'ready' && (
           <p className="mt-4 text-center text-sm text-muted">
-            Fill the frame with the barcode, then capture.
+            {t('cameraCapture.hint')}
           </p>
         )}
 
@@ -170,7 +174,7 @@ export function CameraCapture({
           className="mt-4 w-full rounded-xl bg-primary hover:bg-primary-deep disabled:opacity-50 py-3.5 font-semibold text-white transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
         >
           {!failed && <Camera className="w-5 h-5" />}
-          {failed ? 'Close' : 'Capture photo'}
+          {failed ? t('cameraCapture.close') : t('cameraCapture.capture')}
         </button>
       </motion.div>
     </div>

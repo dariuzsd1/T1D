@@ -6,6 +6,7 @@ import { Stethoscope, Plus, Pencil, Trash2, Database, RefreshCw, Clock } from 'l
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { BackButton } from '@/components/ui/BackButton'
 import { AppointmentModal } from '@/components/appointments/AppointmentModal'
 import { useI18n } from '@/lib/i18n'
@@ -42,6 +43,7 @@ function formatWhen(iso: string): string {
 export default function AppointmentsPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const { t } = useI18n()
 
   const [items, setItems] = useState<Appointment[]>([])
@@ -99,6 +101,13 @@ export default function AppointmentsPage() {
   }
 
   const handleDelete = async (appt: Appointment) => {
+    const ok = await confirm({
+      title: t('confirm.deleteTitle', { name: appt.title }),
+      body: t('confirm.deleteApptBody'),
+      confirmLabel: t('confirm.deleteBtn'),
+      tone: 'danger',
+    })
+    if (!ok) return
     const { error: dErr } = await supabase.from('appointments').delete().eq('id', appt.id)
     if (dErr) {
       showToast(t('common.toastDeleteFail', { error: dErr.message }), 'caution')
