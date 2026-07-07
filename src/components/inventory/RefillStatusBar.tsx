@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Clock, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
 import { stockStatus, DEFAULT_SAFETY_BUFFER_DAYS, type DisplayStatus } from "@/lib/depletion";
+import { useI18n } from "@/lib/i18n";
+import type { TKey } from "@/lib/i18n/dictionaries";
 
 interface RefillStatusBarProps {
   daysRemaining: number;
@@ -21,6 +23,7 @@ export function RefillStatusBar({
   estimated = false,
   status,
 }: RefillStatusBarProps) {
+  const { t } = useI18n()
   const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
 
   const current = variants[status ?? stockStatus(daysRemaining, bufferDays)];
@@ -30,11 +33,11 @@ export function RefillStatusBar({
       <div className="flex justify-between items-end">
         <div className={cn("flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest", current.text)}>
           {current.icon}
-          {current.label}
+          {t(current.labelKey)}
         </div>
         <div className="text-right">
           <span className="text-2xl font-black tabular-nums text-ink">{estimated ? '~' : ''}{daysRemaining}</span>
-          <span className="text-[10px] font-semibold text-muted uppercase ml-1">{estimated ? 'Est. days left' : 'Days left'}</span>
+          <span className="text-[10px] font-semibold text-muted uppercase ml-1">{estimated ? t('product.estDaysLeft') : t('product.daysLeftLabel')}</span>
         </div>
       </div>
 
@@ -50,29 +53,29 @@ export function RefillStatusBar({
 
 // Semantic color: red only for a true stockout; routine low stock is amber;
 // an unknown usage rate is neutral (never an alarm built on the fallback guess).
-const variants: Record<DisplayStatus, { bar: string; text: string; icon: React.ReactNode; label: string }> = {
+const variants: Record<DisplayStatus, { bar: string; text: string; icon: React.ReactNode; labelKey: TKey }> = {
   out: {
     bar: "bg-urgent",
     text: "text-urgent",
     icon: <AlertTriangle className="w-4 h-4" />,
-    label: "Out. Reorder now",
+    labelKey: "product.barOut",
   },
   low: {
     bar: "bg-caution",
     text: "text-caution",
     icon: <Clock className="w-4 h-4" />,
-    label: "Running low",
+    labelKey: "product.barLow",
   },
   ok: {
     bar: "bg-success",
     text: "text-success",
     icon: <CheckCircle2 className="w-4 h-4" />,
-    label: "Well stocked",
+    labelKey: "row.wellStocked",
   },
   unset: {
     bar: "bg-faint",
     text: "text-muted",
     icon: <HelpCircle className="w-4 h-4" />,
-    label: "Set usage to track",
+    labelKey: "product.barUnset",
   },
 };

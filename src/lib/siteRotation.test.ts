@@ -6,7 +6,7 @@ import {
   suggestedZoneId,
   hasZoneHistory,
   daysSince,
-  elapsedText,
+  elapsedTextKey,
   type SiteChangeRow,
 } from './siteRotation'
 
@@ -94,12 +94,15 @@ describe('hasZoneHistory', () => {
   })
 })
 
-describe('elapsedText', () => {
-  it('phrases each state', () => {
-    expect(elapsedText({ kind: 'never' })).toBe('Not yet logged')
-    expect(elapsedText({ kind: 'unknown' })).toBe('Last used: unknown')
-    expect(elapsedText({ kind: 'days', days: 0, date: ymd(0) })).toBe('Last used today')
-    expect(elapsedText({ kind: 'days', days: 1, date: ymd(1) })).toBe('Last used yesterday')
-    expect(elapsedText({ kind: 'days', days: 5, date: ymd(5) })).toBe('Last used 5 days ago')
+describe('elapsedTextKey', () => {
+  it('picks the right translation key (and vars) for each state', () => {
+    expect(elapsedTextKey({ kind: 'never' })).toEqual({ key: 'zone.notYetLogged' })
+    expect(elapsedTextKey({ kind: 'unknown' })).toEqual({ key: 'zone.lastUsedUnknown' })
+    expect(elapsedTextKey({ kind: 'days', days: 0, date: ymd(0) })).toEqual({ key: 'zone.lastUsedToday' })
+    expect(elapsedTextKey({ kind: 'days', days: 1, date: ymd(1) })).toEqual({ key: 'zone.lastUsedYesterday' })
+    expect(elapsedTextKey({ kind: 'days', days: 5, date: ymd(5) })).toEqual({
+      key: 'zone.lastUsedDaysAgo',
+      vars: { days: 5 },
+    })
   })
 })

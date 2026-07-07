@@ -7,16 +7,25 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 import { BackButton } from '@/components/ui/BackButton'
 import { isMissingTableError } from '@/lib/prescriptions'
 import {
   type MedicalProfile, rowToProfile, profileToRow, emptyProfile,
-  TRAVEL_CHECKLIST, TSA_NOTE,
 } from '@/lib/medicalId'
+
+// The travel checklist + TSA note are static, universally-true guidance whose
+// text lives in the i18n dictionary so it follows the active language.
+const TRAVEL_KEYS: TKey[] = [
+  'travel.item1', 'travel.item2', 'travel.item3', 'travel.item4',
+  'travel.item5', 'travel.item6', 'travel.item7', 'travel.item8',
+]
 
 export default function MedicalIdPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const [profile, setProfile] = useState<MedicalProfile>(emptyProfile())
   const [loading, setLoading] = useState(true)
@@ -58,7 +67,7 @@ export default function MedicalIdPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.id) {
       setSaving(false)
-      showToast('Please sign in again.', 'caution')
+      showToast(t('common.pleaseSignInAgain'), 'caution')
       return
     }
     const { error: uErr } = await supabase
@@ -66,10 +75,10 @@ export default function MedicalIdPage() {
       .upsert({ user_id: user.id, ...profileToRow(profile) }, { onConflict: 'user_id' })
     if (uErr) {
       setSaving(false)
-      showToast(`Couldn’t save: ${uErr.message}`, 'caution')
+      showToast(t('medicalId.saveFail', { error: uErr.message }), 'caution')
       return
     }
-    showToast('Medical ID saved.', 'success')
+    showToast(t('medicalId.saved'), 'success')
     await load() // pull back the public_token generated on first save
     setSaving(false)
   }
@@ -83,7 +92,7 @@ export default function MedicalIdPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      showToast('Couldn’t copy. Select and copy the link manually.', 'caution')
+      showToast(t('medicalId.copyFail'), 'caution')
     }
   }
 
@@ -98,14 +107,12 @@ export default function MedicalIdPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Database className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('common.setupStepTitle')}</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-            The Medical ID is new. Re-run <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
-            in your Supabase dashboard (it only adds the new table, see{' '}
-            <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>), then reload.
+            {t('medicalId.migrationBody')}
           </p>
           <button onClick={load} className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors">
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
+            <RefreshCw className="w-4 h-4" /> {t('common.reload')}
           </button>
         </div>
       </div>
@@ -116,17 +123,16 @@ export default function MedicalIdPage() {
     <div className="max-w-5xl mx-auto space-y-8">
       <BackButton />
       <header>
-        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Emergency</h2>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Medical ID</h1>
+        <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('medicalId.kicker')}</h2>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">{t('medicalId.title')}</h1>
         <p className="text-muted text-sm mt-2 max-w-prose">
-          The essentials someone would need if you couldn&apos;t speak for yourself. Fill it in,
-          then optionally turn on a private link a first responder can open without your password.
+          {t('medicalId.intro')}
         </p>
       </header>
 
       {error && (
         <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-          <p className="text-urgent font-semibold">Something went wrong</p>
+          <p className="text-urgent font-semibold">{t('medicalId.errorGeneric')}</p>
           <p className="text-urgent/80 text-sm mt-1">{error}</p>
         </div>
       )}
@@ -140,63 +146,63 @@ export default function MedicalIdPage() {
           {/* ---- Editor ---- */}
           <div className="space-y-6">
             <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-4">
-              <h3 className="font-semibold text-ink">Your information</h3>
+              <h3 className="font-semibold text-ink">{t('medicalId.yourInfo')}</h3>
               <div>
-                <label htmlFor="mi-name" className={label}>Full name</label>
+                <label htmlFor="mi-name" className={label}>{t('medicalId.fullName')}</label>
                 <input id="mi-name" type="text" value={profile.fullName} onChange={(e) => set('fullName', e.target.value)} className={field} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mi-dob" className={label}>Date of birth</label>
+                  <label htmlFor="mi-dob" className={label}>{t('medicalId.dob')}</label>
                   <input id="mi-dob" type="date" value={profile.dateOfBirth ?? ''} onChange={(e) => set('dateOfBirth', e.target.value || null)} className={field} />
                 </div>
                 <div>
-                  <label htmlFor="mi-blood" className={label}>Blood type</label>
-                  <input id="mi-blood" type="text" placeholder="e.g. O+" value={profile.bloodType} onChange={(e) => set('bloodType', e.target.value)} className={field} />
+                  <label htmlFor="mi-blood" className={label}>{t('medicalId.bloodType')}</label>
+                  <input id="mi-blood" type="text" placeholder={t('medicalId.bloodTypePlaceholder')} value={profile.bloodType} onChange={(e) => set('bloodType', e.target.value)} className={field} />
                 </div>
               </div>
               <div>
-                <label htmlFor="mi-dx" className={label}>Diagnosis</label>
+                <label htmlFor="mi-dx" className={label}>{t('medicalId.diagnosis')}</label>
                 <input id="mi-dx" type="text" value={profile.diagnosis} onChange={(e) => set('diagnosis', e.target.value)} className={field} />
               </div>
               <div>
-                <label htmlFor="mi-insulin" className={label}>Insulin(s)</label>
-                <input id="mi-insulin" type="text" placeholder="e.g. Humalog (rapid), Tresiba (basal)" value={profile.insulinTypes} onChange={(e) => set('insulinTypes', e.target.value)} className={field} />
+                <label htmlFor="mi-insulin" className={label}>{t('medicalId.insulins')}</label>
+                <input id="mi-insulin" type="text" placeholder={t('medicalId.insulinsPlaceholder')} value={profile.insulinTypes} onChange={(e) => set('insulinTypes', e.target.value)} className={field} />
               </div>
               <div>
-                <label htmlFor="mi-devices" className={label}>Devices</label>
-                <input id="mi-devices" type="text" placeholder="e.g. Omnipod 5, Dexcom G7" value={profile.devices} onChange={(e) => set('devices', e.target.value)} className={field} />
+                <label htmlFor="mi-devices" className={label}>{t('medicalId.devices')}</label>
+                <input id="mi-devices" type="text" placeholder={t('medicalId.devicesPlaceholder')} value={profile.devices} onChange={(e) => set('devices', e.target.value)} className={field} />
               </div>
               <div>
-                <label htmlFor="mi-allergies" className={label}>Allergies</label>
-                <input id="mi-allergies" type="text" placeholder="e.g. none known" value={profile.allergies} onChange={(e) => set('allergies', e.target.value)} className={field} />
+                <label htmlFor="mi-allergies" className={label}>{t('medicalId.allergies')}</label>
+                <input id="mi-allergies" type="text" placeholder={t('medicalId.allergiesPlaceholder')} value={profile.allergies} onChange={(e) => set('allergies', e.target.value)} className={field} />
               </div>
             </section>
 
             <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-4">
-              <h3 className="font-semibold text-ink">Emergency contacts</h3>
+              <h3 className="font-semibold text-ink">{t('medicalId.emergencyContacts')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mi-ec-name" className={label}>Contact name</label>
+                  <label htmlFor="mi-ec-name" className={label}>{t('medicalId.contactName')}</label>
                   <input id="mi-ec-name" type="text" value={profile.emergencyContactName} onChange={(e) => set('emergencyContactName', e.target.value)} className={field} />
                 </div>
                 <div>
-                  <label htmlFor="mi-ec-phone" className={label}>Contact phone</label>
+                  <label htmlFor="mi-ec-phone" className={label}>{t('medicalId.contactPhone')}</label>
                   <input id="mi-ec-phone" type="tel" value={profile.emergencyContactPhone} onChange={(e) => set('emergencyContactPhone', e.target.value)} className={field} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mi-dr-name" className={label}>Doctor</label>
+                  <label htmlFor="mi-dr-name" className={label}>{t('medicalId.doctor')}</label>
                   <input id="mi-dr-name" type="text" value={profile.doctorName} onChange={(e) => set('doctorName', e.target.value)} className={field} />
                 </div>
                 <div>
-                  <label htmlFor="mi-dr-phone" className={label}>Doctor phone</label>
+                  <label htmlFor="mi-dr-phone" className={label}>{t('medicalId.doctorPhone')}</label>
                   <input id="mi-dr-phone" type="tel" value={profile.doctorPhone} onChange={(e) => set('doctorPhone', e.target.value)} className={field} />
                 </div>
               </div>
               <div>
-                <label htmlFor="mi-notes" className={label}>Emergency note</label>
+                <label htmlFor="mi-notes" className={label}>{t('medicalId.emergencyNote')}</label>
                 <textarea id="mi-notes" rows={3} value={profile.notes} onChange={(e) => set('notes', e.target.value)} className={`${field} resize-none`} />
               </div>
             </section>
@@ -207,7 +213,7 @@ export default function MedicalIdPage() {
               className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-3.5 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              Save medical ID
+              {t('medicalId.save')}
             </button>
           </div>
 
@@ -222,8 +228,8 @@ export default function MedicalIdPage() {
                   <Share2 className="w-5 h-5 text-teal" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-ink">Lock-screen / share access</h3>
-                  <p className="text-sm text-muted">Create a private link that opens this card <strong>without a login</strong> — save it to your phone&apos;s lock screen or give it to family/school.</p>
+                  <h3 className="font-semibold text-ink">{t('medicalId.shareTitle')}</h3>
+                  <p className="text-sm text-muted">{t('medicalId.shareBody')}</p>
                 </div>
               </div>
 
@@ -234,7 +240,7 @@ export default function MedicalIdPage() {
                   onChange={(e) => set('isPublic', e.target.checked)}
                   className="w-5 h-5 accent-primary"
                 />
-                <span className="text-sm font-medium text-ink">Turn on the shareable link</span>
+                <span className="text-sm font-medium text-ink">{t('medicalId.turnOnLink')}</span>
               </label>
 
               {profile.isPublic && (
@@ -245,16 +251,16 @@ export default function MedicalIdPage() {
                       <div className="flex flex-wrap gap-2">
                         <button onClick={copyLink} className="inline-flex items-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink px-3 py-2 rounded-lg text-sm font-semibold transition-colors">
                           {copied ? <Check className="w-4 h-4 text-success" /> : <LinkIcon className="w-4 h-4" />}
-                          {copied ? 'Copied' : 'Copy link'}
+                          {copied ? t('medicalId.copied') : t('medicalId.copyLink')}
                         </button>
                         <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink px-3 py-2 rounded-lg text-sm font-semibold transition-colors">
-                          <ExternalLink className="w-4 h-4" /> Open / print card
+                          <ExternalLink className="w-4 h-4" /> {t('medicalId.openPrint')}
                         </a>
                       </div>
-                      <p className="text-[11px] text-faint">Anyone with this link can view the card (no login). Turn it off here to revoke.</p>
+                      <p className="text-[11px] text-faint">{t('medicalId.revokeNote')}</p>
                     </>
                   ) : (
-                    <p className="text-xs text-muted">Click <strong>Save medical ID</strong> to generate your private link.</p>
+                    <p className="text-xs text-muted">{t('medicalId.generateHint')}</p>
                   )}
                 </div>
               )}
@@ -264,22 +270,22 @@ export default function MedicalIdPage() {
             <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-4">
               <div className="flex items-center gap-2">
                 <Plane className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-ink">Travel & emergency kit</h3>
+                <h3 className="font-semibold text-ink">{t('medicalId.travelTitle')}</h3>
               </div>
               <ul className="space-y-2">
-                {TRAVEL_CHECKLIST.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-ink">
+                {TRAVEL_KEYS.map((key) => (
+                  <li key={key} className="flex items-start gap-2 text-sm text-ink">
                     <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                    <span>{item}</span>
+                    <span>{t(key)}</span>
                   </li>
                 ))}
               </ul>
               <div className="rounded-2xl bg-surface-2 border border-line p-4">
                 <div className="flex items-center gap-2 mb-1.5">
                   <ShieldAlert className="w-4 h-4 text-muted" />
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted">For airport security</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted">{t('medicalId.tsaTitle')}</p>
                 </div>
-                <p className="text-sm text-muted leading-relaxed">{TSA_NOTE}</p>
+                <p className="text-sm text-muted leading-relaxed">{t('travel.tsaNote')}</p>
               </div>
             </section>
           </div>
@@ -291,22 +297,23 @@ export default function MedicalIdPage() {
 
 /** The card preview shown to the owner — same shape as the public /id page. */
 function EmergencyCard({ profile }: { profile: MedicalProfile }) {
+  const { t } = useI18n()
   const rows: [string, string][] = [
-    ['Diagnosis', profile.diagnosis],
-    ['Insulin', profile.insulinTypes],
-    ['Devices', profile.devices],
-    ['Allergies', profile.allergies],
-    ['Blood type', profile.bloodType],
+    [t('medicalId.diagnosis'), profile.diagnosis],
+    [t('medicalId.rowInsulin'), profile.insulinTypes],
+    [t('medicalId.devices'), profile.devices],
+    [t('medicalId.allergies'), profile.allergies],
+    [t('medicalId.bloodType'), profile.bloodType],
   ]
   return (
     <div className="rounded-3xl border-2 border-urgent/30 bg-white shadow-sm overflow-hidden">
       <div className="bg-urgent text-white px-5 py-3 flex items-center gap-2">
         <HeartPulse className="w-5 h-5" />
-        <span className="font-bold tracking-wide">MEDICAL ID: TYPE 1 DIABETES</span>
+        <span className="font-bold tracking-wide">{t('medicalId.badgeTitle')}</span>
       </div>
       <div className="p-5 space-y-4">
         <div>
-          <p className="text-2xl font-bold text-ink leading-tight">{profile.fullName || 'Your name'}</p>
+          <p className="text-2xl font-bold text-ink leading-tight">{profile.fullName || t('medicalId.yourName')}</p>
         </div>
         <dl className="grid grid-cols-1 gap-2">
           {rows.filter(([, v]) => v).map(([k, v]) => (
@@ -333,7 +340,7 @@ function EmergencyCard({ profile }: { profile: MedicalProfile }) {
             {profile.doctorName && (
               <p className="flex items-center gap-2 text-sm text-ink">
                 <Phone className="w-3.5 h-3.5 text-muted" />
-                <span className="font-semibold">Dr. {profile.doctorName}</span>
+                <span className="font-semibold">{t('medicalId.doctorPrefix', { name: profile.doctorName })}</span>
                 <span className="text-muted">{profile.doctorPhone}</span>
               </p>
             )}

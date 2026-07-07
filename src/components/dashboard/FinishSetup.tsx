@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react'
 import { type SetupStep, setupDoneCount } from '@/lib/setupProgress'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * "Finish setup" nudge — a calm, informational onboarding checklist for accounts
@@ -16,18 +17,19 @@ import { type SetupStep, setupDoneCount } from '@/lib/setupProgress'
  * so completion is the dismissal — there's no close button.
  */
 export function FinishSetup({ steps }: { steps: SetupStep[] }) {
+  const { t } = useI18n()
   const done = setupDoneCount(steps)
   const total = steps.length
 
   return (
     <section
-      aria-label={`Finish setup, ${done} of ${total} complete`}
+      aria-label={`${t('setup.title')}, ${t('setup.ofCount', { done, total })}`}
       className="bg-surface border border-line rounded-3xl p-5 sm:p-6"
     >
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Finish setup</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">{t('setup.title')}</h2>
         <span className="text-xs font-semibold text-muted tabular-nums">
-          {done} of {total}
+          {t('setup.ofCount', { done, total })}
         </span>
       </div>
 
@@ -46,7 +48,7 @@ export function FinishSetup({ steps }: { steps: SetupStep[] }) {
           s.done ? (
             <div key={s.key} className="flex items-center gap-3 py-2 text-muted">
               <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
-              <span className="font-medium">{s.label}</span>
+              <span className="font-medium">{t(s.label)}</span>
             </div>
           ) : (
             <li key={s.key}>
@@ -55,7 +57,7 @@ export function FinishSetup({ steps }: { steps: SetupStep[] }) {
                 className="group flex items-center gap-3 py-2 rounded-lg -mx-1 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <Circle className="w-5 h-5 text-faint shrink-0" aria-hidden="true" />
-                <span className="min-w-0 flex-1 font-medium text-ink">{s.label}</span>
+                <span className="min-w-0 flex-1 font-medium text-ink">{t(s.label)}</span>
                 <ChevronRight
                   className="w-4 h-4 text-faint group-hover:text-primary transition-colors shrink-0"
                   aria-hidden="true"

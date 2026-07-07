@@ -12,6 +12,8 @@
  * is baked into each zone's geometry `x` below — the labels are anatomical.
  */
 
+import type { TKey } from './i18n/dictionaries'
+
 export type BodyView = 'front' | 'back'
 
 /** Any zone used within this many days counts as "recently used" (amber). Kept a
@@ -49,16 +51,41 @@ export const BODY_ZONES: BodyZone[] = [
 
 export const BODY_ZONE_IDS: readonly string[] = BODY_ZONES.map((z) => z.id)
 
-/** Short display label, e.g. "Left abdomen" / "Lower back" (no dashes). */
-export function zoneLabel(z: BodyZone): string {
-  if (z.side === 'center') return z.region
-  return `${z.side === 'left' ? 'Left' : 'Right'} ${z.region.toLowerCase()}`
+// Precomposed per-zone keys (not built from side+region at runtime) because
+// word order differs by language (English puts the side first, French puts it
+// after the noun) — each language's dictionary just writes the correct phrase.
+const ZONE_LABEL_KEY: Record<string, TKey> = {
+  abdomen_left: 'zone.abdomenLeft',
+  abdomen_right: 'zone.abdomenRight',
+  thigh_left: 'zone.thighLeft',
+  thigh_right: 'zone.thighRight',
+  upper_arm_left: 'zone.upperArmLeft',
+  upper_arm_right: 'zone.upperArmRight',
+  lower_back: 'zone.lowerBack',
+  hip_left: 'zone.hipLeft',
+  hip_right: 'zone.hipRight',
 }
 
-/** Aria fragment, e.g. "Abdomen, left side" / "Lower back". */
-export function zoneAria(z: BodyZone): string {
-  if (z.side === 'center') return z.region
-  return `${z.region}, ${z.side} side`
+const ZONE_ARIA_KEY: Record<string, TKey> = {
+  abdomen_left: 'zone.abdomenLeftAria',
+  abdomen_right: 'zone.abdomenRightAria',
+  thigh_left: 'zone.thighLeftAria',
+  thigh_right: 'zone.thighRightAria',
+  upper_arm_left: 'zone.upperArmLeftAria',
+  upper_arm_right: 'zone.upperArmRightAria',
+  lower_back: 'zone.lowerBack', // center zone: label and aria are the same phrase
+  hip_left: 'zone.hipLeftAria',
+  hip_right: 'zone.hipRightAria',
+}
+
+/** Translation key for the short display label, e.g. "Left abdomen". Render with t(). */
+export function zoneLabelKey(z: BodyZone): TKey {
+  return ZONE_LABEL_KEY[z.id]
+}
+
+/** Translation key for the aria fragment, e.g. "Abdomen, left side". Render with t(). */
+export function zoneAriaKey(z: BodyZone): TKey {
+  return ZONE_ARIA_KEY[z.id]
 }
 
 export function zoneCenter(z: BodyZone): { cx: number; cy: number } {
@@ -163,16 +190,19 @@ export function suggestedZoneId(views: Map<string, ZoneView>): string | null {
   return bestId
 }
 
-/** Human elapsed text, e.g. "Last used 3 days ago" / "Not yet logged". */
-export function elapsedText(elapsed: Elapsed): string {
+/**
+ * Translation key (+ vars) for the human elapsed text, e.g. "Last used 3 days
+ * ago" / "Not yet logged". Render with `t(key, vars)`.
+ */
+export function elapsedTextKey(elapsed: Elapsed): { key: TKey; vars?: { days: number } } {
   switch (elapsed.kind) {
     case 'never':
-      return 'Not yet logged'
+      return { key: 'zone.notYetLogged' }
     case 'unknown':
-      return 'Last used: unknown'
+      return { key: 'zone.lastUsedUnknown' }
     case 'days':
-      if (elapsed.days === 0) return 'Last used today'
-      if (elapsed.days === 1) return 'Last used yesterday'
-      return `Last used ${elapsed.days} days ago`
+      if (elapsed.days === 0) return { key: 'zone.lastUsedToday' }
+      if (elapsed.days === 1) return { key: 'zone.lastUsedYesterday' }
+      return { key: 'zone.lastUsedDaysAgo', vars: { days: elapsed.days } }
   }
 }

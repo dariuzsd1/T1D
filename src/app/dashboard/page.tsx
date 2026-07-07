@@ -57,7 +57,7 @@ export default function DashboardPage() {
         setError(null)
       } catch (err) {
         console.error('Failed to fetch inventory:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load supplies')
+        setError(err instanceof Error ? err.message : t('home.loadFail'))
       } finally {
         setLoading(false)
       }
@@ -155,11 +155,11 @@ export default function DashboardPage() {
           ? nextEligibleRefillDate(mostUrgent.lastFilledDate, { supplyDays: mostUrgent.refillIntervalDays })
           : null
       return refillDate
-        ? `Reorder ${mostUrgent.name} · refill-eligible ${formatAgendaDate(refillDate, now)}`
-        : `Reorder ${mostUrgent.name} soon`
+        ? t('home.reorderNameEligible', { name: mostUrgent.name, date: formatAgendaDate(refillDate, now) })
+        : t('home.reorderNameSoon', { name: mostUrgent.name })
     }
     if (agenda.length > 0) {
-      return `Next: ${agenda[0].label} · ${formatAgendaDate(agenda[0].date, now)}`
+      return t('home.nextLabel', { label: agenda[0].label, date: formatAgendaDate(agenda[0].date, now) })
     }
     return null
   })()
@@ -181,20 +181,20 @@ export default function DashboardPage() {
       try {
         await updateProduct(pod.id, { quantity: pod.quantity - 1 })
         void logActivity('supply_used', pod.name)
-        showToast(`Logged one ${pod.name}. ${pod.quantity - 1} left.`, 'success')
+        showToast(t('home.loggedOne', { name: pod.name, count: pod.quantity - 1 }), 'success')
       } catch (err) {
         console.error('Failed to log pod change:', err)
-        showToast(`Couldn't save that. ${pod.name} is unchanged.`, 'caution')
+        showToast(t('home.couldntSave', { name: pod.name }), 'caution')
       }
     } else {
-      showToast(`You're out of ${pod.name}.`, 'caution')
+      showToast(t('home.outOf', { name: pod.name }), 'caution')
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6" aria-busy={loading}>
       <p role="status" aria-live="polite" className="sr-only">
-        {loading ? 'Loading supplies…' : ''}
+        {loading ? t('home.loadingSr') : ''}
       </p>
 
       {/* Loading */}
@@ -324,7 +324,7 @@ export default function DashboardPage() {
               className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-deep text-white py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <ShoppingCart className="w-5 h-5" />
-              Reorder {mostUrgent.name}
+              {t('home.reorderName', { name: mostUrgent.name })}
             </a>
           ) : pod ? (
             <button
@@ -332,7 +332,7 @@ export default function DashboardPage() {
               className="w-full inline-flex items-center justify-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <RefreshCcw className="w-5 h-5 text-teal" />
-              Log a pod change
+              {t('home.logPodChange')}
             </button>
           ) : (
             <Link
@@ -340,7 +340,7 @@ export default function DashboardPage() {
               className="w-full inline-flex items-center justify-center gap-2 bg-surface border border-line hover:border-primary/40 text-ink py-3.5 rounded-2xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <Plus className="w-5 h-5 text-primary" />
-              Add a supply
+              {t('home.addSupply')}
             </Link>
           )}
         </div>

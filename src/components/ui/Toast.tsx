@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 type ToastVariant = 'success' | 'caution' | 'info'
 
@@ -84,6 +85,7 @@ function ToastItem({
   toast: Toast
   onDismiss: (id: string) => void
 }) {
+  const { t } = useI18n()
   const v = VARIANTS[toast.variant]
   return (
     <motion.div
@@ -101,7 +103,7 @@ function ToastItem({
       </p>
       <button
         onClick={() => onDismiss(toast.id)}
-        aria-label="Dismiss notification"
+        aria-label={t('common.dismissNotification')}
         className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       >
         <X className="w-4 h-4" />

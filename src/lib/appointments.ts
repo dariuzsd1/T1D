@@ -9,9 +9,14 @@
  * show a one-time setup prompt instead of crashing.
  */
 
+import type { TKey } from './i18n/dictionaries'
+
 // Re-export so pages can import the shared helper from here too.
 export { isMissingTableError } from './prescriptions'
 
+// `label` stays as an English fallback (used only if a TKey lookup is ever
+// skipped); the UI should prefer `t(APPOINTMENT_TYPE_KEY[value])` so the type
+// name renders in the active language.
 export const APPOINTMENT_TYPES = [
   { value: 'endocrinology', label: 'Endocrinology' },
   { value: 'lab', label: 'Lab work' },
@@ -20,6 +25,15 @@ export const APPOINTMENT_TYPES = [
   { value: 'primary_care', label: 'Primary care' },
   { value: 'other', label: 'Other' },
 ] as const
+
+export const APPOINTMENT_TYPE_KEY: Record<string, TKey> = {
+  endocrinology: 'apptType.endocrinology',
+  lab: 'apptType.lab',
+  pump_trainer: 'apptType.pumpTrainer',
+  cgm_trainer: 'apptType.cgmTrainer',
+  primary_care: 'apptType.primaryCare',
+  other: 'apptType.other',
+}
 
 export function appointmentTypeLabel(value: string): string {
   return APPOINTMENT_TYPES.find((t) => t.value === value)?.label ?? 'Appointment'

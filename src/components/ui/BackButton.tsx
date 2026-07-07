@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 /**
  * Consistent back-navigation button used in every sub-page header.
@@ -11,12 +12,14 @@ import { ChevronLeft } from 'lucide-react'
  */
 export function BackButton({
   fallbackHref = '/dashboard',
-  label = 'Back',
+  label,
 }: {
   fallbackHref?: string
   label?: string
 }) {
   const router = useRouter()
+  const { t } = useI18n()
+  const resolvedLabel = label ?? t('common.back')
 
   const handleClick = () => {
     // window.history.length <= 1 means the tab was opened directly at this URL
@@ -34,7 +37,7 @@ export function BackButton({
       className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded mb-6 -ml-1 group"
     >
       <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-      {label}
+      {resolvedLabel}
     </button>
   )
 }

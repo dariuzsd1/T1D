@@ -218,6 +218,13 @@ export const EVENT_KIND_LABEL: Record<CareLinkEventKind, string> = {
   infusion_set: 'Infusion site changes',
 }
 
+// Prefer `t(EVENT_KIND_KEY[kind])` in the UI; EVENT_KIND_LABEL is the English fallback.
+export const EVENT_KIND_KEY: Record<CareLinkEventKind, import('./i18n/dictionaries').TKey> = {
+  reservoir: 'eventKind.reservoir',
+  sensor: 'eventKind.sensor',
+  infusion_set: 'eventKind.infusionSet',
+}
+
 /**
  * Keyword hints for auto-matching a CareLink event kind to a supply in inventory.
  * Try these against supply name + brand (case-insensitive). First match wins.

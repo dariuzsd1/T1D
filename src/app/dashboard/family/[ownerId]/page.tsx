@@ -85,7 +85,7 @@ export default function SafetyViewPage() {
     })
     if (!res.ok) {
       setQtyMap(prev => ({ ...prev, [product.id]: current }))
-      showToast('Could not update supply.', 'caution')
+      showToast(t('quickActions.couldntSave', { name: product.name }), 'caution')
     }
   }
 
@@ -218,9 +218,9 @@ export default function SafetyViewPage() {
                             <button
                               onClick={() => handleUseOne(product)}
                               disabled={qty <= 0}
-                              aria-label={`${t('row.reorder')} ${product.name}`}
+                              aria-label={t('common.useOneAria', { name: product.name })}
                               className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:text-primary hover:bg-surface-2 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                              title="Use one"
+                              title={t('product.useOne')}
                             >
                               <Minus className="w-4 h-4" />
                             </button>

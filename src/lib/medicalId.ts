@@ -123,22 +123,6 @@ export function profileToRow(p: MedicalProfile): Record<string, unknown> {
   }
 }
 
-/** Items every person with T1D should travel with — static, universally-true
- *  guidance (not fabricated per-user status). */
-export const TRAVEL_CHECKLIST: string[] = [
-  'Twice the supplies you expect to need (pods/sets, sensors, insulin)',
-  'Insulin in carry-on, never checked baggage (cargo holds can freeze)',
-  'In-date glucagon (check the expiry before every trip)',
-  'Fast-acting sugar: glucose tabs, juice, or candy',
-  'Backup blood-glucose meter, strips, and lancets',
-  'A cool pack or Frio pouch for insulin',
-  'Prescriptions and this medical-ID card (printed or shareable link)',
-  'Doctor’s letter / TSA notification card for supplies through security',
-]
-
-/** A plain-language note travelers can show at airport security. */
-export const TSA_NOTE =
-  'I have Type 1 Diabetes and am carrying medically necessary supplies: ' +
-  'insulin and delivery devices, a continuous glucose monitor, lancets, and ' +
-  'fast-acting sugar. These must stay with me in my carry-on and should not be ' +
-  'X-rayed or removed from their packaging without my awareness. Thank you.'
+// The travel checklist + TSA note used to live here as English string constants;
+// they're now translation keys (travel.item1..8, travel.tsaNote) rendered
+// directly with t() in the medical-id page, so they follow the active language.

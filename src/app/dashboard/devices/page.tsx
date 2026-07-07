@@ -13,18 +13,19 @@ import { createClient } from '@/lib/supabase/client'
 import { useStore, type Product } from '@/lib/store'
 import {
   type MedicalDevice, type MedicalDeviceRow, type DeviceKind,
-  rowToDevice, deviceToRow, deviceLabel, DEVICE_PRESETS, DEVICE_KIND_LABEL,
+  rowToDevice, deviceToRow, deviceLabel, DEVICE_PRESETS, DEVICE_KIND_KEY,
 } from '@/lib/devices'
 import { isMissingTableError } from '@/lib/prescriptions'
 import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { BackButton } from '@/components/ui/BackButton'
 import {
-  parseCareLink, EVENT_KIND_LABEL, KIND_SUPPLY_KEYWORDS,
+  parseCareLink, EVENT_KIND_KEY, KIND_SUPPLY_KEYWORDS,
   formatShortDate,
   type CareLinkSummary, type CareLinkEventKind,
 } from '@/lib/carelink'
@@ -39,6 +40,7 @@ const KIND_ICON: Record<DeviceKind, LucideIcon> = {
 export default function DevicesPage() {
   const { safetyBufferDays } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const supabase = createClient()
 
   const [devices, setDevices] = useState<MedicalDevice[]>([])
@@ -71,9 +73,9 @@ export default function DevicesPage() {
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('medical_devices').delete().eq('id', id)
-    if (error) { showToast('Could not remove device.', 'caution'); return }
+    if (error) { showToast(t('devices.deviceRemoveFail'), 'caution'); return }
     setDevices(prev => prev.filter(d => d.id !== id))
-    showToast('Device removed. Its supplies were kept.', 'success')
+    showToast(t('devices.deviceRemoved'), 'success')
   }
 
   const linkedTo = (deviceId: string) => inventory.filter(p => p.deviceId === deviceId)
@@ -95,17 +97,16 @@ export default function DevicesPage() {
       <BackButton />
       <section className="flex justify-between items-end gap-4">
         <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Your devices</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Pumps &amp; CGMs</h1>
+          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('devices.kicker')}</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">{t('devices.title')}</h1>
           <p className="text-muted mt-2 max-w-xl">
-            Group a device with the supplies it uses — reservoirs, sensors, infusion sets — to see
-            them, and their runway, in one place.
+            {t('devices.intro')}
           </p>
         </div>
         {!needsSetup && (
           <Button onClick={() => setShowAdd(true)} className="shrink-0">
             <Plus className="w-5 h-5" />
-            Add device
+            {t('devices.addDevice')}
           </Button>
         )}
       </section>
@@ -122,11 +123,9 @@ export default function DevicesPage() {
           <div className="w-12 h-12 rounded-xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
             <Database className="w-6 h-6 text-muted" />
           </div>
-          <h3 className="font-semibold text-ink mb-2">One quick database step</h3>
+          <h3 className="font-semibold text-ink mb-2">{t('common.setupStepTitle')}</h3>
           <p className="text-muted text-sm leading-relaxed">
-            Devices need a small table that isn&apos;t in your database yet. Open Supabase → SQL
-            Editor, run <span className="font-mono text-xs bg-surface-2 px-1.5 py-0.5 rounded">supabase/setup.sql</span> once
-            (it&apos;s safe to re-run), then refresh this page.
+            {t('devices.migrationBody')}
           </p>
         </div>
       )}
@@ -137,10 +136,10 @@ export default function DevicesPage() {
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <Cpu className="w-7 h-7 text-primary" />
           </div>
-          <p className="text-muted font-medium">No devices added yet</p>
+          <p className="text-muted font-medium">{t('devices.emptyTitle')}</p>
           <Button onClick={() => setShowAdd(true)} className="mx-auto">
             <Plus className="w-4 h-4" />
-            Add your first device
+            {t('devices.addFirst')}
           </Button>
         </div>
       )}
@@ -155,7 +154,7 @@ export default function DevicesPage() {
             >
               <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
                 <Link2 className="w-4 h-4" />
-                Your system
+                {t('devices.yourSystem')}
               </div>
               <div className="space-y-2">
                 <DeviceCard
@@ -192,9 +191,7 @@ export default function DevicesPage() {
 
           {unlinkedCount > 0 && (
             <p className="text-sm text-faint text-center">
-              {unlinkedCount} supply{unlinkedCount === 1 ? '' : ' items'} not linked to a device.
-              Link them from each supply&apos;s Edit screen on the{' '}
-              <Link href="/dashboard" className="text-primary hover:underline">dashboard</Link>.
+              {t(unlinkedCount === 1 ? 'devices.unlinkedOne' : 'devices.unlinkedOther', { count: unlinkedCount })}
             </p>
           )}
         </div>
@@ -209,7 +206,7 @@ export default function DevicesPage() {
         <AddDeviceModal
           userId={userId}
           onClose={() => setShowAdd(false)}
-          onAdded={(d) => { setDevices(prev => [...prev, d]); setShowAdd(false); showToast(`Added ${deviceLabel(d)}.`, 'success') }}
+          onAdded={(d) => { setDevices(prev => [...prev, d]); setShowAdd(false); showToast(t('common.toastAdded', { name: deviceLabel(d) }), 'success') }}
         />
       )}
     </div>
@@ -229,6 +226,7 @@ function DeviceCard({
   bufferDays: number
   onDelete: (id: string) => void
 }) {
+  const { t } = useI18n()
   const Icon = KIND_ICON[device.kind]
   return (
     <motion.div
@@ -244,14 +242,14 @@ function DeviceCard({
           <div>
             <h3 className="text-lg font-bold text-ink leading-tight">{deviceLabel(device)}</h3>
             <p className="text-xs font-semibold text-muted uppercase tracking-widest mt-1">
-              {DEVICE_KIND_LABEL[device.kind]}
+              {t(DEVICE_KIND_KEY[device.kind])}
               {device.brand ? ` · ${device.brand}` : ''}
             </p>
           </div>
         </div>
         <button
           onClick={() => onDelete(device.id)}
-          aria-label={`Remove ${deviceLabel(device)}`}
+          aria-label={t('common.removeAria', { name: deviceLabel(device) })}
           className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:text-urgent hover:bg-urgent-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
         >
           <Trash2 className="w-4 h-4" />
@@ -262,8 +260,7 @@ function DeviceCard({
       <div className="mt-5 border-t border-line pt-4">
         {supplies.length === 0 ? (
           <p className="text-sm text-faint">
-            No supplies linked yet. Open a supply on the dashboard, tap Edit, and choose
-            this device.
+            {t('devices.noSuppliesLinked')}
           </p>
         ) : (
           <ul className="divide-y divide-line">
@@ -279,6 +276,7 @@ function DeviceCard({
 
 /** One linked consumable: name, runway (honest), status, reorder hand-off. */
 function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: number }) {
+  const { t } = useI18n()
   // displayStatus: an unknown rate renders neutral, never an alarm on a guess.
   const status = displayStatus(product, bufferDays)
   const estimated = isRateEstimated(product.usageRatePerDay)
@@ -286,7 +284,7 @@ function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: 
   const tone =
     status === 'out' ? 'urgent' : status === 'low' ? 'caution' : status === 'unset' ? 'neutral' : 'success'
   const label =
-    status === 'out' ? 'Out' : status === 'low' ? 'Reorder soon' : status === 'unset' ? 'Usage not set' : 'Well stocked'
+    status === 'out' ? t('devices.statusOutShort') : status === 'low' ? t('row.reorderSoon') : status === 'unset' ? t('row.unsetLabel') : t('row.wellStocked')
 
   return (
     <li className="flex items-center gap-3 py-3">
@@ -294,8 +292,8 @@ function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: 
         <p className="font-semibold text-ink text-sm truncate">{product.name}</p>
         <p className="text-xs text-muted">
           {status === 'unset'
-            ? `${product.quantity} on hand · set usage to see days left`
-            : `${product.quantity} on hand · ${estimated ? '~' : ''}${product.remainingDays} days left`}
+            ? t('product.summaryUnset', { quantity: product.quantity })
+            : t('devices.onHandDays', { quantity: product.quantity, days: `${estimated ? '~' : ''}${product.remainingDays}` })}
         </p>
       </div>
       <Badge tone={tone}>{label}</Badge>
@@ -303,9 +301,9 @@ function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: 
         href={reorder.url}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Reorder ${product.name}`}
+        aria-label={t('common.reorderAria', { name: product.name })}
         className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:text-primary hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        title={reorder.isDirect ? `Reorder via ${reorder.label}` : 'Find a supplier'}
+        title={reorder.isDirect ? t('common.reorderVia', { label: reorder.label }) : t('common.findSupplier')}
       >
         <ShoppingCart className="w-4 h-4" />
       </a>
@@ -328,6 +326,7 @@ function CareLinkImportSection({
 }) {
   const { updateProduct } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [summary, setSummary] = useState<CareLinkSummary | null>(null)
@@ -360,18 +359,11 @@ function CareLinkImportSection({
       const text = ev.target?.result as string
       const result = parseCareLink(text)
       if (result.format === 'unknown') {
-        setParseError(
-          "This file doesn't look like a CareLink Personal CSV export. " +
-          "Export from carelink.medtronic.com → Reports → Export, then try again."
-        )
+        setParseError(t('carelink.notCsv'))
         return
       }
       if (result.recognized.length === 0) {
-        setParseError(
-          `The file was read (${result.dataRows} rows) but no reservoir, sensor, ` +
-          `or site-change events were found. Make sure you're exporting a date range that ` +
-          `includes pump/CGM activity.`
-        )
+        setParseError(t('carelink.noEvents', { rows: result.dataRows }))
         return
       }
       // Auto-match supply picker defaults
@@ -382,7 +374,7 @@ function CareLinkImportSection({
       setMappings(initial)
       setSummary(result)
     }
-    reader.onerror = () => setParseError('Could not read the file.')
+    reader.onerror = () => setParseError(t('carelink.readError'))
     reader.readAsText(file)
 
     // Reset the input so the same file can be re-selected after a discard
@@ -420,11 +412,11 @@ function CareLinkImportSection({
     onApplied()
 
     if (failed > 0) {
-      showToast(`Applied ${applied} of ${applied + failed} changes. ${failed} didn't save, please try again.`, 'caution')
+      showToast(t('carelink.appliedPartial', { applied, total: applied + failed, failed }), 'caution')
     } else if (applied > 0) {
-      showToast(`Applied ${applied} CareLink change${applied === 1 ? '' : 's'}.`, 'success')
+      showToast(t(applied === 1 ? 'carelink.appliedSuccessOne' : 'carelink.appliedSuccessOther', { count: applied }), 'success')
     } else {
-      showToast('No supplies were updated. All event types were set to Skip.', 'info')
+      showToast(t('carelink.appliedNone'), 'info')
     }
   }
 
@@ -442,11 +434,9 @@ function CareLinkImportSection({
           <Cpu className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-ink">Medtronic CareLink data</h3>
+          <h3 className="text-lg font-bold text-ink">{t('carelink.title')}</h3>
           <p className="text-sm text-muted mt-0.5 leading-relaxed">
-            Medtronic doesn&apos;t offer a live sync API for third-party apps, so this
-            app can&apos;t auto-connect to CareLink. Instead, export your own data and
-            import it here — you&apos;ll always review changes before anything is saved.
+            {t('carelink.intro')}
           </p>
         </div>
       </div>
@@ -455,9 +445,7 @@ function CareLinkImportSection({
       <div className="flex gap-2.5 rounded-2xl bg-surface-2 border border-line p-3.5 text-xs text-muted leading-relaxed">
         <Info className="w-4 h-4 shrink-0 mt-0.5 text-faint" />
         <p>
-          To export: sign in to{' '}
-          <span className="font-semibold text-ink">carelink.medtronic.com</span> →
-          Reports → select a date range → Export CSV. Then upload it below.
+          {t('carelink.howToExport')}
         </p>
       </div>
 
@@ -465,12 +453,12 @@ function CareLinkImportSection({
       {applied && !summary && (
         <div className="flex items-center gap-3 rounded-2xl bg-success-soft border border-success/20 p-4 text-sm text-success font-semibold">
           <CheckCircle className="w-5 h-5 shrink-0" />
-          Changes applied. Your inventory is updated.
+          {t('carelink.appliedSuccess')}
           <button
             onClick={() => setApplied(false)}
             className="ml-auto text-xs underline text-success/70 hover:text-success"
           >
-            Import another
+            {t('carelink.importAnother')}
           </button>
         </div>
       )}
@@ -484,7 +472,7 @@ function CareLinkImportSection({
             accept=".csv,text/csv"
             onChange={handleFile}
             className="sr-only"
-            aria-label="Upload CareLink CSV export"
+            aria-label={t('carelink.chooseFile')}
             id="carelink-file-input"
           />
           <label
@@ -492,7 +480,7 @@ function CareLinkImportSection({
             className="inline-flex items-center gap-2 cursor-pointer bg-surface border border-line hover:border-primary/40 hover:bg-primary/5 text-ink font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors focus-within:ring-2 focus-within:ring-primary"
           >
             <Upload className="w-4 h-4" />
-            Choose CareLink CSV export
+            {t('carelink.chooseFile')}
           </label>
           {parseError && (
             <div className="mt-3 flex gap-2.5 rounded-2xl bg-caution-soft border border-caution/20 p-3.5 text-xs text-caution leading-relaxed">
@@ -507,17 +495,17 @@ function CareLinkImportSection({
       {summary && (
         <div className="space-y-4">
           <p className="text-sm font-semibold text-ink">
-            Review before applying. Nothing is saved until you click &quot;Apply&quot;
+            {t('carelink.reviewNotice')}
           </p>
 
           <div className="rounded-2xl border border-line overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-2 border-b border-line">
-                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Event</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Count</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Date range</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">Apply to supply</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">{t('carelink.colEvent')}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">{t('carelink.colCount')}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">{t('carelink.colDateRange')}</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted text-xs uppercase tracking-wider">{t('carelink.colApplyTo')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -531,7 +519,7 @@ function CareLinkImportSection({
                   return (
                     <tr key={k.kind}>
                       <td className="px-4 py-3 font-semibold text-ink">
-                        {EVENT_KIND_LABEL[k.kind]}
+                        {t(EVENT_KIND_KEY[k.kind])}
                       </td>
                       <td className="px-4 py-3 text-muted tabular-nums">
                         {k.count}
@@ -546,12 +534,12 @@ function CareLinkImportSection({
                           value={selectedId}
                           onChange={e => setMappings(prev => ({ ...prev, [k.kind]: e.target.value }))}
                           className="w-full max-w-[200px] rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                          aria-label={`Supply for ${EVENT_KIND_LABEL[k.kind]}`}
+                          aria-label={`${t('carelink.colApplyTo')}: ${t(EVENT_KIND_KEY[k.kind])}`}
                         >
-                          <option value="">— Skip —</option>
+                          <option value="">— {t('carelink.skip')} —</option>
                           {inventory.map(p => (
                             <option key={p.id} value={p.id}>
-                              {p.name} ({p.quantity} on hand)
+                              {p.name} ({t('common.onHand', { quantity: p.quantity })})
                             </option>
                           ))}
                         </select>
@@ -569,17 +557,16 @@ function CareLinkImportSection({
           </div>
 
           <p className="text-xs text-faint">
-            {summary.skippedRows} row{summary.skippedRows === 1 ? '' : 's'} skipped
-            (glucose readings, boluses, and other events not shown above).
+            {t(summary.skippedRows === 1 ? 'carelink.rowsSkippedOne' : 'carelink.rowsSkippedOther', { count: summary.skippedRows })}
           </p>
 
           <div className="flex gap-3">
             <Button onClick={handleApply} disabled={applying}>
               {applying && <Loader2 className="w-4 h-4 animate-spin" />}
-              {applying ? 'Applying…' : 'Apply changes'}
+              {applying ? t('carelink.applying') : t('carelink.applyChanges')}
             </Button>
             <Button variant="ghost" onClick={handleDiscard} disabled={applying}>
-              Discard
+              {t('carelink.discard')}
             </Button>
           </div>
         </div>
@@ -596,6 +583,7 @@ function AddDeviceModal({
   onClose: () => void
   onAdded: (d: MedicalDevice) => void
 }) {
+  const { t } = useI18n()
   const supabase = createClient()
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const [brand, setBrand] = useState('')
@@ -610,7 +598,7 @@ function AddDeviceModal({
   }
 
   const handleSave = async () => {
-    if (!brand.trim()) { setError('Please choose a preset or enter a brand.'); return }
+    if (!brand.trim()) { setError(t('deviceModal.errBrand')); return }
     setSaving(true); setError(null)
     const { data, error } = await supabase
       .from('medical_devices')
@@ -618,7 +606,7 @@ function AddDeviceModal({
       .select()
       .single()
     setSaving(false)
-    if (error || !data) { setError(error?.message || 'Could not save device.'); return }
+    if (error || !data) { setError(error?.message || t('deviceModal.errGeneric')); return }
     onAdded(rowToDevice(data as MedicalDeviceRow))
   }
 
@@ -635,17 +623,17 @@ function AddDeviceModal({
         className="relative w-full max-w-md bg-surface border border-line rounded-3xl p-7 shadow-lg max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-start justify-between mb-5">
-          <h2 id="add-device-title" className="text-xl font-bold text-ink">Add a device</h2>
+          <h2 id="add-device-title" className="text-xl font-bold text-ink">{t('deviceModal.title')}</h2>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">Quick add</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('deviceModal.quickAdd')}</p>
         <div className="flex flex-wrap gap-2 mb-5">
           {DEVICE_PRESETS.map(p => (
             <button
@@ -665,46 +653,46 @@ function AddDeviceModal({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="dev-brand" className="block text-[11px] font-medium text-muted mb-1.5">Brand</label>
+              <label htmlFor="dev-brand" className="block text-[11px] font-medium text-muted mb-1.5">{t('deviceModal.brand')}</label>
               <input
                 id="dev-brand"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="Medtronic"
+                placeholder={t('deviceModal.brandPlaceholder')}
                 className="w-full min-h-[44px] rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
               />
             </div>
             <div>
-              <label htmlFor="dev-model" className="block text-[11px] font-medium text-muted mb-1.5">Model</label>
+              <label htmlFor="dev-model" className="block text-[11px] font-medium text-muted mb-1.5">{t('deviceModal.model')}</label>
               <input
                 id="dev-model"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="MiniMed 780G"
+                placeholder={t('deviceModal.modelPlaceholder')}
                 className="w-full min-h-[44px] rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
               />
             </div>
           </div>
           <div>
-            <label htmlFor="dev-kind" className="block text-[11px] font-medium text-muted mb-1.5">Type</label>
+            <label htmlFor="dev-kind" className="block text-[11px] font-medium text-muted mb-1.5">{t('apptModal.type')}</label>
             <select
               id="dev-kind"
               value={kind}
               onChange={(e) => setKind(e.target.value as DeviceKind)}
               className="w-full min-h-[44px] rounded-xl border border-line bg-surface px-3 py-2 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
             >
-              {(Object.keys(DEVICE_KIND_LABEL) as DeviceKind[]).map(k => (
-                <option key={k} value={k}>{DEVICE_KIND_LABEL[k]}</option>
+              {(Object.keys(DEVICE_KIND_KEY) as DeviceKind[]).map(k => (
+                <option key={k} value={k}>{t(DEVICE_KIND_KEY[k])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="dev-nickname" className="block text-[11px] font-medium text-muted mb-1.5">Nickname (optional)</label>
+            <label htmlFor="dev-nickname" className="block text-[11px] font-medium text-muted mb-1.5">{t('deviceModal.nickname')}</label>
             <input
               id="dev-nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="e.g. Emma's pump"
+              placeholder={t('deviceModal.nicknamePlaceholder')}
               className="w-full min-h-[44px] rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
             />
           </div>
@@ -719,9 +707,9 @@ function AddDeviceModal({
         <div className="mt-7 flex gap-3">
           <Button onClick={handleSave} disabled={saving} className="flex-1">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Add device
+            {t('devices.addDevice')}
           </Button>
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
         </div>
       </motion.div>
     </div>

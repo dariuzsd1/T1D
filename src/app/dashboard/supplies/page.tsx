@@ -11,11 +11,13 @@ import { displayStatus } from '@/lib/depletion'
 import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
+import { useI18n } from '@/lib/i18n'
 import { Plus } from 'lucide-react'
 
 export default function SuppliesPage() {
   const { inventory, setInventory, updateProduct, removeProduct, safetyBufferDays } = useStore()
   const { showToast } = useToast()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -29,8 +31,8 @@ export default function SuppliesPage() {
   const handleOrder = (label: string) =>
     showToast(
       label === 'find a supplier'
-        ? 'Opening a supplier search in a new tab.'
-        : `Opening ${label}'s reorder page in a new tab.`,
+        ? t('toast.openingSearch')
+        : t('toast.openingSupplier', { label }),
       'info'
     )
 
@@ -81,20 +83,20 @@ export default function SuppliesPage() {
 
       <section className="flex justify-between items-end">
         <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Your supplies</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">All supplies</h1>
+          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('supplies.kicker')}</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">{t('supplies.title')}</h1>
         </div>
         <Link
           href="/scan"
           className="bg-primary hover:bg-primary-deep text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
         >
           <Plus className="w-5 h-5" />
-          Add supply
+          {t('supplies.addSupply')}
         </Link>
       </section>
 
       <p role="status" aria-live="polite" className="sr-only">
-        {loading ? 'Loading supplies…' : ''}
+        {loading ? t('supplies.loadingSr') : ''}
       </p>
 
       {loading && (
@@ -108,20 +110,20 @@ export default function SuppliesPage() {
 
       {error && !loading && (
         <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-          <p className="text-urgent font-semibold mb-2">Failed to load inventory</p>
+          <p className="text-urgent font-semibold mb-2">{t('supplies.errorTitle')}</p>
           <p className="text-urgent/80 text-sm">{error}</p>
         </div>
       )}
 
       {!loading && !error && inventory.length === 0 && (
         <div className="bg-surface border border-line rounded-2xl p-12 text-center space-y-4">
-          <p className="text-muted font-medium">No supplies tracked yet</p>
+          <p className="text-muted font-medium">{t('supplies.emptyTitle')}</p>
           <Link
             href="/scan"
             className="inline-block bg-primary hover:bg-primary-deep text-white px-6 py-3 rounded-xl font-semibold transition-colors"
           >
             <Plus className="w-4 h-4 inline mr-2" />
-            Add your first supply
+            {t('supplies.emptyAdd')}
           </Link>
         </div>
       )}
@@ -130,7 +132,7 @@ export default function SuppliesPage() {
         <section className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-caution rounded-full" />
-            <h2 className="text-base font-semibold tracking-wide text-caution">Reorder soon</h2>
+            <h2 className="text-base font-semibold tracking-wide text-caution">{t('row.reorderSoon')}</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {needsAttention.map((item) => (
@@ -153,7 +155,7 @@ export default function SuppliesPage() {
         <section className="space-y-6 pt-10 border-t border-line">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-faint rounded-full" />
-            <h2 className="text-base font-semibold tracking-wide text-muted">Set usage to track</h2>
+            <h2 className="text-base font-semibold tracking-wide text-muted">{t('supplies.groupSetUsage')}</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {unsetItems.map((item) => (
@@ -174,7 +176,7 @@ export default function SuppliesPage() {
 
       {!loading && stableItems.length > 0 && (
         <section className="space-y-6 pt-10 border-t border-line">
-          <h2 className="text-base font-semibold tracking-wide text-muted">Well stocked</h2>
+          <h2 className="text-base font-semibold tracking-wide text-muted">{t('row.wellStocked')}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {stableItems.map((item) => (
               <ProductCard
@@ -198,7 +200,7 @@ export default function SuppliesPage() {
             product={editingProduct}
             onClose={() => setEditingId(null)}
             onUpdate={updateProduct}
-            onSaved={(name) => showToast(`Updated ${name}.`, 'success')}
+            onSaved={(name) => showToast(t('supplies.updated', { name }), 'success')}
           />
         )}
       </AnimatePresence>

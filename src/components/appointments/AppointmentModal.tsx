@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
-import { type Appointment, APPOINTMENT_TYPES } from '@/lib/appointments'
+import { type Appointment, APPOINTMENT_TYPES, APPOINTMENT_TYPE_KEY } from '@/lib/appointments'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
 
 interface AppointmentModalProps {
   /** Existing appointment to edit, or null to create a new one. */
@@ -25,6 +26,7 @@ function isoToLocalInput(iso: string | null | undefined): string {
 
 /** Accessible add/edit dialog for an appointment. Mirrors PrescriptionModal. */
 export function AppointmentModal({ appointment, onClose, onSave }: AppointmentModalProps) {
+  const { t } = useI18n()
   const [title, setTitle] = useState(appointment?.title ?? '')
   const [appointmentType, setAppointmentType] = useState(appointment?.appointmentType ?? 'endocrinology')
   const [when, setWhen] = useState(isoToLocalInput(appointment?.appointmentDate))
@@ -40,11 +42,11 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
 
   const handleSave = async () => {
     if (!title.trim()) {
-      setError('Please enter a title.')
+      setError(t('apptModal.errTitle'))
       return
     }
     if (!when) {
-      setError('Please choose a date and time.')
+      setError(t('apptModal.errWhen'))
       return
     }
     setSaving(true)
@@ -59,7 +61,7 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
       })
       onClose()
     } catch (err: any) {
-      setError(err?.message || 'Could not save the appointment.')
+      setError(err?.message || t('apptModal.errGeneric'))
     } finally {
       setSaving(false)
     }
@@ -84,11 +86,11 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
       >
         <div className="flex items-start justify-between mb-6">
           <h2 id="appt-title" className="text-xl font-bold text-ink">
-            {appointment ? 'Edit appointment' : 'Add appointment'}
+            {appointment ? t('apptModal.editTitle') : t('apptModal.addTitle')}
           </h2>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
@@ -97,12 +99,12 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="appt-name" className={labelClass}>Title</label>
+            <label htmlFor="appt-name" className={labelClass}>{t('apptModal.titleLabel')}</label>
             <input
               ref={firstFieldRef}
               id="appt-name"
               type="text"
-              placeholder="e.g. Endo check-in with Dr. Lee"
+              placeholder={t('apptModal.titlePlaceholder')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={fieldClass}
@@ -111,20 +113,20 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="appt-type" className={labelClass}>Type</label>
+              <label htmlFor="appt-type" className={labelClass}>{t('apptModal.type')}</label>
               <select
                 id="appt-type"
                 value={appointmentType}
                 onChange={(e) => setAppointmentType(e.target.value)}
                 className={fieldClass}
               >
-                {APPOINTMENT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                {APPOINTMENT_TYPES.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{t(APPOINTMENT_TYPE_KEY[opt.value])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label htmlFor="appt-when" className={labelClass}>Date &amp; time</label>
+              <label htmlFor="appt-when" className={labelClass}>{t('apptModal.dateTime')}</label>
               <input
                 id="appt-when"
                 type="datetime-local"
@@ -136,11 +138,11 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
           </div>
 
           <div>
-            <label htmlFor="appt-notes" className={labelClass}>Notes</label>
+            <label htmlFor="appt-notes" className={labelClass}>{t('rxModal.notes')}</label>
             <textarea
               id="appt-notes"
               rows={2}
-              placeholder="Questions to ask, supplies to bring, lab fasting…"
+              placeholder={t('apptModal.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className={`${fieldClass} resize-none`}
@@ -161,14 +163,14 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
             className="flex-1 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {appointment ? 'Save changes' : 'Add appointment'}
+            {appointment ? t('common.saveChanges') : t('apptModal.addTitle')}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
             className="px-5 py-3 rounded-xl font-semibold text-muted hover:bg-surface-2 transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </motion.div>

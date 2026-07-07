@@ -8,20 +8,22 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import { AppointmentModal } from '@/components/appointments/AppointmentModal'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 import {
   type Appointment,
   type AppointmentTiming,
   rowToAppointment,
   appointmentToRow,
-  appointmentTypeLabel,
+  APPOINTMENT_TYPE_KEY,
   appointmentTiming,
   isMissingTableError,
 } from '@/lib/appointments'
 
-const TIMING_STYLE: Record<AppointmentTiming, { label: string; cls: string }> = {
-  upcoming: { label: 'Upcoming', cls: 'bg-success-soft text-success border-success/20' },
-  soon: { label: 'Soon', cls: 'bg-caution-soft text-caution border-caution/20' },
-  past: { label: 'Past', cls: 'bg-surface-2 text-faint border-line' },
+const TIMING_STYLE: Record<AppointmentTiming, { labelKey: TKey; cls: string }> = {
+  upcoming: { labelKey: 'appointments.timingUpcoming', cls: 'bg-success-soft text-success border-success/20' },
+  soon: { labelKey: 'appointments.timingSoon', cls: 'bg-caution-soft text-caution border-caution/20' },
+  past: { labelKey: 'appointments.timingPast', cls: 'bg-surface-2 text-faint border-line' },
 }
 
 function formatWhen(iso: string): string {
@@ -40,6 +42,7 @@ function formatWhen(iso: string): string {
 export default function AppointmentsPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const [items, setItems] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,7 +79,7 @@ export default function AppointmentsPage() {
 
   const handleSave = async (values: Partial<Appointment>) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.id) throw new Error('You are signed out. Please sign in again.')
+    if (!user?.id) throw new Error(t('common.signedOutError'))
 
     if (editing) {
       const { error: uErr } = await supabase
@@ -84,13 +87,13 @@ export default function AppointmentsPage() {
         .update(appointmentToRow(values))
         .eq('id', editing.id)
       if (uErr) throw new Error(uErr.message)
-      showToast(`Updated ${values.title}.`, 'success')
+      showToast(t('common.toastUpdated', { name: values.title ?? '' }), 'success')
     } else {
       const { error: iErr } = await supabase
         .from('appointments')
         .insert({ ...appointmentToRow(values), user_id: user.id })
       if (iErr) throw new Error(iErr.message)
-      showToast(`Added ${values.title}.`, 'success')
+      showToast(t('common.toastAdded', { name: values.title ?? '' }), 'success')
     }
     await load()
   }
@@ -98,11 +101,11 @@ export default function AppointmentsPage() {
   const handleDelete = async (appt: Appointment) => {
     const { error: dErr } = await supabase.from('appointments').delete().eq('id', appt.id)
     if (dErr) {
-      showToast(`Could not delete: ${dErr.message}`, 'caution')
+      showToast(t('common.toastDeleteFail', { error: dErr.message }), 'caution')
       return
     }
     setItems((prev) => prev.filter((a) => a.id !== appt.id))
-    showToast(`Removed ${appt.title}.`, 'info')
+    showToast(t('common.toastRemoved', { name: appt.title }), 'info')
   }
 
   // Upcoming (incl. soon) first, ascending; then past, most-recent first.
@@ -119,8 +122,8 @@ export default function AppointmentsPage() {
       <BackButton />
       <header className="flex items-end justify-between">
         <div>
-          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">Appointments</h2>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Your visits</h1>
+          <h2 className="text-muted text-xs font-semibold uppercase tracking-[0.2em] mb-2">{t('nav.appointments')}</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">{t('appointments.title')}</h1>
         </div>
         {!needsMigration && (
           <button
@@ -128,7 +131,7 @@ export default function AppointmentsPage() {
             className="bg-primary hover:bg-primary-deep text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             <Plus className="w-5 h-5" />
-            Add
+            {t('nav.add')}
           </button>
         )}
       </header>
@@ -139,19 +142,15 @@ export default function AppointmentsPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Database className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-ink">One quick setup step</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('common.setupStepTitle')}</h3>
           <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-            Appointments are stored in their own secure table. It hasn&apos;t been
-            created in your database yet. Run{' '}
-            <span className="font-semibold text-ink">supabase/setup.sql</span>{' '}
-            in your Supabase SQL editor (see{' '}
-            <span className="font-semibold text-ink">docs/DATABASE_SETUP.md</span>), then reload.
+            {t('appointments.migrationBody')}
           </p>
           <button
             onClick={load}
             className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line text-ink px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> I&apos;ve run it, reload
+            <RefreshCw className="w-4 h-4" /> {t('common.reload')}
           </button>
         </div>
       )}
@@ -164,7 +163,7 @@ export default function AppointmentsPage() {
 
       {error && !needsMigration && (
         <div className="bg-urgent-soft border border-urgent/30 rounded-2xl p-6">
-          <p className="text-urgent font-semibold">Couldn&apos;t load appointments</p>
+          <p className="text-urgent font-semibold">{t('appointments.errorTitle')}</p>
           <p className="text-urgent/80 text-sm mt-1">{error}</p>
         </div>
       )}
@@ -172,12 +171,12 @@ export default function AppointmentsPage() {
       {!loading && !needsMigration && !error && items.length === 0 && (
         <div className="bg-surface border border-line rounded-3xl p-12 text-center space-y-4">
           <Stethoscope className="w-8 h-8 text-faint mx-auto" />
-          <p className="text-muted font-medium">No appointments yet</p>
+          <p className="text-muted font-medium">{t('appointments.emptyTitle')}</p>
           <button
             onClick={() => { setEditing(null); setModalOpen(true) }}
             className="inline-flex items-center gap-2 bg-primary hover:bg-primary-deep text-white px-5 py-3 rounded-xl font-semibold transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add your first appointment
+            <Plus className="w-4 h-4" /> {t('appointments.emptyAdd')}
           </button>
         </div>
       )}
@@ -198,22 +197,22 @@ export default function AppointmentsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-ink truncate">{appt.title}</h3>
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${style.cls}`}>
-                        {style.label}
+                        {t(style.labelKey)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted mt-0.5">{appointmentTypeLabel(appt.appointmentType)}</p>
+                    <p className="text-sm text-muted mt-0.5">{t(APPOINTMENT_TYPE_KEY[appt.appointmentType] ?? 'apptType.other')}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => { setEditing(appt); setModalOpen(true) }}
-                      aria-label={`Edit ${appt.title}`}
+                      aria-label={t('common.editAria', { name: appt.title })}
                       className="rounded-lg p-2 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(appt)}
-                      aria-label={`Delete ${appt.title}`}
+                      aria-label={t('common.deleteAria', { name: appt.title })}
                       className="rounded-lg p-2 text-faint hover:bg-urgent-soft hover:text-urgent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
                     >
                       <Trash2 className="w-4 h-4" />

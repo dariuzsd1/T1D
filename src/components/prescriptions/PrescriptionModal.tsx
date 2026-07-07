@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import type { Prescription } from '@/lib/prescriptions'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
 
 interface PrescriptionModalProps {
   /** Existing prescription to edit, or null to create a new one. */
@@ -16,6 +17,7 @@ interface PrescriptionModalProps {
 /** Accessible add/edit dialog for a prescription (role="dialog", aria-modal,
  *  Escape to close, backdrop click to close). Mirrors EditProductModal. */
 export function PrescriptionModal({ prescription, onClose, onSave }: PrescriptionModalProps) {
+  const { t } = useI18n()
   const [medicationName, setMedicationName] = useState(prescription?.medicationName ?? '')
   const [dosage, setDosage] = useState(prescription?.dosage ?? '')
   const [prescriber, setPrescriber] = useState(prescription?.prescriber ?? '')
@@ -39,7 +41,7 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
 
   const handleSave = async () => {
     if (!medicationName.trim()) {
-      setError('Please enter the medication name.')
+      setError(t('rxModal.errName'))
       return
     }
     setSaving(true)
@@ -59,7 +61,7 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
       })
       onClose()
     } catch (err: any) {
-      setError(err?.message || 'Could not save the prescription.')
+      setError(err?.message || t('rxModal.errGeneric'))
     } finally {
       setSaving(false)
     }
@@ -84,11 +86,11 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
       >
         <div className="flex items-start justify-between mb-6">
           <h2 id="rx-title" className="text-xl font-bold text-ink">
-            {prescription ? 'Edit prescription' : 'Add prescription'}
+            {prescription ? t('rxModal.editTitle') : t('rxModal.addTitle')}
           </h2>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5" />
@@ -97,12 +99,12 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="rx-name" className={labelClass}>Medication</label>
+            <label htmlFor="rx-name" className={labelClass}>{t('rxModal.medication')}</label>
             <input
               ref={firstFieldRef}
               id="rx-name"
               type="text"
-              placeholder="e.g. Insulin aspart (Novolog)"
+              placeholder={t('rxModal.medicationPlaceholder')}
               value={medicationName}
               onChange={(e) => setMedicationName(e.target.value)}
               className={fieldClass}
@@ -111,50 +113,50 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="rx-dosage" className={labelClass}>Dosage</label>
-              <input id="rx-dosage" type="text" placeholder="e.g. 100 U/mL" value={dosage} onChange={(e) => setDosage(e.target.value)} className={fieldClass} />
+              <label htmlFor="rx-dosage" className={labelClass}>{t('rxModal.dosage')}</label>
+              <input id="rx-dosage" type="text" placeholder={t('rxModal.dosagePlaceholder')} value={dosage} onChange={(e) => setDosage(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor="rx-number" className={labelClass}>Rx number</label>
+              <label htmlFor="rx-number" className={labelClass}>{t('rxModal.rxNumber')}</label>
               <input id="rx-number" type="text" value={rxNumber} onChange={(e) => setRxNumber(e.target.value)} className={fieldClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="rx-prescriber" className={labelClass}>Prescriber</label>
-              <input id="rx-prescriber" type="text" placeholder="e.g. Dr. Lee" value={prescriber} onChange={(e) => setPrescriber(e.target.value)} className={fieldClass} />
+              <label htmlFor="rx-prescriber" className={labelClass}>{t('prescriptions.prescriber')}</label>
+              <input id="rx-prescriber" type="text" placeholder={t('rxModal.prescriberPlaceholder')} value={prescriber} onChange={(e) => setPrescriber(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor="rx-pharmacy" className={labelClass}>Pharmacy</label>
+              <label htmlFor="rx-pharmacy" className={labelClass}>{t('prescriptions.pharmacy')}</label>
               <input id="rx-pharmacy" type="text" value={pharmacy} onChange={(e) => setPharmacy(e.target.value)} className={fieldClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="rx-refills" className={labelClass}>Refills left</label>
-              <input id="rx-refills" type="number" min="0" placeholder="e.g. 3" value={refillsRemaining} onChange={(e) => setRefillsRemaining(e.target.value)} className={fieldClass} />
+              <label htmlFor="rx-refills" className={labelClass}>{t('prescriptions.refillsLeft')}</label>
+              <input id="rx-refills" type="number" min="0" placeholder={t('rxModal.refillsPlaceholder')} value={refillsRemaining} onChange={(e) => setRefillsRemaining(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor="rx-last-filled" className={labelClass}>Last filled</label>
+              <label htmlFor="rx-last-filled" className={labelClass}>{t('editModal.lastFilledLabel')}</label>
               <input id="rx-last-filled" type="date" value={lastFilledDate} onChange={(e) => setLastFilledDate(e.target.value)} className={fieldClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="rx-written" className={labelClass}>Written date</label>
+              <label htmlFor="rx-written" className={labelClass}>{t('rxModal.writtenDate')}</label>
               <input id="rx-written" type="date" value={writtenDate} onChange={(e) => setWrittenDate(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor="rx-expiration" className={labelClass}>Expires</label>
+              <label htmlFor="rx-expiration" className={labelClass}>{t('prescriptions.expires')}</label>
               <input id="rx-expiration" type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} className={fieldClass} />
             </div>
           </div>
 
           <div>
-            <label htmlFor="rx-notes" className={labelClass}>Notes</label>
+            <label htmlFor="rx-notes" className={labelClass}>{t('rxModal.notes')}</label>
             <textarea id="rx-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${fieldClass} resize-none`} />
           </div>
         </div>
@@ -172,14 +174,14 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
             className="flex-1 bg-primary hover:bg-primary-deep disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {prescription ? 'Save changes' : 'Add prescription'}
+            {prescription ? t('common.saveChanges') : t('rxModal.addTitle')}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
             className="px-5 py-3 rounded-xl font-semibold text-muted hover:bg-surface-2 transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </motion.div>
