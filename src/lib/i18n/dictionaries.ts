@@ -859,6 +859,8 @@ export const en = {
   // ── quick-action hub (floating +) ──
   'quickActions.podChange': 'Pod change',
   'quickActions.podChangeSub': '−1 pod',
+  'quickActions.siteChange': 'Site change',
+  'quickActions.siteChangeSub': '−1 set',
   'quickActions.scanSupply': 'Scan a supply',
   'quickActions.scanSupplySub': 'Add to inventory',
   'quickActions.logSensor': 'Log sensor',
@@ -1827,6 +1829,8 @@ export const fr: Record<TKey, string> = {
   // ── quick-action hub (floating +) ──
   'quickActions.podChange': 'Changement de pod',
   'quickActions.podChangeSub': '−1 pod',
+  'quickActions.siteChange': 'Changement de site',
+  'quickActions.siteChangeSub': '−1 set',
   'quickActions.scanSupply': 'Scanner une fourniture',
   'quickActions.scanSupplySub': "Ajouter à l'inventaire",
   'quickActions.logSensor': 'Enregistrer un capteur',
@@ -2818,6 +2822,8 @@ export const es: Record<TKey, string> = {
   // ── quick-action hub (floating +) ──
   'quickActions.podChange': 'Cambio de pod',
   'quickActions.podChangeSub': '−1 pod',
+  'quickActions.siteChange': 'Cambio de sitio',
+  'quickActions.siteChangeSub': '−1 set',
   'quickActions.scanSupply': 'Escanear un suministro',
   'quickActions.scanSupplySub': 'Añadir al inventario',
   'quickActions.logSensor': 'Registrar sensor',

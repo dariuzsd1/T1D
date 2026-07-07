@@ -6,9 +6,16 @@ import { useStore } from '@/lib/store'
 import { useToast } from '@/components/ui/Toast'
 import { logActivity } from '@/lib/activity'
 import { useI18n } from '@/lib/i18n'
+import { deriveDepletionActions, type QuickDepleteKind } from '@/lib/quickActions'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+
+const KIND_COLOR: Record<QuickDepleteKind, string> = {
+  pod: 'bg-teal',
+  site: 'bg-teal',
+  sensor: 'bg-primary-deep',
+}
 
 export function QuickActionHub() {
   const [isOpen, setIsOpen] = useState(false)
@@ -16,11 +23,12 @@ export function QuickActionHub() {
   const { showToast } = useToast()
   const { t } = useI18n()
 
-  const handleManualDeplete = async (brand: string, label: string) => {
-    const item = inventory.find((p) => p.brand?.toLowerCase().includes(brand.toLowerCase()))
-    if (!item) {
-      showToast(t('quickActions.noneYet', { label }), 'info')
-    } else if (item.quantity > 0) {
+  // Depletion targets come from what the user actually stocks (any brand), not
+  // hardcoded Insulet/Dexcom. The action already names a specific inventory item.
+  const handleDeplete = async (productId: string) => {
+    const item = inventory.find((p) => p.id === productId)
+    if (!item) return
+    if (item.quantity > 0) {
       try {
         await updateProduct(item.id, { quantity: item.quantity - 1 })
         void logActivity('supply_used', item.name)
@@ -35,29 +43,26 @@ export function QuickActionHub() {
     setIsOpen(false)
   }
 
-  const actions = [
-    {
-      label: t('quickActions.podChange'),
-      sub: t('quickActions.podChangeSub'),
-      icon: RefreshCcw,
-      onClick: () => handleManualDeplete('Insulet', 'pods'),
-      color: 'bg-teal',
-    },
-    {
-      label: t('quickActions.scanSupply'),
-      sub: t('quickActions.scanSupplySub'),
-      icon: Scan,
-      href: '/scan',
-      color: 'bg-primary',
-    },
-    {
-      label: t('quickActions.logSensor'),
-      sub: t('quickActions.logSensorSub'),
-      icon: Package,
-      onClick: () => handleManualDeplete('Dexcom', 'sensors'),
-      color: 'bg-primary-deep',
-    },
-  ]
+  const scanAction = {
+    label: t('quickActions.scanSupply'),
+    sub: t('quickActions.scanSupplySub'),
+    icon: Scan,
+    href: '/scan' as const,
+    color: 'bg-primary',
+    onClick: undefined,
+  }
+
+  const depletionActions = deriveDepletionActions(inventory).map((a) => ({
+    label: t(a.labelKey),
+    sub: t(a.subKey),
+    icon: a.kind === 'sensor' ? Package : RefreshCcw,
+    href: undefined,
+    color: KIND_COLOR[a.kind],
+    onClick: () => handleDeplete(a.productId),
+  }))
+
+  // Scan is always available; log-use actions appear for the consumables in stock.
+  const actions = [...depletionActions, scanAction]
 
   return (
     <div className="print:hidden fixed bottom-20 right-5 lg:bottom-8 lg:right-8 z-[110]">
