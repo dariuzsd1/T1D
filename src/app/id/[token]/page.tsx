@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import type { PublicMedicalId } from '@/lib/medicalId'
-import { en, fr } from '@/lib/i18n/dictionaries'
+import { en, fr, es } from '@/lib/i18n/dictionaries'
 import { LANG_COOKIE, normalizeLang } from '@/lib/i18n/shared'
 import { HeartPulse, Phone, ShieldAlert } from 'lucide-react'
 
@@ -24,7 +24,7 @@ export default async function PublicMedicalIdPage({
   // read straight from the cookie like the root layout does. Defaults to English.
   const cookieStore = await cookies()
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value)
-  const dict = lang === 'fr' ? fr : en
+  const dict = lang === 'fr' ? fr : lang === 'es' ? es : en
   const tr = (key: keyof typeof en) => dict[key] ?? en[key]
 
   let card: PublicMedicalId | null = null
