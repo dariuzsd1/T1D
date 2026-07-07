@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Pill, Plus, Pencil, Trash2, Database, CalendarClock, RefreshCw, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { BackButton } from '@/components/ui/BackButton'
 import { PrescriptionModal } from '@/components/prescriptions/PrescriptionModal'
 import { isRateEstimated } from '@/lib/depletion'
@@ -37,6 +38,7 @@ export default function PrescriptionsPage() {
   // is a dependency of the load callback — a new client every render would loop.
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const { t } = useI18n()
 
   const [items, setItems] = useState<Prescription[]>([])
@@ -101,6 +103,13 @@ export default function PrescriptionsPage() {
   }
 
   const handleDelete = async (rx: Prescription) => {
+    const ok = await confirm({
+      title: t('confirm.deleteTitle', { name: rx.medicationName }),
+      body: t('confirm.deleteRxBody', { name: rx.medicationName }),
+      confirmLabel: t('confirm.deleteBtn'),
+      tone: 'danger',
+    })
+    if (!ok) return
     const { error: dErr } = await supabase.from('prescriptions').delete().eq('id', rx.id)
     if (dErr) {
       showToast(t('common.toastDeleteFail', { error: dErr.message }), 'caution')

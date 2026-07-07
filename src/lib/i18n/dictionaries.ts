@@ -912,6 +912,62 @@ export const en = {
   'nav.closeMenu': 'Close menu',
   'nav.moreNavAria': 'More navigation options',
   'common.dismissNotification': 'Dismiss notification',
+
+  // ── confirm dialogs (before a destructive delete) ──
+  'confirm.deleteBtn': 'Delete',
+  'confirm.removeBtn': 'Remove',
+  'confirm.deleteTitle': 'Delete {name}?',
+  'confirm.removeTitle': 'Remove {name}?',
+  'confirm.deleteSupplyBody': 'This permanently removes {name} from your supplies. You cannot undo this.',
+  'confirm.deleteRxBody': 'This permanently deletes the prescription for {name}. You cannot undo this.',
+  'confirm.deleteApptBody': 'This permanently deletes this appointment. You cannot undo this.',
+  'confirm.removeDeviceBody': 'This removes {name}. Its linked supplies are kept. You cannot undo this.',
+
+  // ── camera (shared by barcode scanner + photo capture) ──
+  'camera.starting': 'Starting camera…',
+
+  // ── barcode scanner ──
+  'barcodeScanner.title': 'Scan a barcode',
+  'barcodeScanner.closeAria': 'Close scanner',
+  'barcodeScanner.denied': 'Camera access was blocked. Allow it in your browser settings, or enter the supply manually.',
+  'barcodeScanner.noCamera': 'No camera was found on this device. You can still add the supply manually.',
+  'barcodeScanner.error': 'Could not start the camera. You can still add the supply manually.',
+  'barcodeScanner.unsupported': 'Scanning needs a camera and a secure (https) connection. You can enter the supply by hand instead.',
+  'barcodeScanner.hint': 'Hold the barcode on the box or pharmacy label inside the frame.',
+  'barcodeScanner.enterManually': 'Enter manually instead',
+
+  // ── photo capture ──
+  'cameraCapture.title': 'Take a photo',
+  'cameraCapture.closeAria': 'Close camera',
+  'cameraCapture.denied': 'Camera access was blocked. Allow it in your browser settings, or use "Add photo" to choose a file.',
+  'cameraCapture.noCamera': 'No camera was found. Use "Add photo" to choose a file instead.',
+  'cameraCapture.error': 'Could not start the camera. Use "Add photo" to choose a file instead.',
+  'cameraCapture.unsupported': 'Your browser cannot open the camera here. Use "Add photo" to choose a file instead.',
+  'cameraCapture.hint': 'Fill the frame with the barcode, then capture.',
+  'cameraCapture.capture': 'Capture photo',
+  'cameraCapture.close': 'Close',
+
+  // ── catalog browser ──
+  'catalog.browseTitle': 'Browse catalog',
+  'catalog.browseAria': 'Browse supply catalog',
+  'catalog.backToCategories': 'Back to categories',
+  'catalog.closeAria': 'Close catalog',
+  'catalog.searchPlaceholder': 'Search e.g. Omnipod, G7, Libre…',
+  'catalog.searchAria': 'Search the supply catalog',
+  'catalog.noMatches': 'No matches for “{query}”. Try fewer letters, or browse by category.',
+  'catalog.productsCount': '{count} products',
+  'catalog.perBox': '{count} per box',
+  'catalogCat.cgmSensor': 'CGM sensors',
+  'catalogCat.patchPump': 'Pumps & pods',
+  'catalogCat.infusionSet': 'Infusion sets',
+  'catalogCat.mdiSupply': 'Pens & needles',
+  'catalogCat.insulin': 'Insulin',
+  'catalogCat.bgSupply': 'Blood glucose',
+  'catalogCat.ketoneSupply': 'Ketone testing',
+  'catalogCat.glucagon': 'Emergency glucagon',
+  'catalogCat.hypoTreatment': 'Hypo treatments',
+  'catalogCat.skinCare': 'Skin care',
+  'catalogCat.other': 'Other supplies',
 } as const
 
 export type TKey = keyof typeof en
@@ -1823,6 +1879,62 @@ export const fr: Record<TKey, string> = {
   'nav.closeMenu': 'Fermer le menu',
   'nav.moreNavAria': 'Autres options de navigation',
   'common.dismissNotification': 'Ignorer la notification',
+
+  // ── confirm dialogs (before a destructive delete) ──
+  'confirm.deleteBtn': 'Supprimer',
+  'confirm.removeBtn': 'Retirer',
+  'confirm.deleteTitle': 'Supprimer {name} ?',
+  'confirm.removeTitle': 'Retirer {name} ?',
+  'confirm.deleteSupplyBody': 'Cela supprime définitivement {name} de vos fournitures. Vous ne pourrez pas annuler.',
+  'confirm.deleteRxBody': "Cela supprime définitivement l'ordonnance de {name}. Vous ne pourrez pas annuler.",
+  'confirm.deleteApptBody': 'Cela supprime définitivement ce rendez-vous. Vous ne pourrez pas annuler.',
+  'confirm.removeDeviceBody': 'Cela retire {name}. Ses fournitures liées sont conservées. Vous ne pourrez pas annuler.',
+
+  // ── camera (shared by barcode scanner + photo capture) ──
+  'camera.starting': "Démarrage de la caméra…",
+
+  // ── barcode scanner ──
+  'barcodeScanner.title': 'Scanner un code-barres',
+  'barcodeScanner.closeAria': 'Fermer le scanner',
+  'barcodeScanner.denied': "L'accès à la caméra a été bloqué. Autorisez-le dans les paramètres de votre navigateur, ou saisissez la fourniture manuellement.",
+  'barcodeScanner.noCamera': "Aucune caméra n'a été trouvée sur cet appareil. Vous pouvez quand même ajouter la fourniture manuellement.",
+  'barcodeScanner.error': "Impossible de démarrer la caméra. Vous pouvez quand même ajouter la fourniture manuellement.",
+  'barcodeScanner.unsupported': "Le scan nécessite une caméra et une connexion sécurisée (https). Vous pouvez saisir la fourniture à la main.",
+  'barcodeScanner.hint': 'Maintenez le code-barres de la boîte ou de l\'étiquette de la pharmacie dans le cadre.',
+  'barcodeScanner.enterManually': 'Saisir manuellement',
+
+  // ── photo capture ──
+  'cameraCapture.title': 'Prendre une photo',
+  'cameraCapture.closeAria': 'Fermer la caméra',
+  'cameraCapture.denied': "L'accès à la caméra a été bloqué. Autorisez-le dans les paramètres de votre navigateur, ou utilisez « Ajouter une photo » pour choisir un fichier.",
+  'cameraCapture.noCamera': "Aucune caméra n'a été trouvée. Utilisez « Ajouter une photo » pour choisir un fichier.",
+  'cameraCapture.error': "Impossible de démarrer la caméra. Utilisez « Ajouter une photo » pour choisir un fichier.",
+  'cameraCapture.unsupported': "Votre navigateur ne peut pas ouvrir la caméra ici. Utilisez « Ajouter une photo » pour choisir un fichier.",
+  'cameraCapture.hint': 'Remplissez le cadre avec le code-barres, puis capturez.',
+  'cameraCapture.capture': 'Capturer la photo',
+  'cameraCapture.close': 'Fermer',
+
+  // ── catalog browser ──
+  'catalog.browseTitle': 'Parcourir le catalogue',
+  'catalog.browseAria': 'Parcourir le catalogue de fournitures',
+  'catalog.backToCategories': 'Retour aux catégories',
+  'catalog.closeAria': 'Fermer le catalogue',
+  'catalog.searchPlaceholder': 'Rechercher, par ex. Omnipod, G7, Libre…',
+  'catalog.searchAria': 'Rechercher dans le catalogue de fournitures',
+  'catalog.noMatches': "Aucun résultat pour « {query} ». Essayez moins de lettres, ou parcourez par catégorie.",
+  'catalog.productsCount': '{count} produits',
+  'catalog.perBox': '{count} par boîte',
+  'catalogCat.cgmSensor': 'Capteurs CGM',
+  'catalogCat.patchPump': 'Pompes et pods',
+  'catalogCat.infusionSet': 'Sets de perfusion',
+  'catalogCat.mdiSupply': 'Stylos et aiguilles',
+  'catalogCat.insulin': 'Insuline',
+  'catalogCat.bgSupply': 'Glycémie',
+  'catalogCat.ketoneSupply': 'Test de cétones',
+  'catalogCat.glucagon': "Glucagon d'urgence",
+  'catalogCat.hypoTreatment': 'Traitements de l\'hypo',
+  'catalogCat.skinCare': 'Soin de la peau',
+  'catalogCat.other': 'Autres fournitures',
 }
 
 export const es: Record<TKey, string> = {
@@ -2760,4 +2872,60 @@ export const es: Record<TKey, string> = {
   'nav.closeMenu': 'Cerrar menú',
   'nav.moreNavAria': 'Más opciones de navegación',
   'common.dismissNotification': 'Descartar notificación',
+
+  // ── confirm dialogs (before a destructive delete) ──
+  'confirm.deleteBtn': 'Eliminar',
+  'confirm.removeBtn': 'Quitar',
+  'confirm.deleteTitle': '¿Eliminar {name}?',
+  'confirm.removeTitle': '¿Quitar {name}?',
+  'confirm.deleteSupplyBody': 'Esto elimina permanentemente {name} de tus suministros. No podrás deshacerlo.',
+  'confirm.deleteRxBody': 'Esto elimina permanentemente la receta de {name}. No podrás deshacerlo.',
+  'confirm.deleteApptBody': 'Esto elimina permanentemente esta cita. No podrás deshacerlo.',
+  'confirm.removeDeviceBody': 'Esto quita {name}. Sus suministros vinculados se conservan. No podrás deshacerlo.',
+
+  // ── camera (shared by barcode scanner + photo capture) ──
+  'camera.starting': 'Iniciando la cámara…',
+
+  // ── barcode scanner ──
+  'barcodeScanner.title': 'Escanear un código de barras',
+  'barcodeScanner.closeAria': 'Cerrar el escáner',
+  'barcodeScanner.denied': 'Se bloqueó el acceso a la cámara. Permítelo en la configuración de tu navegador, o ingresa el suministro manualmente.',
+  'barcodeScanner.noCamera': 'No se encontró ninguna cámara en este dispositivo. Aún puedes añadir el suministro manualmente.',
+  'barcodeScanner.error': 'No se pudo iniciar la cámara. Aún puedes añadir el suministro manualmente.',
+  'barcodeScanner.unsupported': 'El escaneo necesita una cámara y una conexión segura (https). Puedes ingresar el suministro a mano.',
+  'barcodeScanner.hint': 'Mantén el código de barras de la caja o la etiqueta de la farmacia dentro del recuadro.',
+  'barcodeScanner.enterManually': 'Ingresar manualmente',
+
+  // ── photo capture ──
+  'cameraCapture.title': 'Tomar una foto',
+  'cameraCapture.closeAria': 'Cerrar la cámara',
+  'cameraCapture.denied': 'Se bloqueó el acceso a la cámara. Permítelo en la configuración de tu navegador, o usa «Añadir foto» para elegir un archivo.',
+  'cameraCapture.noCamera': 'No se encontró ninguna cámara. Usa «Añadir foto» para elegir un archivo.',
+  'cameraCapture.error': 'No se pudo iniciar la cámara. Usa «Añadir foto» para elegir un archivo.',
+  'cameraCapture.unsupported': 'Tu navegador no puede abrir la cámara aquí. Usa «Añadir foto» para elegir un archivo.',
+  'cameraCapture.hint': 'Llena el recuadro con el código de barras, luego captura.',
+  'cameraCapture.capture': 'Capturar foto',
+  'cameraCapture.close': 'Cerrar',
+
+  // ── catalog browser ──
+  'catalog.browseTitle': 'Explorar el catálogo',
+  'catalog.browseAria': 'Explorar el catálogo de suministros',
+  'catalog.backToCategories': 'Volver a las categorías',
+  'catalog.closeAria': 'Cerrar el catálogo',
+  'catalog.searchPlaceholder': 'Busca p. ej. Omnipod, G7, Libre…',
+  'catalog.searchAria': 'Buscar en el catálogo de suministros',
+  'catalog.noMatches': 'Sin resultados para «{query}». Prueba con menos letras, o explora por categoría.',
+  'catalog.productsCount': '{count} productos',
+  'catalog.perBox': '{count} por caja',
+  'catalogCat.cgmSensor': 'Sensores MCG',
+  'catalogCat.patchPump': 'Bombas y pods',
+  'catalogCat.infusionSet': 'Sets de infusión',
+  'catalogCat.mdiSupply': 'Plumas y agujas',
+  'catalogCat.insulin': 'Insulina',
+  'catalogCat.bgSupply': 'Glucosa en sangre',
+  'catalogCat.ketoneSupply': 'Prueba de cetonas',
+  'catalogCat.glucagon': 'Glucagón de emergencia',
+  'catalogCat.hypoTreatment': 'Tratamientos para la hipo',
+  'catalogCat.skinCare': 'Cuidado de la piel',
+  'catalogCat.other': 'Otros suministros',
 }

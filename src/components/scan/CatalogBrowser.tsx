@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
+import { useI18n } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/dictionaries'
 
 export interface CatalogItem {
   product_name: string
@@ -35,27 +37,28 @@ interface CatalogGroup {
 }
 
 interface CategoryMeta {
-  label: string
+  /** null for an unknown category, which falls back to the raw category string. */
+  labelKey: TKey | null
   Icon: LucideIcon
   iconClass: string
 }
 
 const CATEGORY_META: Record<string, CategoryMeta> = {
-  cgm_sensor:     { label: 'CGM Sensors',         Icon: Activity,     iconClass: 'text-primary bg-primary/10' },
-  patch_pump:     { label: 'Pumps & Pods',         Icon: Zap,          iconClass: 'text-teal bg-teal/10' },
-  infusion_set:   { label: 'Infusion Sets',        Icon: Droplets,     iconClass: 'text-sky-500 bg-sky-50' },
-  mdi_supply:     { label: 'Pens & Needles',       Icon: Pen,          iconClass: 'text-violet-500 bg-violet-50' },
-  insulin:        { label: 'Insulin',              Icon: Droplet,      iconClass: 'text-cyan-600 bg-cyan-50' },
-  bg_supply:      { label: 'Blood Glucose',        Icon: TestTube2,    iconClass: 'text-rose-500 bg-rose-50' },
-  ketone_supply:  { label: 'Ketone Testing',       Icon: FlaskConical, iconClass: 'text-amber-500 bg-amber-50' },
-  glucagon:       { label: 'Emergency Glucagon',   Icon: AlertCircle,  iconClass: 'text-urgent bg-urgent-soft' },
-  hypo_treatment: { label: 'Hypo Treatments',      Icon: Heart,        iconClass: 'text-pink-500 bg-pink-50' },
-  skin_care:      { label: 'Skin Care',            Icon: Shield,       iconClass: 'text-success bg-success-soft' },
-  other:          { label: 'Other Supplies',       Icon: Package,      iconClass: 'text-muted bg-surface-2' },
+  cgm_sensor:     { labelKey: 'catalogCat.cgmSensor',     Icon: Activity,     iconClass: 'text-primary bg-primary/10' },
+  patch_pump:     { labelKey: 'catalogCat.patchPump',     Icon: Zap,          iconClass: 'text-teal bg-teal/10' },
+  infusion_set:   { labelKey: 'catalogCat.infusionSet',   Icon: Droplets,     iconClass: 'text-sky-500 bg-sky-50' },
+  mdi_supply:     { labelKey: 'catalogCat.mdiSupply',     Icon: Pen,          iconClass: 'text-violet-500 bg-violet-50' },
+  insulin:        { labelKey: 'catalogCat.insulin',       Icon: Droplet,      iconClass: 'text-cyan-600 bg-cyan-50' },
+  bg_supply:      { labelKey: 'catalogCat.bgSupply',      Icon: TestTube2,    iconClass: 'text-rose-500 bg-rose-50' },
+  ketone_supply:  { labelKey: 'catalogCat.ketoneSupply',  Icon: FlaskConical, iconClass: 'text-amber-500 bg-amber-50' },
+  glucagon:       { labelKey: 'catalogCat.glucagon',      Icon: AlertCircle,  iconClass: 'text-urgent bg-urgent-soft' },
+  hypo_treatment: { labelKey: 'catalogCat.hypoTreatment', Icon: Heart,        iconClass: 'text-pink-500 bg-pink-50' },
+  skin_care:      { labelKey: 'catalogCat.skinCare',      Icon: Shield,       iconClass: 'text-success bg-success-soft' },
+  other:          { labelKey: 'catalogCat.other',         Icon: Package,      iconClass: 'text-muted bg-surface-2' },
 }
 
 function getMeta(category: string): CategoryMeta {
-  return CATEGORY_META[category] ?? { label: category, Icon: Package, iconClass: 'text-muted bg-surface-2' }
+  return CATEGORY_META[category] ?? { labelKey: null, Icon: Package, iconClass: 'text-muted bg-surface-2' }
 }
 
 interface Props {
@@ -64,6 +67,7 @@ interface Props {
 }
 
 export function CatalogBrowser({ onSelect, onClose }: Props) {
+  const { t } = useI18n()
   const [groups, setGroups] = useState<CatalogGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [activeGroup, setActiveGroup] = useState<CatalogGroup | null>(null)
@@ -84,7 +88,13 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
       .finally(() => setLoading(false))
   }, [])
 
+  // Resolve a category's display label: a known key is translated; an unknown
+  // category falls back to its raw id (better than an empty label).
+  const metaLabel = (meta: CategoryMeta, category: string) =>
+    meta.labelKey ? t(meta.labelKey) : category
+
   const activeMeta = activeGroup ? getMeta(activeGroup.category) : null
+  const activeLabel = activeGroup && activeMeta ? metaLabel(activeMeta, activeGroup.category) : ''
 
   // Type-to-find across the whole catalog, matching name, brand, and aliases.
   // A non-empty query overrides the category grid with a flat result list, so the
@@ -110,7 +120,7 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
         <p className="font-semibold text-ink text-sm leading-snug">{product.product_name}</p>
         {product.brand && <p className="text-muted text-xs mt-0.5">{product.brand}</p>}
         {product.units_per_box != null && (
-          <p className="text-faint text-xs">{product.units_per_box} per box</p>
+          <p className="text-faint text-xs">{t('catalog.perBox', { count: product.units_per_box })}</p>
         )}
       </div>
       <ChevronRight className="w-4 h-4 text-faint shrink-0" />
@@ -122,7 +132,7 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={activeGroup ? activeMeta!.label : 'Browse supply catalog'}
+      aria-label={activeGroup ? activeLabel : t('catalog.browseAria')}
       tabIndex={-1}
       className="fixed inset-0 z-50 bg-canvas flex flex-col focus:outline-none"
     >
@@ -131,7 +141,7 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
         {activeGroup ? (
           <button
             onClick={() => setActiveGroup(null)}
-            aria-label="Back to categories"
+            aria-label={t('catalog.backToCategories')}
             className="p-2 -ml-1 rounded-xl hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronLeft className="w-5 h-5 text-ink" />
@@ -140,11 +150,11 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
           <div className="w-9 shrink-0" />
         )}
         <h2 className="flex-1 text-base font-semibold text-ink text-center truncate">
-          {activeGroup ? activeMeta!.label : 'Browse catalog'}
+          {activeGroup ? activeLabel : t('catalog.browseTitle')}
         </h2>
         <button
           onClick={handleClose}
-          aria-label="Close catalog"
+          aria-label={t('catalog.closeAria')}
           className="p-2 -mr-1 rounded-xl hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <X className="w-5 h-5 text-ink" />
@@ -160,10 +170,10 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
               type="search"
               inputMode="search"
               autoFocus
-              placeholder="Search e.g. Omnipod, G7, Libre…"
+              placeholder={t('catalog.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search the supply catalog"
+              aria-label={t('catalog.searchAria')}
               className="w-full bg-surface border border-line rounded-xl pl-10 pr-3 py-3 font-medium text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
             />
           </div>
@@ -189,7 +199,7 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
               >
                 {searchResults.length === 0 ? (
                   <p className="text-center text-sm text-muted px-6 py-16">
-                    No matches for “{query}”. Try fewer letters, or browse by category.
+                    {t('catalog.noMatches', { query })}
                   </p>
                 ) : (
                   searchResults.map((product, i) => renderProduct(product, i))
@@ -205,7 +215,8 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
                 className="grid grid-cols-2 gap-3 p-4"
               >
                 {groups.map(group => {
-                  const { label, Icon, iconClass } = getMeta(group.category)
+                  const meta = getMeta(group.category)
+                  const { Icon, iconClass } = meta
                   return (
                     <button
                       key={group.category}
@@ -215,8 +226,8 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${iconClass}`}>
                         <Icon className="w-5 h-5" />
                       </div>
-                      <p className="font-semibold text-ink text-sm leading-tight">{label}</p>
-                      <p className="text-faint text-xs mt-0.5">{group.products.length} products</p>
+                      <p className="font-semibold text-ink text-sm leading-tight">{metaLabel(meta, group.category)}</p>
+                      <p className="text-faint text-xs mt-0.5">{t('catalog.productsCount', { count: group.products.length })}</p>
                     </button>
                   )
                 })}
