@@ -28,7 +28,7 @@ export function PreferenceSync() {
   // 1. Seed once from the profile (profile wins on a fresh device).
   useEffect(() => {
     if (loading || !profile || seeded.current) return
-    if (profile.locale === 'en' || profile.locale === 'fr') {
+    if (profile.locale === 'en' || profile.locale === 'fr' || profile.locale === 'es') {
       if (profile.locale !== lang) setLang(profile.locale as Lang)
     }
     if (typeof profile.safetyBufferDays === 'number' && profile.safetyBufferDays > 0) {

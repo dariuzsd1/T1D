@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import { en, fr, type TKey } from './dictionaries'
+import { en, fr, es, type TKey } from './dictionaries'
 import { type Lang, LANG_COOKIE, normalizeLang } from './shared'
 
 export type { Lang } from './shared'
@@ -9,7 +9,7 @@ export { LANG_COOKIE, normalizeLang } from './shared'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
 
-const DICTS: Record<Lang, Record<TKey, string>> = { en, fr }
+const DICTS: Record<Lang, Record<TKey, string>> = { en, fr, es }
 
 interface I18nValue {
   lang: Lang

@@ -6,11 +6,12 @@ import { cn } from '@/lib/utils'
 const LANGS: { code: Lang; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'fr', label: 'FR' },
+  { code: 'es', label: 'ES' },
 ]
 
 /**
- * Compact English/French switcher. Writes the choice to a cookie (via the
- * provider) so it persists and is read server-side on the next load.
+ * Compact English/French/Spanish switcher. Writes the choice to a cookie (via
+ * the provider) so it persists and is read server-side on the next load.
  */
 export function LanguageToggle({ className }: { className?: string }) {
   const { lang, setLang, t } = useI18n()
