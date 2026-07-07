@@ -42,11 +42,16 @@ async function messagingIfSupported(): Promise<Messaging | null> {
  * device token — or null if the user declined or the browser can't do push.
  */
 export async function registerAndGetToken(): Promise<string | null> {
-  const messaging = await messagingIfSupported()
-  if (!messaging) return null
-
+  // Ask permission FIRST, while the click's user activation is still fresh.
+  // Browsers suppress the permission popup if it isn't requested promptly after
+  // a user gesture — doing the async imports/support checks before this is what
+  // made the prompt silently never appear (button stuck on "Enabling…").
+  if (typeof Notification === 'undefined') return null
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return null
+
+  const messaging = await messagingIfSupported()
+  if (!messaging) return null
 
   // Register our SW explicitly so getToken binds to the right registration.
   const registration = await navigator.serviceWorker.register(

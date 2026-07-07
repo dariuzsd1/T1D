@@ -899,6 +899,7 @@ export const en = {
   'push.saveDeviceFail': "Couldn't save your device: {error}",
   'push.enabledToast': 'Notifications are on for this device.',
   'push.enableFail': 'Could not enable notifications.',
+  'push.timeout': "That took too long. Make sure notifications are allowed for this site, then try again.",
   'push.migrationBody': 'Almost there. The table that stores your device needs to be created once. Run supabase/setup.sql in your Supabase dashboard (see docs/DATABASE_SETUP.md), then reload and try again.',
   'push.unsupportedBody': "This browser doesn't support push notifications. Try Chrome or Safari (on a phone, add the app to your home screen first).",
   'push.deniedBody': 'Notifications are blocked. Turn them on for this site in your browser settings, then reload this page.',
@@ -1866,6 +1867,7 @@ export const fr: Record<TKey, string> = {
   'push.saveDeviceFail': 'Impossible d’enregistrer votre appareil : {error}',
   'push.enabledToast': 'Les notifications sont activées sur cet appareil.',
   'push.enableFail': 'Impossible d’activer les notifications.',
+  'push.timeout': "Cela a pris trop de temps. Assurez-vous que les notifications sont autorisées pour ce site, puis réessayez.",
   'push.migrationBody': "Presque prêt. La table qui stocke votre appareil doit d'abord être créée. Exécutez supabase/setup.sql dans votre tableau de bord Supabase (voir docs/DATABASE_SETUP.md), puis actualisez et réessayez.",
   'push.unsupportedBody': "Ce navigateur ne prend pas en charge les notifications push. Essayez Chrome ou Safari (sur téléphone, ajoutez d'abord l'application à l'écran d'accueil).",
   'push.deniedBody': 'Les notifications sont bloquées. Activez-les pour ce site dans les paramètres de votre navigateur, puis actualisez cette page.',
@@ -2856,6 +2858,7 @@ export const es: Record<TKey, string> = {
   'push.saveDeviceFail': "No se pudo guardar tu dispositivo: {error}",
   'push.enabledToast': 'Las notificaciones están activadas en este dispositivo.',
   'push.enableFail': 'No se pudieron activar las notificaciones.',
+  'push.timeout': 'Esto tardó demasiado. Asegúrate de que las notificaciones estén permitidas para este sitio, luego inténtalo de nuevo.',
   'push.migrationBody':
     'Ya casi. La tabla que guarda tu dispositivo debe crearse una vez. Ejecuta supabase/setup.sql en tu panel de Supabase (ver docs/DATABASE_SETUP.md), luego recarga e inténtalo de nuevo.',
   'push.unsupportedBody':

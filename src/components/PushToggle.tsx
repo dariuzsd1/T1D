@@ -55,7 +55,14 @@ export function PushToggle() {
   const enable = async () => {
     setState('working')
     try {
-      const token = await registerAndGetToken()
+      // Never spin forever: if the browser prompt is ignored or Google's token
+      // request stalls, give up after 20s and let the user try again.
+      const token = await Promise.race([
+        registerAndGetToken(),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error(t('push.timeout'))), 20_000)
+        ),
+      ])
       if (!token) {
         const blocked = Notification.permission === 'denied'
         setState(blocked ? 'denied' : 'default')
