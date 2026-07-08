@@ -4,6 +4,7 @@ import {
   nextEligibleRefillDate,
   daysUntilRefillEligible,
   assessRefill,
+  refillRuleFrom,
 } from './refill'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -33,6 +34,59 @@ describe('nextEligibleRefillDate', () => {
     const eligible = nextEligibleRefillDate(filled, rule40)!
     // 40 * 0.75 = 30 days after 2026-06-01 → 2026-07-01
     const expected = new Date(new Date(filled).getTime() + 30 * MS_PER_DAY)
+    expect(eligible.getTime()).toBe(expected.getTime())
+  })
+
+  it('honors an explicit percent threshold (80% of 90-day = day 72)', () => {
+    const filled = '2026-06-01'
+    const eligible = nextEligibleRefillDate(filled, { kind: 'percent', supplyDays: 90, refillThreshold: 0.8 })!
+    const expected = new Date(new Date(filled).getTime() + 72 * MS_PER_DAY)
+    expect(eligible.getTime()).toBe(expected.getTime())
+  })
+
+  it('supports the days-before-runout shape (90-day, 10 days before = day 80)', () => {
+    const filled = '2026-06-01'
+    const eligible = nextEligibleRefillDate(filled, { kind: 'days-before', supplyDays: 90, daysBeforeRunout: 10 })!
+    const expected = new Date(new Date(filled).getTime() + 80 * MS_PER_DAY)
+    expect(eligible.getTime()).toBe(expected.getTime())
+  })
+
+  it('days-before clamps: a huge daysBeforeRunout never yields a date before the fill', () => {
+    const filled = '2026-06-01'
+    const eligible = nextEligibleRefillDate(filled, { kind: 'days-before', supplyDays: 30, daysBeforeRunout: 999 })!
+    expect(eligible.getTime()).toBe(new Date(filled).getTime()) // day 0, not negative
+  })
+})
+
+describe('refillRuleFrom', () => {
+  it('returns null without a dispensed-days value', () => {
+    expect(refillRuleFrom({})).toBeNull()
+    expect(refillRuleFrom({ refillIntervalDays: 0 })).toBeNull()
+    expect(refillRuleFrom({ refillIntervalDays: null })).toBeNull()
+  })
+
+  it('defaults to the percent shape when no kind is stored', () => {
+    const rule = refillRuleFrom({ refillIntervalDays: 90 })!
+    expect(rule.kind).toBe('percent')
+    expect(rule.supplyDays).toBe(90)
+    expect(rule.refillThreshold).toBeUndefined() // falls back to DEFAULT in the engine
+  })
+
+  it('converts a stored percent (0-100) to the engine fraction', () => {
+    const rule = refillRuleFrom({ refillIntervalDays: 90, refillThresholdPct: 80 })!
+    expect(rule.refillThreshold).toBeCloseTo(0.8)
+  })
+
+  it("maps the DB snake_case 'days_before' kind to the engine enum", () => {
+    const rule = refillRuleFrom({ refillIntervalDays: 90, refillRuleKind: 'days_before', refillDaysBefore: 7 })!
+    expect(rule.kind).toBe('days-before')
+    expect(rule.daysBeforeRunout).toBe(7)
+  })
+
+  it('round-trips through nextEligibleRefillDate for a days-before plan', () => {
+    const rule = refillRuleFrom({ refillIntervalDays: 30, refillRuleKind: 'days_before', refillDaysBefore: 5 })!
+    const eligible = nextEligibleRefillDate('2026-06-01', rule)! // day 25
+    const expected = new Date(new Date('2026-06-01').getTime() + 25 * MS_PER_DAY)
     expect(eligible.getTime()).toBe(expected.getTime())
   })
 })
