@@ -29,14 +29,17 @@ branch's commit message) rather than repeated here now that they're done.
 
 ---
 
-## Regenerate `types/database.ts`
+## ✅ `types/database.ts` — resolved by deletion (2026-07-08)
 
-Hand-maintained types can silently drift from what `supabase/setup.sql` actually creates.
-
-**Blocked on the user:** requires the Supabase CLI (`supabase gen types typescript`) authenticated
-against the live project — cannot be done headless from this environment. When the user is ready:
-`supabase gen types typescript --project-id <ref> > src/types/database.ts`, then fix whatever it
-breaks (expect optional-vs-required mismatches on columns added ad hoc over time).
+Turned out to be dead code: confirmed zero imports anywhere in `src`. Every lib file already defines
+its own manual Row interface + `rowToX()` mapper (appointments.ts, devices.ts, caregivers.ts,
+prescriptions.ts, medicalId.ts, etc.) — that's the app's real, consistent pattern, and neither
+Supabase client (`src/lib/supabase/client.ts` / `server.ts`) uses a `createClient<Database>()`
+generic. Regenerating a stale-but-unused file would have just produced an accurate-but-unused file.
+User chose deletion over regenerating-as-reference or the larger "wire it in everywhere" option (the
+latter would mean typing both Supabase clients against it and likely fixing small mismatches across
+every existing manual Row interface — a real refactor, not a backlog-sized item; revisit as its own
+scoped task if ever wanted).
 
 ---
 
