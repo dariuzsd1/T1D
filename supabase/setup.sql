@@ -10,7 +10,9 @@
 -- This supersedes running the individual docs/*_MIGRATION.md files piecemeal.
 -- Every column here matches what the code reads/writes (verified against
 -- src/lib/store.ts, src/app/api/inventory/route.ts, src/lib/prescriptions.ts,
--- src/lib/caregivers.ts, src/types/database.ts).
+-- src/lib/caregivers.ts — there is no generated types/database.ts; each lib
+-- file defines its own Row interface + rowToX() mapper, which is this app's
+-- real, consistent pattern).
 -- ============================================================================
 
 -- Needed for gen_random_uuid()

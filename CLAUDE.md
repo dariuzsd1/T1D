@@ -37,16 +37,20 @@ scanning is real (browser Barcode Detection API + GS1 parsing) — the old mocke
 deleted entirely, not demoted. Push notifications (FCM) are deployed and verified working end to end
 (daily `pg_cron` → Edge Function → FCM, confirmed by a real delivered notification). The app is
 translated across every page in English, French, and Spanish. Caregiver sharing's consent gate is
-verified: an invited-but-not-accepted caregiver has zero read access; accepting grants it. All routes
-build clean; the test suite is green (123+ tests as of 2026-07-07).
+verified: an invited-but-not-accepted caregiver has zero read access; accepting grants it. Device-aware
+Quick Actions replaced the hardcoded Insulet/Dexcom quick-log buttons. Dark mode is wired via
+`prefers-color-scheme`, contrast-verified. Wear-clock auto-depletion (supplement model — manual
+logging always wins) fills the gap when a wearable's site/device change is never logged by hand.
+TanStack Query is in place as a proof of concept on the Home + Supplies pages (caching, refetch on
+focus); the rest of the dashboard still uses the original `useEffect` + fetch pattern. All routes
+build clean; the test suite is green (153+ tests as of 2026-07-08).
 
 **Known still-open, non-urgent (check `user-todo.md` memory for anything actively in flight):**
-- Device-aware Quick Actions, `@zxing/library` declared as a direct dep — built, awaiting merge.
-- Dark-mode tokens are specified (§5) but not yet wired into the app.
+- Expanding TanStack Query beyond the Home/Supplies POC to the rest of the dashboard — needs a fresh
+  scope decision (full migration vs. more POC pages), not started.
+- A user-facing light/dark toggle in Settings — dark mode currently follows OS preference only.
 - Device-driven auto-depletion (Dexcom/Omnipod/Tandem session → auto-decrement) — blocked on vendor
   OAuth access, not something to build speculatively.
-- Wear-clock auto-depletion (decrement from catalog wear rates + last-change date), a TanStack Query
-  data layer, and regenerating `types/database.ts` from the live schema — backlog, no urgency.
 - Biometric unlock — mentioned in earlier planning, never built. Not started.
 - Predictive/sick-day usage modeling and the B2B/HIPAA-BAA tier are V3, blocked on funding/legal.
 - **Prescription-photo intake is intentionally on hold** — see §4, a legal-review gate, not a backlog item.
