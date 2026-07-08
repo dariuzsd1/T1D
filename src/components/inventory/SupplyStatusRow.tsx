@@ -3,9 +3,11 @@
 import type { Product } from '@/lib/store'
 import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
-import { ShoppingCart } from 'lucide-react'
+import { isOrderPending } from '@/lib/orderTracking'
+import { ShoppingCart, CheckCircle2, Undo2, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+import { useState } from 'react'
 
 /**
  * A calm, single-line view of one supply — status dot, name, one plain-language
@@ -17,16 +19,31 @@ export function SupplyStatusRow({
   product,
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
   onReorder,
+  onMarkOrdered,
 }: {
   product: Product
   bufferDays?: number
   onReorder?: (label: string) => void
+  /** Self-report a placed order (src/lib/orderTracking.ts) — softens the nag
+   *  for a grace window without hiding the real status. Omit to hide the toggle. */
+  onMarkOrdered?: (id: string, ordered: boolean) => Promise<void>
 }) {
   const { t } = useI18n()
   // displayStatus: an unknown rate renders neutral 'unset', never an alarm.
   const status = displayStatus(product, bufferDays)
   const estimated = isRateEstimated(product.usageRatePerDay)
   const reorder = reorderTargetFor(product)
+  const orderPending = isOrderPending(product.lastOrderedDate)
+  const [isToggling, setIsToggling] = useState(false)
+
+  const handleToggle = async () => {
+    setIsToggling(true)
+    try {
+      await onMarkOrdered?.(product.id, !orderPending)
+    } finally {
+      setIsToggling(false)
+    }
+  }
 
   const dot =
     status === 'out' ? 'bg-urgent'
@@ -61,8 +78,36 @@ export function SupplyStatusRow({
         <p className="font-semibold text-ink truncate">{product.name}</p>
         <p className="text-sm text-muted truncate">
           {statusLabel} · {daysLine}
+          {orderPending && <> · <span className="text-primary">{t('row.ordered')}</span></>}
         </p>
       </div>
+
+      {onMarkOrdered && (
+        <button
+          onClick={handleToggle}
+          disabled={isToggling}
+          aria-label={
+            orderPending
+              ? t('product.undoOrderedAria', { name: product.name })
+              : t('product.markOrderedAria', { name: product.name })
+          }
+          title={orderPending ? t('product.undoOrderedTitle') : t('product.markOrderedTitle')}
+          className={cn(
+            'shrink-0 inline-flex items-center justify-center w-11 min-h-[44px] rounded-xl transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary',
+            orderPending
+              ? 'bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15'
+              : 'bg-surface-2 text-muted hover:bg-line border border-line'
+          )}
+        >
+          {isToggling ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : orderPending ? (
+            <Undo2 className="w-4 h-4" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4" />
+          )}
+        </button>
+      )}
 
       <a
         href={reorder.url}

@@ -5,7 +5,7 @@ import { RefillStatusBar } from "./RefillStatusBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package, Trash2, Edit3, ShoppingCart, Minus, Loader2,
-  CalendarClock, ChevronDown, PackagePlus, Pill, Droplet,
+  CalendarClock, ChevronDown, PackagePlus, Pill, Droplet, CheckCircle2, Undo2,
 } from "lucide-react";
 import { rxSupplyStatus, type Prescription } from "@/lib/prescriptions";
 import { useToast } from "@/components/ui/Toast";
@@ -22,6 +22,7 @@ import {
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from "@/lib/depletion";
 import { reorderTargetFor } from "@/lib/suppliers";
+import { isOrderPending, daysSinceOrdered } from "@/lib/orderTracking";
 import { logActivity } from "@/lib/activity";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
@@ -72,6 +73,8 @@ export function ProductCard({
   const reorderBy = reorderByDate(product.remainingDays, bufferDays)
   const expiryDays = daysUntilExpiration(product.expirationDate)
   const reorder = reorderTargetFor(product)
+  const orderPending = isOrderPending(product.lastOrderedDate)
+  const orderedDaysAgo = daysSinceOrdered(product.lastOrderedDate)
 
   // Insulin in-use clock: an opened vial/pen must be tossed after its window
   // even if the printed expiry is later. Shown as its own line + a one-tap
@@ -163,7 +166,9 @@ export function ProductCard({
       } catch {
         // Lookup is best-effort; a miss just means a box of 1.
       }
-      await onUpdate?.(product.id, { quantity: product.quantity + boxSize })
+      // The box arrived, so any in-flight order note has done its job — clear it
+      // rather than leaving a stale "on its way" note next to fresh stock.
+      await onUpdate?.(product.id, { quantity: product.quantity + boxSize, lastOrderedDate: null })
       void logActivity('supply_restocked', product.name)
       showToast(t('product.toastRestocked', { name: product.name, count: boxSize }), 'success')
     } catch (err) {
@@ -171,6 +176,30 @@ export function ProductCard({
       showToast(t('product.toastRestockFail'), 'caution')
     } finally {
       setIsRestocking(false)
+    }
+  }
+
+  // "Closing the loop" without a supplier API (CLAUDE.md §0): Reorder is a
+  // hand-off, so the app has no way to know an order was placed. Letting the
+  // user say so themselves quiets the proactive nags (banner/push) for a grace
+  // window without ever hiding the real status — see src/lib/orderTracking.ts.
+  const [isTogglingOrdered, setIsTogglingOrdered] = useState(false)
+  const handleToggleOrdered = async (ordered: boolean) => {
+    setIsTogglingOrdered(true)
+    try {
+      await onUpdate?.(product.id, { lastOrderedDate: ordered ? new Date().toISOString() : null })
+      if (ordered) void logActivity('supply_reordered', product.name)
+      showToast(
+        ordered
+          ? t('product.toastMarkedOrdered', { name: product.name })
+          : t('product.toastUnmarkedOrdered', { name: product.name }),
+        'success'
+      )
+    } catch (err) {
+      console.error('Failed to update order status:', err)
+      showToast(t('product.toastMarkOrderedFail', { name: product.name }), 'caution')
+    } finally {
+      setIsTogglingOrdered(false)
     }
   }
 
@@ -294,6 +323,17 @@ export function ProductCard({
                   {/* Honest one-line summary */}
                   <p className="text-sm text-muted font-medium">{summary}</p>
 
+                  {/* Self-reported order note — never replaces the real status above,
+                      just adds context that the user is already handling it. */}
+                  {orderPending && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      {orderedDaysAgo === 0
+                        ? t('product.orderedToday')
+                        : t(orderedDaysAgo === 1 ? 'product.orderedDaysAgoOne' : 'product.orderedDaysAgoOther', { days: orderedDaysAgo ?? 0 })}
+                    </p>
+                  )}
+
                   {/* Prescription reconciliation — only when actionable */}
                   {rxNote && (
                     <p className={cn(
@@ -392,6 +432,37 @@ export function ProductCard({
                       <ShoppingCart className="w-3.5 h-3.5" />
                       {t('row.reorder')}
                     </a>
+
+                    {/* Self-report a placed order — no supplier API exists to know
+                        this automatically, so the user tells us. Only offered where
+                        it's actionable (out/low); quiets the nag without hiding it. */}
+                    {(status === 'out' || status === 'low' || orderPending) && (
+                      <button
+                        onClick={() => handleToggleOrdered(!orderPending)}
+                        disabled={isTogglingOrdered}
+                        aria-label={
+                          orderPending
+                            ? t('product.undoOrderedAria', { name: product.name })
+                            : t('product.markOrderedAria', { name: product.name })
+                        }
+                        title={orderPending ? t('product.undoOrderedTitle') : t('product.markOrderedTitle')}
+                        className={cn(
+                          "flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest transition-colors active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                          orderPending
+                            ? "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15"
+                            : "bg-surface-2 hover:bg-line border border-line text-ink"
+                        )}
+                      >
+                        {isTogglingOrdered ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : orderPending ? (
+                          <Undo2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        {orderPending ? t('product.undoOrdered') : t('product.markOrdered')}
+                      </button>
+                    )}
 
                     <div className="ml-auto flex gap-1">
                       <button

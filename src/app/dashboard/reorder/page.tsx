@@ -13,7 +13,7 @@ import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
 
 export default function ReorderPage() {
-  const { inventory, setInventory, safetyBufferDays } = useStore()
+  const { inventory, setInventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const [loading, setLoading] = useState(true)
@@ -57,6 +57,16 @@ export default function ReorderPage() {
         : t('toast.openingSupplier', { label }),
       'info'
     )
+
+  const handleMarkOrdered = async (id: string, ordered: boolean) => {
+    try {
+      await updateProduct(id, { lastOrderedDate: ordered ? new Date().toISOString() : null })
+    } catch (err) {
+      console.error('Failed to update order status:', err)
+      const name = inventory.find((p) => p.id === id)?.name ?? ''
+      showToast(t('product.toastMarkOrderedFail', { name }), 'caution')
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8" aria-busy={loading}>
@@ -108,6 +118,7 @@ export default function ReorderPage() {
               product={item}
               bufferDays={safetyBufferDays}
               onReorder={handleReorder}
+              onMarkOrdered={handleMarkOrdered}
             />
           ))}
         </section>

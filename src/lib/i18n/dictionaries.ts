@@ -164,6 +164,7 @@ export const en = {
   'row.reorder': 'Reorder',
   'row.unsetLabel': 'Usage not set',
   'row.unsetDays': 'set usage to see days left',
+  'row.ordered': 'Ordered',
 
   // ── reorder page ──
   'reorder.kicker': 'Reorder',
@@ -266,6 +267,7 @@ export const en = {
   'activity.supplyAdded': 'Added {detail}',
   'activity.supplyUsed': 'Used one {detail}',
   'activity.supplyRestocked': 'Restocked {detail}',
+  'activity.supplyReordered': 'Marked {detail} as ordered',
 
   // ── analytics consent (Phase E) ──
   'analytics.title': 'Help improve the app',
@@ -369,6 +371,18 @@ export const en = {
   'product.openedToday': 'Opened today',
   'product.openedTodayAria': 'Mark {name} opened today',
   'product.openedTodayTitle': 'Start the discard clock for a newly opened vial or pen',
+  'product.markOrdered': 'Mark as ordered',
+  'product.undoOrdered': 'Ordered · Undo',
+  'product.markOrderedAria': 'Mark {name} as ordered',
+  'product.undoOrderedAria': 'Undo marking {name} as ordered',
+  'product.markOrderedTitle': "Note that you've placed an order, so we stop nagging about it for a bit",
+  'product.undoOrderedTitle': 'Clear the order note for this supply',
+  'product.orderedToday': 'Ordered today · on its way',
+  'product.orderedDaysAgoOne': 'Ordered {days} day ago · on its way',
+  'product.orderedDaysAgoOther': 'Ordered {days} days ago · on its way',
+  'product.toastMarkedOrdered': 'Marked {name} as ordered.',
+  'product.toastUnmarkedOrdered': 'Cleared the order note for {name}.',
+  'product.toastMarkOrderedFail': "Couldn't update {name}. Please try again.",
   'product.toastCouldntSave': "Couldn't save that. {name} is unchanged.",
   'product.toastRestocked': 'Restocked {name}: +{count}.',
   'product.toastRestockFail': 'Could not restock. Please try again.',
@@ -1132,6 +1146,7 @@ export const fr: Record<TKey, string> = {
   'row.reorder': 'Recommander',
   'row.unsetLabel': 'Usage non renseigné',
   'row.unsetDays': "renseignez l'usage pour voir les jours restants",
+  'row.ordered': 'Commandé',
 
   // ── reorder page ──
   'reorder.kicker': 'Recommander',
@@ -1236,6 +1251,7 @@ export const fr: Record<TKey, string> = {
   'activity.supplyAdded': 'Ajout de {detail}',
   'activity.supplyUsed': "Utilisation d’un(e) {detail}",
   'activity.supplyRestocked': 'Réapprovisionnement de {detail}',
+  'activity.supplyReordered': 'Marqué {detail} comme commandé',
 
   // ── analytics consent (Phase E) ──
   'analytics.title': "Aider à améliorer l’application",
@@ -1339,6 +1355,18 @@ export const fr: Record<TKey, string> = {
   'product.openedToday': "Ouvert aujourd'hui",
   'product.openedTodayAria': 'Marquer {name} comme ouvert(e) aujourd’hui',
   'product.openedTodayTitle': 'Démarrer le compte à rebours pour un flacon ou un stylo nouvellement ouvert',
+  'product.markOrdered': 'Marquer comme commandé',
+  'product.undoOrdered': 'Commandé · Annuler',
+  'product.markOrderedAria': 'Marquer {name} comme commandé',
+  'product.undoOrderedAria': 'Annuler le marquage de {name} comme commandé',
+  'product.markOrderedTitle': "Noter qu'une commande a été passée pour ne plus vous relancer pendant un moment",
+  'product.undoOrderedTitle': 'Effacer la note de commande pour cette fourniture',
+  'product.orderedToday': "Commandé aujourd'hui · en route",
+  'product.orderedDaysAgoOne': 'Commandé il y a {days} jour · en route',
+  'product.orderedDaysAgoOther': 'Commandé il y a {days} jours · en route',
+  'product.toastMarkedOrdered': '{name} marqué comme commandé.',
+  'product.toastUnmarkedOrdered': 'Note de commande effacée pour {name}.',
+  'product.toastMarkOrderedFail': "Impossible de mettre à jour {name}. Veuillez réessayer.",
   'product.toastCouldntSave': "Impossible d'enregistrer. {name} reste inchangé(e).",
   'product.toastRestocked': 'Réapprovisionné {name} : +{count}.',
   'product.toastRestockFail': 'Impossible de réapprovisionner. Veuillez réessayer.',
@@ -2097,6 +2125,7 @@ export const es: Record<TKey, string> = {
   'row.reorder': 'Reponer',
   'row.unsetLabel': 'Uso no definido',
   'row.unsetDays': 'define el uso para ver los días restantes',
+  'row.ordered': 'Pedido',
 
   // ── reorder page ──
   'reorder.kicker': 'Reponer',
@@ -2199,6 +2228,7 @@ export const es: Record<TKey, string> = {
   'activity.supplyAdded': 'Añadido {detail}',
   'activity.supplyUsed': 'Usado uno {detail}',
   'activity.supplyRestocked': 'Reabastecido {detail}',
+  'activity.supplyReordered': 'Marcado {detail} como pedido',
 
   // ── analytics consent (Phase E) ──
   'analytics.title': 'Ayuda a mejorar la aplicación',
@@ -2302,6 +2332,18 @@ export const es: Record<TKey, string> = {
   'product.openedToday': 'Abierto hoy',
   'product.openedTodayAria': 'Marcar {name} como abierto hoy',
   'product.openedTodayTitle': 'Iniciar el conteo de descarte para un vial o pluma recién abierto',
+  'product.markOrdered': 'Marcar como pedido',
+  'product.undoOrdered': 'Pedido · Deshacer',
+  'product.markOrderedAria': 'Marcar {name} como pedido',
+  'product.undoOrderedAria': 'Deshacer el marcado de {name} como pedido',
+  'product.markOrderedTitle': 'Anota que ya hiciste el pedido para que dejemos de avisarte por un tiempo',
+  'product.undoOrderedTitle': 'Borrar la nota de pedido de este suministro',
+  'product.orderedToday': 'Pedido hoy · en camino',
+  'product.orderedDaysAgoOne': 'Pedido hace {days} día · en camino',
+  'product.orderedDaysAgoOther': 'Pedido hace {days} días · en camino',
+  'product.toastMarkedOrdered': '{name} marcado como pedido.',
+  'product.toastUnmarkedOrdered': 'Nota de pedido borrada para {name}.',
+  'product.toastMarkOrderedFail': 'No se pudo actualizar {name}. Inténtalo de nuevo.',
   'product.toastCouldntSave': 'No se pudo guardar. {name} no cambió.',
   'product.toastRestocked': '{name} reabastecido: +{count}.',
   'product.toastRestockFail': 'No se pudo reabastecer. Inténtalo de nuevo.',
