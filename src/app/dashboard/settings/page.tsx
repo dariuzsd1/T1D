@@ -370,6 +370,7 @@ function AccountSection() {
             <button
               onClick={handleSaveName}
               disabled={nameSaving}
+              aria-label={t('settings.save')}
               className="min-h-[44px] px-4 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {nameSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.save')}
@@ -438,6 +439,7 @@ function AccountSection() {
                 <button
                   type="submit"
                   disabled={pwSaving}
+                  aria-label={t('settings.updatePw')}
                   className="min-h-[40px] px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.updatePw')}
@@ -474,6 +476,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={emailSaving || !newEmail.trim()}
+              aria-label={t('account.sendEmailChange')}
               className="min-h-[44px] px-4 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-deep disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary whitespace-nowrap"
             >
               {emailSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('account.sendEmailChange')}

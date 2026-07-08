@@ -63,18 +63,18 @@ const VARIANTS: Record<
 > = {
   success: {
     icon: <CheckCircle2 className="w-5 h-5" />,
-    ring: 'border-emerald-200',
-    iconColor: 'text-emerald-600',
+    ring: 'border-success/30',
+    iconColor: 'text-success',
   },
   caution: {
     icon: <AlertTriangle className="w-5 h-5" />,
-    ring: 'border-amber-200',
-    iconColor: 'text-amber-600',
+    ring: 'border-caution/30',
+    iconColor: 'text-caution',
   },
   info: {
     icon: <Info className="w-5 h-5" />,
-    ring: 'border-slate-200',
-    iconColor: 'text-blue-600',
+    ring: 'border-line',
+    iconColor: 'text-primary',
   },
 }
 
@@ -95,16 +95,16 @@ function ToastItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 12 }}
       transition={{ duration: 0.18 }}
-      className={`flex items-start gap-3 max-w-sm rounded-2xl border ${v.ring} bg-white px-4 py-3 shadow-lg shadow-slate-900/5`}
+      className={`flex items-start gap-3 max-w-sm rounded-2xl border ${v.ring} bg-surface px-4 py-3 shadow-lg shadow-ink/10`}
     >
       <span className={`mt-0.5 shrink-0 ${v.iconColor}`}>{v.icon}</span>
-      <p className="flex-1 text-sm font-medium leading-snug text-slate-800">
+      <p className="flex-1 text-sm font-medium leading-snug text-ink">
         {toast.message}
       </p>
       <button
         onClick={() => onDismiss(toast.id)}
         aria-label={t('common.dismissNotification')}
-        className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="shrink-0 rounded-lg p-1 text-faint transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <X className="w-4 h-4" />
       </button>

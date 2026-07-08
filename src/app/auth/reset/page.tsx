@@ -131,6 +131,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={loading}
+            aria-label={t('reset.submit')}
             className="w-full bg-primary hover:bg-primary-deep text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('reset.submit')}
