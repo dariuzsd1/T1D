@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ChevronLeft,
@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
+import { useInventory } from '@/lib/useInventory'
 import { displayStatus, stockStatus, type StockStatus } from '@/lib/depletion'
 import { assessRefill } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
@@ -32,30 +33,11 @@ type DayEventKind = 'runout' | 'eligible'
 
 export default function CalendarPage() {
   const { t } = useI18n()
-  const { inventory, setInventory, safetyBufferDays } = useStore()
+  const { inventory, safetyBufferDays } = useStore()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [loading, setLoading] = useState(true)
-
-  // The store is empty on a direct load or refresh (inventory is PHI, so it's
-  // never persisted locally) — fetch it like the other dashboard pages do.
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/inventory')
-        if (response.ok) {
-          const result = await response.json()
-          setInventory(result.data || [])
-        }
-      } catch (err) {
-        console.error('Failed to fetch inventory:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchInventory()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // TanStack Query (shared with Home/Supplies/Reorder): cached + deduplicated,
+  // so arriving here from any of those pages reuses the already-fetched data.
+  const { isLoading: loading } = useInventory()
 
   // Per-item forecast: when it runs out (real, from usage) and — when the user
   // has entered a refill cycle — when insurance lets them refill (the moat).
