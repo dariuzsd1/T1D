@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { PushToggle } from '@/components/PushToggle'
 import { BackButton } from '@/components/ui/BackButton'
 import { LanguageToggle } from '@/components/ui/LanguageToggle'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
 import { useI18n } from '@/lib/i18n'
@@ -20,7 +21,7 @@ import {
 } from '@/lib/dataExport'
 import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
-  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
+  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages, SunMoon,
   Mail, Download, Trash2, AlertTriangle, X, BarChart3,
 } from 'lucide-react'
 
@@ -68,6 +69,22 @@ export default function SettingsPage() {
             </div>
           </div>
           <LanguageToggle />
+        </div>
+      </section>
+
+      {/* Appearance (light/dark/system) */}
+      <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <SunMoon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-ink">{t('settings.theme')}</h3>
+              <p className="text-sm text-muted">{t('settings.themeBody')}</p>
+            </div>
+          </div>
+          <ThemeToggle />
         </div>
       </section>
 
