@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
 import { displayStatus, stockStatus, type StockStatus } from '@/lib/depletion'
-import { assessRefill } from '@/lib/refill'
+import { assessRefill, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useI18n } from '@/lib/i18n'
 import {
@@ -64,9 +64,7 @@ export default function CalendarPage() {
   // date on a calendar is exactly what CLAUDE.md §9.1 forbids). Refill-eligible
   // markers stay — those come from real entered dates.
   const items = inventory.map((item) => {
-    const rule = item.refillIntervalDays
-      ? { supplyDays: item.refillIntervalDays }
-      : null
+    const rule = refillRuleFrom(item)
     return {
       item,
       unset: displayStatus(item, safetyBufferDays) === 'unset',

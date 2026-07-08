@@ -18,9 +18,14 @@ export interface Product {
   usageRatePerDay: number;
   expirationDate?: string | null;
   // Insurance refill cycle (powers the refill-window engine, src/lib/refill.ts).
-  // Optional until the DB columns land — see docs/REFILL_RULES_MIGRATION.md.
+  // refillIntervalDays = dispensed days-supply; the rule kind + its one param
+  // (threshold % for 'percent', days-before for 'days_before') model how the
+  // plan opens its refill window. Optional until the DB columns land.
   refillIntervalDays?: number | null;
   lastFilledDate?: string | null;
+  refillRuleKind?: string | null;
+  refillThresholdPct?: number | null;
+  refillDaysBefore?: number | null;
   // Out-of-pocket copay per refill (cost & savings layer, src/lib/cost.ts).
   copay?: number | null;
   // The device this consumable feeds (pump/CGM), if any. Optional until the
@@ -99,6 +104,9 @@ export const useStore = create<T1DStore>()((set) => ({
       updates.usageRatePerDay !== undefined ||
       updates.refillIntervalDays !== undefined ||
       updates.lastFilledDate !== undefined ||
+      updates.refillRuleKind !== undefined ||
+      updates.refillThresholdPct !== undefined ||
+      updates.refillDaysBefore !== undefined ||
       updates.copay !== undefined ||
       updates.deviceId !== undefined ||
       updates.prescriptionId !== undefined ||
@@ -114,6 +122,14 @@ export const useStore = create<T1DStore>()((set) => ({
         optionalPayload.refill_interval_days = updates.refillIntervalDays
       if (updates.lastFilledDate !== undefined)
         optionalPayload.last_filled_date = updates.lastFilledDate
+      if (updates.refillRuleKind !== undefined)
+        optionalPayload.refill_rule_kind = updates.refillRuleKind || null
+      if (updates.refillThresholdPct !== undefined)
+        optionalPayload.refill_threshold_pct =
+          updates.refillThresholdPct && updates.refillThresholdPct > 0 ? updates.refillThresholdPct : null
+      if (updates.refillDaysBefore !== undefined)
+        optionalPayload.refill_days_before =
+          updates.refillDaysBefore != null && updates.refillDaysBefore >= 0 ? updates.refillDaysBefore : null
       if (updates.copay !== undefined)
         // NULL when cleared so it's simply not counted (never $0 fabricated).
         optionalPayload.copay = updates.copay && updates.copay > 0 ? updates.copay : null
