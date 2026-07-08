@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
+import { useInventory } from '@/lib/useInventory'
 import { displayStatus } from '@/lib/depletion'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { useToast } from '@/components/ui/Toast'
@@ -13,29 +13,12 @@ import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
 
 export default function ReorderPage() {
-  const { inventory, setInventory, safetyBufferDays } = useStore()
+  const { inventory, safetyBufferDays } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/inventory')
-        if (response.ok) {
-          const result = await response.json()
-          setInventory(result.data || [])
-        }
-      } catch (err) {
-        console.error('Failed to fetch inventory:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchInventory()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // TanStack Query (shared with Home/Supplies): cached + deduplicated, so
+  // arriving here from either of those pages reuses the already-fetched data.
+  const { isLoading: loading } = useInventory()
 
   // Out first, then low — most urgent at the top. "ok" items aren't shown here,
   // and neither are unknown-rate items: their runway is a guess, so they get the
