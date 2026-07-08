@@ -83,6 +83,13 @@ create table if not exists public.supplies (
   -- insulins). Both NULL = not tracked → the clock simply doesn't apply.
   opened_date     date,
   in_use_days     integer,
+  -- Wear-clock auto-depletion (src/lib/autoDepletion.ts), supplement model: how
+  -- far the auto-clock has already accounted for. NULL = not eligible yet (no
+  -- reference point). Advanced only by whole elapsed wear-cycles, never to
+  -- "now" — see the module doc for why. Any manual write to this row (a normal
+  -- "Use one", a restock, a site-tracker log) also counts as a fresh reference
+  -- point via `updated_at` below, so a manual tap can never be double-counted.
+  auto_depleted_through timestamptz,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -97,7 +104,8 @@ alter table public.supplies
   add column if not exists barcode               text,
   add column if not exists lot_number            text,
   add column if not exists opened_date           date,
-  add column if not exists in_use_days           integer;
+  add column if not exists in_use_days           integer,
+  add column if not exists auto_depleted_through timestamptz;
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 
