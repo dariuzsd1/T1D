@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
+import { useInventory } from '@/lib/useInventory'
 import { displayStatus } from '@/lib/depletion'
 import { nextEligibleRefillDate } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
@@ -26,14 +27,20 @@ import {
 } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { inventory, setInventory, safetyBufferDays, updateProduct } = useStore()
+  const { inventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const { profile, loading: profileLoading } = useProfile()
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // TanStack Query POC (BACKLOG.md): cached + deduplicated with the Supplies
+  // page, refetches on window focus. Still write-throughs into the zustand
+  // store, so `inventory`/`updateProduct` below are completely unchanged.
+  const inventoryQuery = useInventory()
+  const loading = inventoryQuery.isLoading
+  const error = inventoryQuery.error
+    ? inventoryQuery.error instanceof Error ? inventoryQuery.error.message : t('home.loadFail')
+    : null
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [deviceCount, setDeviceCount] = useState(0)
@@ -45,26 +52,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (profile?.analyticsOptIn) void trackEvent('opened_dashboard', true)
   }, [profile?.analyticsOptIn])
-
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/inventory')
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const result = await response.json()
-        setInventory(result.data || [])
-        setError(null)
-      } catch (err) {
-        console.error('Failed to fetch inventory:', err)
-        setError(err instanceof Error ? err.message : t('home.loadFail'))
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchInventory()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Load the extra dated sources for "What's Next". Both are table-missing-safe:
   // if the table doesn't exist yet (un-migrated DB) or the query errors, we simply
