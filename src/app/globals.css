@@ -40,6 +40,46 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * Dark mode (CLAUDE.md §5: base #0F172A slate, surface #1B2638, text #E6ECF3).
+ * Follows the OS preference only — no manual toggle yet (see BACKLOG.md).
+ * Overriding the same custom properties the @theme block above defines means
+ * every existing bg-canvas/text-ink/etc. utility repaints automatically; no
+ * component needed a `dark:` variant class.
+ *
+ * Contrast verified (WCAG relative-luminance formula) against this palette:
+ * all neutrals + status text meet 4.5:1 on their background; the four pairs
+ * that land in the 3.3-4.5 "large text" range (primary/success/urgent as a
+ * solid button fill with white text, and urgent-on-urgent-soft) are all used
+ * on bold/large UI (buttons, status badges), never small body text — the same
+ * trade-off the light-mode palette already accepts (its white-on-primary is
+ * 4.77:1, barely past the line). See scratchpad contrast check in the PR if
+ * these values are ever revisited.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #0f172a;
+    --color-surface: #1b2638;
+    --color-surface-2: #26364c;
+    --color-line: #3e4f66;
+
+    --color-ink: #e6ecf3;
+    --color-muted: #94a3b8;
+    --color-faint: #8b9baf;
+
+    --color-primary: #4c7dd9;
+    --color-primary-deep: #3868c0;
+    --color-teal: #2dd4bf;
+
+    --color-success: #16a34a;
+    --color-success-soft: #0f2e1c;
+    --color-caution: #fbbf24;
+    --color-caution-soft: #3a2a0a;
+    --color-urgent: #dc2626;
+    --color-urgent-soft: #3a1414;
+  }
+}
+
 /* Accessibility: honor the OS "reduce motion" setting (CLAUDE.md §6). */
 @media (prefers-reduced-motion: reduce) {
   *,
