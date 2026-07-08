@@ -279,6 +279,24 @@ export const en = {
   'analytics.on': 'On',
   'analytics.off': 'Off',
 
+  // ── biometric app-lock (opt-in, per-device) ──
+  'biometric.title': 'Biometric lock',
+  'biometric.body': 'Require Face ID, Windows Hello, or your fingerprint to view your data on this device. Off by default. Set up separately on each device you use.',
+  'biometric.on': 'On',
+  'biometric.off': 'Off',
+  'biometric.unsupportedBody': "This device or browser doesn't support biometric unlock.",
+  'biometric.enabledToast': 'Biometric lock is on for this device.',
+  'biometric.enableFail': "Couldn't enable biometric lock. Make sure Face ID, Windows Hello, or a fingerprint is set up on this device.",
+  'biometric.disabledToast': 'Biometric lock is off for this device.',
+  'biometric.lockedTitle': 'Locked',
+  'biometric.lockedBody': "Unlock with this device's biometrics to continue.",
+  'biometric.unlockBtn': 'Unlock',
+  'biometric.failed': "Couldn't verify. Try again.",
+  'biometric.resetLink': 'Trouble unlocking? Reset on this device',
+  'biometric.resetConfirmTitle': 'Turn off biometric lock on this device?',
+  'biometric.resetConfirmBody': "This removes the biometric lock from this device only. Your account and data are unaffected. You can turn it back on anytime in Settings.",
+  'biometric.resetConfirmBtn': 'Turn off',
+
   // ── parent safety view ──
   'safetyview.kicker': 'Parent safety view',
   'safetyview.caringFor': 'Caring for {name}',
@@ -1254,6 +1272,24 @@ export const fr: Record<TKey, string> = {
   'analytics.on': 'Activé',
   'analytics.off': 'Désactivé',
 
+  // ── biometric app-lock (opt-in, per-device) ──
+  'biometric.title': 'Verrouillage biométrique',
+  'biometric.body': 'Exigez Face ID, Windows Hello ou votre empreinte digitale pour consulter vos données sur cet appareil. Désactivé par défaut. À configurer séparément sur chaque appareil que vous utilisez.',
+  'biometric.on': 'Activé',
+  'biometric.off': 'Désactivé',
+  'biometric.unsupportedBody': "Cet appareil ou ce navigateur ne prend pas en charge le verrouillage biométrique.",
+  'biometric.enabledToast': 'Le verrouillage biométrique est activé sur cet appareil.',
+  'biometric.enableFail': "Impossible d'activer le verrouillage biométrique. Assurez-vous que Face ID, Windows Hello ou une empreinte digitale est configuré sur cet appareil.",
+  'biometric.disabledToast': 'Le verrouillage biométrique est désactivé sur cet appareil.',
+  'biometric.lockedTitle': 'Verrouillé',
+  'biometric.lockedBody': "Déverrouillez avec la biométrie de cet appareil pour continuer.",
+  'biometric.unlockBtn': 'Déverrouiller',
+  'biometric.failed': "Impossible de vérifier. Réessayez.",
+  'biometric.resetLink': 'Problème de déverrouillage ? Réinitialiser sur cet appareil',
+  'biometric.resetConfirmTitle': 'Désactiver le verrouillage biométrique sur cet appareil ?',
+  'biometric.resetConfirmBody': "Cela retire le verrouillage biométrique de cet appareil uniquement. Votre compte et vos données ne sont pas affectés. Vous pourrez le réactiver à tout moment dans les paramètres.",
+  'biometric.resetConfirmBtn': 'Désactiver',
+
   // ── parent safety view ──
   'safetyview.kicker': 'Vue de sécurité parent',
   'safetyview.caringFor': 'Vous accompagnez {name}',
@@ -2221,6 +2257,24 @@ export const es: Record<TKey, string> = {
     'Comparte el uso anónimo (qué pantallas abres) para ayudar a mejorar T1D Hub. Nunca se incluyen datos de salud, nombres de suministros ni información personal. Desactivado por defecto. Cámbialo cuando quieras.',
   'analytics.on': 'Activado',
   'analytics.off': 'Desactivado',
+
+  // ── biometric app-lock (opt-in, per-device) ──
+  'biometric.title': 'Bloqueo biométrico',
+  'biometric.body': 'Exige Face ID, Windows Hello o tu huella digital para ver tus datos en este dispositivo. Desactivado por defecto. Debes configurarlo por separado en cada dispositivo que uses.',
+  'biometric.on': 'Activado',
+  'biometric.off': 'Desactivado',
+  'biometric.unsupportedBody': 'Este dispositivo o navegador no admite el bloqueo biométrico.',
+  'biometric.enabledToast': 'El bloqueo biométrico está activado en este dispositivo.',
+  'biometric.enableFail': 'No se pudo activar el bloqueo biométrico. Asegúrate de tener configurado Face ID, Windows Hello o una huella digital en este dispositivo.',
+  'biometric.disabledToast': 'El bloqueo biométrico está desactivado en este dispositivo.',
+  'biometric.lockedTitle': 'Bloqueado',
+  'biometric.lockedBody': 'Desbloquea con la biometría de este dispositivo para continuar.',
+  'biometric.unlockBtn': 'Desbloquear',
+  'biometric.failed': 'No se pudo verificar. Inténtalo de nuevo.',
+  'biometric.resetLink': '¿Problemas para desbloquear? Restablecer en este dispositivo',
+  'biometric.resetConfirmTitle': '¿Desactivar el bloqueo biométrico en este dispositivo?',
+  'biometric.resetConfirmBody': 'Esto quita el bloqueo biométrico solo de este dispositivo. Tu cuenta y tus datos no se ven afectados. Puedes volver a activarlo cuando quieras desde Configuración.',
+  'biometric.resetConfirmBtn': 'Desactivar',
 
   // ── parent safety view ──
   'safetyview.kicker': 'Vista de seguridad para el cuidador',
