@@ -66,6 +66,17 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [lastFilledDate, setLastFilledDate] = useState(
     product.lastFilledDate ? product.lastFilledDate.slice(0, 10) : ''
   )
+  // Refill-rule shape: 'percent' (eligible at X% used) or 'days_before'
+  // (eligible N days before the supply's end). Default 'percent' (the common case).
+  const [refillRuleKind, setRefillRuleKind] = useState<'percent' | 'days_before'>(
+    product.refillRuleKind === 'days_before' ? 'days_before' : 'percent'
+  )
+  const [refillThresholdPct, setRefillThresholdPct] = useState<string>(
+    product.refillThresholdPct != null ? String(product.refillThresholdPct) : ''
+  )
+  const [refillDaysBefore, setRefillDaysBefore] = useState<string>(
+    product.refillDaysBefore != null ? String(product.refillDaysBefore) : ''
+  )
   const [copay, setCopay] = useState<string>(
     product.copay != null ? String(product.copay) : ''
   )
@@ -133,6 +144,13 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         expirationDate: expirationDate || null,
         refillIntervalDays: refillIntervalDays ? parseInt(refillIntervalDays, 10) : null,
         lastFilledDate: lastFilledDate || null,
+        refillRuleKind,
+        // Store only the param for the ACTIVE rule shape; clear the other so a
+        // stale value from a previous choice can't linger and mislead the engine.
+        refillThresholdPct:
+          refillRuleKind === 'percent' && refillThresholdPct ? parseFloat(refillThresholdPct) : null,
+        refillDaysBefore:
+          refillRuleKind === 'days_before' && refillDaysBefore ? parseInt(refillDaysBefore, 10) : null,
         copay: copay ? parseFloat(copay) : null,
         deviceId: deviceId || null,
         prescriptionId: prescriptionId || null,
@@ -418,6 +436,57 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
               </div>
+
+              {/* How the plan opens its refill window: % used, or days-before-end. */}
+              <div className="col-span-2">
+                <span className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.refillRuleLabel')}</span>
+                <div role="group" aria-label={t('editModal.refillRuleLabel')} className="inline-flex rounded-xl bg-surface-2 border border-line p-1 gap-1 mb-2">
+                  {(['percent', 'days_before'] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setRefillRuleKind(k)}
+                      aria-pressed={refillRuleKind === k}
+                      className={
+                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
+                        (refillRuleKind === k ? 'bg-surface shadow-sm text-ink' : 'text-muted hover:text-ink')
+                      }
+                    >
+                      {k === 'percent' ? t('editModal.refillRulePercent') : t('editModal.refillRuleDaysBefore')}
+                    </button>
+                  ))}
+                </div>
+                {refillRuleKind === 'percent' ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      placeholder={t('editModal.refillThresholdPlaceholder')}
+                      value={refillThresholdPct}
+                      onChange={(e) => setRefillThresholdPct(e.target.value)}
+                      aria-label={t('editModal.refillRulePercent')}
+                      className="w-24 bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                    <span className="text-sm text-muted">{t('editModal.refillPercentUnit')}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder={t('editModal.refillDaysBeforePlaceholder')}
+                      value={refillDaysBefore}
+                      onChange={(e) => setRefillDaysBefore(e.target.value)}
+                      aria-label={t('editModal.refillRuleDaysBefore')}
+                      className="w-24 bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                    />
+                    <span className="text-sm text-muted">{t('editModal.refillDaysUnit')}</span>
+                  </div>
+                )}
+                <p className="text-[11px] text-faint mt-1.5">{t('editModal.refillRuleHint')}</p>
+              </div>
+
               <div>
                 <label htmlFor="edit-copay" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.copayLabel')}</label>
                 <input

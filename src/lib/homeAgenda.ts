@@ -13,7 +13,7 @@
  * fabricating a date. It stays out until site_changes is actually loaded.
  */
 
-import { nextEligibleRefillDate } from './refill'
+import { nextEligibleRefillDate, refillRuleFrom } from './refill'
 import { isRateEstimated } from './depletion'
 import type { Product } from './store'
 import type { Appointment } from './appointments'
@@ -66,8 +66,8 @@ export function buildAgenda({
   //    clamp to today so it reads as actionable, not stale.
   let bestRefill: { date: Date; product: Product } | null = null
   for (const p of inventory) {
-    if (!p.refillIntervalDays || p.refillIntervalDays <= 0 || !p.lastFilledDate) continue
-    const d = nextEligibleRefillDate(p.lastFilledDate, { supplyDays: p.refillIntervalDays })
+    if (!p.lastFilledDate) continue
+    const d = nextEligibleRefillDate(p.lastFilledDate, refillRuleFrom(p))
     if (!d) continue
     if (!bestRefill || d.getTime() < bestRefill.date.getTime()) bestRefill = { date: d, product: p }
   }

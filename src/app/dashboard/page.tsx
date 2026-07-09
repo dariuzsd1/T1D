@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
 import { displayStatus } from '@/lib/depletion'
-import { nextEligibleRefillDate } from '@/lib/refill'
+import { nextEligibleRefillDate, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { logActivity } from '@/lib/activity'
 import { createClient } from '@/lib/supabase/client'
@@ -137,10 +137,7 @@ export default function DashboardPage() {
   // as the separator — no em-dashes anywhere on the page.
   const nextClause: string | null = (() => {
     if (mostUrgent) {
-      const refillDate =
-        mostUrgent.refillIntervalDays && mostUrgent.lastFilledDate
-          ? nextEligibleRefillDate(mostUrgent.lastFilledDate, { supplyDays: mostUrgent.refillIntervalDays })
-          : null
+      const refillDate = nextEligibleRefillDate(mostUrgent.lastFilledDate, refillRuleFrom(mostUrgent))
       return refillDate
         ? t('home.reorderNameEligible', { name: mostUrgent.name, date: formatAgendaDate(refillDate, now) })
         : t('home.reorderNameSoon', { name: mostUrgent.name })

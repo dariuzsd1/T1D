@@ -72,9 +72,16 @@ create table if not exists public.supplies (
   -- Out-of-pocket copay the user pays per refill (cost & savings layer). NULL =
   -- not entered → simply not counted; we never guess a price.
   copay numeric,
-  -- Insurance refill-window engine (src/lib/refill.ts):
+  -- Insurance refill-window engine (src/lib/refill.ts). refill_interval_days is
+  -- the dispensed days-supply (30/90). refill_rule_kind picks how the plan
+  -- expresses its window: 'percent' (eligible at refill_threshold_pct % used,
+  -- default 75) or 'days_before' (eligible refill_days_before days before the
+  -- supply's end). All nullable → no rule set = no eligible date shown.
   refill_interval_days integer,
   last_filled_date     date,
+  refill_rule_kind     text check (refill_rule_kind in ('percent','days_before')),
+  refill_threshold_pct numeric,
+  refill_days_before   integer,
   -- Barcode/GS1 scan capture (src/lib/gs1.ts):
   barcode         text,
   lot_number      text,
@@ -106,6 +113,9 @@ alter table public.supplies
   add column if not exists copay                 numeric,
   add column if not exists refill_interval_days integer,
   add column if not exists last_filled_date      date,
+  add column if not exists refill_rule_kind      text,
+  add column if not exists refill_threshold_pct  numeric,
+  add column if not exists refill_days_before    integer,
   add column if not exists barcode               text,
   add column if not exists lot_number            text,
   add column if not exists opened_date           date,

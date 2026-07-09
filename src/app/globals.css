@@ -42,10 +42,15 @@ body {
 
 /*
  * Dark mode (CLAUDE.md §5: base #0F172A slate, surface #1B2638, text #E6ECF3).
- * Follows the OS preference only — no manual toggle yet (see BACKLOG.md).
- * Overriding the same custom properties the @theme block above defines means
- * every existing bg-canvas/text-ink/etc. utility repaints automatically; no
- * component needed a `dark:` variant class.
+ * Two ways in: the OS preference (below, for anyone who hasn't chosen), or an
+ * explicit `data-theme="dark"|"light"` on <html> set by the Settings toggle
+ * (src/lib/theme/), which wins over the OS preference either direction (an
+ * attribute selector has higher specificity than a bare `:root` inside a media
+ * query, so `:root[data-theme="light"]` still applies even when the OS prefers
+ * dark, and vice versa). No attribute at all = "system", pure OS preference,
+ * today's original behavior. Overriding the same custom properties the
+ * @theme block above defines means every existing bg-canvas/text-ink/etc.
+ * utility repaints automatically; no component needed a `dark:` variant class.
  *
  * Contrast verified (WCAG relative-luminance formula) against this palette:
  * all neutrals + status text meet 4.5:1 on their background; the four pairs
@@ -78,6 +83,55 @@ body {
     --color-urgent: #dc2626;
     --color-urgent-soft: #3a1414;
   }
+}
+
+/* Explicit "Dark" choice — same values as the media query above, but forced
+ * regardless of OS preference. */
+:root[data-theme="dark"] {
+  --color-canvas: #0f172a;
+  --color-surface: #1b2638;
+  --color-surface-2: #26364c;
+  --color-line: #3e4f66;
+
+  --color-ink: #e6ecf3;
+  --color-muted: #94a3b8;
+  --color-faint: #8b9baf;
+
+  --color-primary: #4c7dd9;
+  --color-primary-deep: #3868c0;
+  --color-teal: #2dd4bf;
+
+  --color-success: #16a34a;
+  --color-success-soft: #0f2e1c;
+  --color-caution: #fbbf24;
+  --color-caution-soft: #3a2a0a;
+  --color-urgent: #dc2626;
+  --color-urgent-soft: #3a1414;
+}
+
+/* Explicit "Light" choice — re-asserts the base light values so it wins even
+ * when the OS prefers dark (attribute selector beats the plain :root the media
+ * query above targets). */
+:root[data-theme="light"] {
+  --color-canvas: #f6f8fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef2f7;
+  --color-line: #dce3ec;
+
+  --color-ink: #16202e;
+  --color-muted: #51606f;
+  --color-faint: #6b7a89;
+
+  --color-primary: #1e6fe0;
+  --color-primary-deep: #134fa3;
+  --color-teal: #0e9384;
+
+  --color-success: #1a7a41;
+  --color-success-soft: #e7f6ec;
+  --color-caution: #9c5c00;
+  --color-caution-soft: #fbf1df;
+  --color-urgent: #c8341f;
+  --color-urgent-soft: #fbe9e6;
 }
 
 /* Accessibility: honor the OS "reduce motion" setting (CLAUDE.md §6). */

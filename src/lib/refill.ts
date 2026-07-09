@@ -17,14 +17,60 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24
 /** Most US plans allow a refill once ~75% of the days' supply is used. */
 export const DEFAULT_REFILL_THRESHOLD = 0.75
 
+/**
+ * The two ways real US plans express a refill window:
+ *  - 'percent'     → "refill once you've used X% of the supply" (day = supplyDays × X)
+ *  - 'days-before' → "refill up to N days before the supply's end" (day = supplyDays − N)
+ * Both reduce to "how many days after the last fill you become eligible," so the
+ * date math below is shared. Insurance eligibility is anchored to the fill date
+ * and the dispensed days-supply on the label, NOT the user's actual burn rate —
+ * so both shapes are pure functions of `lastFilledDate` + the rule, never runway.
+ */
+export type RefillRuleKind = 'percent' | 'days-before'
+
 export interface RefillRule {
+  /** Which shape the plan uses. Absent = 'percent' (back-compat + the common case). */
+  kind?: RefillRuleKind
   /** Length of one dispensed supply, in days (e.g. 30 or 90). */
   supplyDays: number
   /**
-   * Fraction of the supply that must be used before insurance allows a refill.
-   * 0.75 → eligible at day 68 of a 90-day supply. Defaults to 0.75.
+   * ('percent' shape) Fraction of the supply that must be used before insurance
+   * allows a refill. 0.75 → eligible at day 68 of a 90-day supply. Defaults to 0.75.
    */
   refillThreshold?: number
+  /**
+   * ('days-before' shape) How many days before the supply's end a refill is
+   * allowed. 10 on a 90-day supply → eligible at day 80. Defaults to 0.
+   */
+  daysBeforeRunout?: number
+}
+
+/**
+ * Build a RefillRule from the fields stored on a supply, or null if there isn't
+ * enough to compute one (no dispensed-days value). Centralizes what every UI
+ * consumer used to hand-assemble as `{ supplyDays: refillIntervalDays }`, and is
+ * where the DB's snake_case rule kind (`days_before`) maps to the engine's enum.
+ */
+export function refillRuleFrom(input: {
+  refillIntervalDays?: number | null
+  refillRuleKind?: string | null
+  refillThresholdPct?: number | null
+  refillDaysBefore?: number | null
+}): RefillRule | null {
+  if (!input.refillIntervalDays || input.refillIntervalDays <= 0) return null
+  const kind: RefillRuleKind = input.refillRuleKind === 'days_before' ? 'days-before' : 'percent'
+  return {
+    kind,
+    supplyDays: input.refillIntervalDays,
+    refillThreshold:
+      input.refillThresholdPct != null && input.refillThresholdPct > 0
+        ? input.refillThresholdPct / 100
+        : undefined,
+    daysBeforeRunout:
+      input.refillDaysBefore != null && input.refillDaysBefore >= 0
+        ? input.refillDaysBefore
+        : undefined,
+  }
 }
 
 export type RefillState =
@@ -62,9 +108,16 @@ export function nextEligibleRefillDate(
   const filled = new Date(lastFilledDate).getTime()
   if (Number.isNaN(filled)) return null
 
-  const threshold = rule.refillThreshold ?? DEFAULT_REFILL_THRESHOLD
-  const daysUsedBeforeEligible = rule.supplyDays * threshold
-  return new Date(filled + daysUsedBeforeEligible * MS_PER_DAY)
+  // Both rule shapes resolve to "days after the fill until eligible."
+  let daysUntilEligibleFromFill: number
+  if ((rule.kind ?? 'percent') === 'days-before') {
+    const before = Math.max(0, rule.daysBeforeRunout ?? 0)
+    daysUntilEligibleFromFill = Math.max(0, rule.supplyDays - before)
+  } else {
+    const threshold = rule.refillThreshold ?? DEFAULT_REFILL_THRESHOLD
+    daysUntilEligibleFromFill = rule.supplyDays * threshold
+  }
+  return new Date(filled + daysUntilEligibleFromFill * MS_PER_DAY)
 }
 
 /** Whole days until a refill is allowed (0 = today, never negative). null if unknown. */

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { PushToggle } from '@/components/PushToggle'
 import { BackButton } from '@/components/ui/BackButton'
 import { LanguageToggle } from '@/components/ui/LanguageToggle'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
 import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
 import { useI18n } from '@/lib/i18n'
@@ -19,9 +20,14 @@ import {
   buildExportDocument, exportFilename, gatherUserData, downloadJson,
 } from '@/lib/dataExport'
 import {
+  isBiometricLockSupported, isPlatformAuthenticatorAvailable,
+  isBiometricLockEnabled, registerBiometricLock, disableBiometricLock,
+} from '@/lib/biometricLock'
+import { useToast } from '@/components/ui/Toast'
+import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
-  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages,
-  Mail, Download, Trash2, AlertTriangle, X, BarChart3,
+  Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages, SunMoon,
+  Mail, Download, Trash2, AlertTriangle, X, BarChart3, Fingerprint,
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
@@ -68,6 +74,22 @@ export default function SettingsPage() {
             </div>
           </div>
           <LanguageToggle />
+        </div>
+      </section>
+
+      {/* Appearance (light/dark/system) */}
+      <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <SunMoon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-ink">{t('settings.theme')}</h3>
+              <p className="text-sm text-muted">{t('settings.themeBody')}</p>
+            </div>
+          </div>
+          <ThemeToggle />
         </div>
       </section>
 
@@ -134,6 +156,9 @@ export default function SettingsPage() {
       {/* Privacy-first usage analytics — opt-in */}
       <AnalyticsConsent />
 
+      {/* Biometric app-lock — opt-in, per-device */}
+      <BiometricLockConsent />
+
       {/* Quick supplier links — real, useful now */}
       <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
         <div className="flex items-start gap-3 mb-4">
@@ -198,6 +223,7 @@ function AnalyticsConsent() {
           disabled={saving || !profile}
           role="switch"
           aria-checked={optedIn}
+          aria-label={t('analytics.title')}
           className={
             'shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
             (optedIn
@@ -207,6 +233,95 @@ function AnalyticsConsent() {
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : optedIn ? t('analytics.on') : t('analytics.off')}
         </button>
+      </div>
+    </section>
+  )
+}
+
+// ── Biometric app-lock (opt-in, per-device — see src/lib/biometricLock.ts) ─────
+
+type BiometricState = 'checking' | 'unsupported' | 'off' | 'on' | 'working'
+
+function BiometricLockConsent() {
+  const { t } = useI18n()
+  const { showToast } = useToast()
+  const { profile, email } = useProfile()
+  const [state, setState] = useState<BiometricState>('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const supported = isBiometricLockSupported() && (await isPlatformAuthenticatorAvailable())
+      if (cancelled) return
+      if (!supported) {
+        setState('unsupported')
+        return
+      }
+      setState(isBiometricLockEnabled() ? 'on' : 'off')
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const enable = async () => {
+    setState('working')
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setState('off')
+      showToast(t('common.pleaseSignInAgain'), 'caution')
+      return
+    }
+    const ok = await registerBiometricLock(user.id, userLabel(profile, email))
+    if (ok) {
+      setState('on')
+      showToast(t('biometric.enabledToast'), 'success')
+    } else {
+      setState('off')
+      showToast(t('biometric.enableFail'), 'caution')
+    }
+  }
+
+  const disable = () => {
+    disableBiometricLock()
+    setState('off')
+    showToast(t('biometric.disabledToast'), 'info')
+  }
+
+  const on = state === 'on'
+
+  return (
+    <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <Fingerprint className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-ink">{t('biometric.title')}</h3>
+            <p className="text-sm text-muted">
+              {state === 'unsupported' ? t('biometric.unsupportedBody') : t('biometric.body')}
+            </p>
+          </div>
+        </div>
+        {state !== 'unsupported' && state !== 'checking' && (
+          <button
+            onClick={on ? disable : enable}
+            disabled={state === 'working'}
+            role="switch"
+            aria-checked={on}
+            aria-label={t('biometric.title')}
+            className={
+              'shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
+              (on
+                ? 'bg-primary text-white border-primary'
+                : 'bg-surface-2 text-muted border-line hover:text-ink')
+            }
+          >
+            {state === 'working' ? <Loader2 className="w-4 h-4 animate-spin" /> : on ? t('biometric.on') : t('biometric.off')}
+          </button>
+        )}
       </div>
     </section>
   )
@@ -296,6 +411,9 @@ function AccountSection() {
 
   const handleSignOut = async () => {
     setSigningOut(true)
+    // Clear this device's biometric lock so it never carries over to whoever
+    // signs in next on a shared/reused device.
+    disableBiometricLock()
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -539,7 +657,7 @@ function AccountSection() {
         {showDelete && (
           <DeleteAccountDialog
             onClose={() => setShowDelete(false)}
-            onConfirmed={async () => { await supabase.auth.signOut(); router.push('/login') }}
+            onConfirmed={async () => { disableBiometricLock(); await supabase.auth.signOut(); router.push('/login') }}
           />
         )}
       </AnimatePresence>
