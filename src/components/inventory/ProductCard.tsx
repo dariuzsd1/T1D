@@ -24,6 +24,8 @@ import {
 import { reorderTargetFor } from "@/lib/suppliers";
 import { isOrderPending, daysSinceOrdered } from "@/lib/orderTracking";
 import { logActivity } from "@/lib/activity";
+import { trackEvent } from "@/lib/analytics";
+import { useProfile } from "@/components/profile/ProfileProvider";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 
@@ -49,6 +51,7 @@ export function ProductCard({
   onOrder,
 }: ProductCardProps) {
   const { t } = useI18n()
+  const { profile } = useProfile()
   // Semantic color: red is reserved for a true stockout; routine low stock is
   // amber; an unknown usage rate is neutral 'unset' (an estimate never alarms).
   const status = displayStatus(product, bufferDays)
@@ -170,6 +173,7 @@ export function ProductCard({
       // rather than leaving a stale "on its way" note next to fresh stock.
       await onUpdate?.(product.id, { quantity: product.quantity + boxSize, lastOrderedDate: null })
       void logActivity('supply_restocked', product.name)
+      if (profile?.analyticsOptIn) void trackEvent('restocked', true)
       showToast(t('product.toastRestocked', { name: product.name, count: boxSize }), 'success')
     } catch (err) {
       console.error('Failed to restock:', err)
@@ -188,7 +192,10 @@ export function ProductCard({
     setIsTogglingOrdered(true)
     try {
       await onUpdate?.(product.id, { lastOrderedDate: ordered ? new Date().toISOString() : null })
-      if (ordered) void logActivity('supply_reordered', product.name)
+      if (ordered) {
+        void logActivity('supply_reordered', product.name)
+        if (profile?.analyticsOptIn) void trackEvent('marked_ordered', true)
+      }
       showToast(
         ordered
           ? t('product.toastMarkedOrdered', { name: product.name })
