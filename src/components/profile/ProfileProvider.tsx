@@ -41,6 +41,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [supabase])
 
+  // Standard fetch-on-mount; goes away if this provider migrates to TanStack Query.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { refresh() }, [refresh])
 
   return (

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { effectiveRunwayDays } from '@/lib/depletion'
+import { type SupplyRow } from '@/lib/store'
+import { errorMessage } from '@/lib/utils'
 
 /**
  * GET /api/inventory
  * Fetch authenticated user's supply inventory
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
 
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
     // agrees. runway = sooner of (stock ÷ usage) and (shelf-life expiry). No more
     // dishonest "default 30"; usage rate is the user's real value or 0 (which the
     // engine treats as a conservative estimate, never a fabricated number).
-    const inventory = supplies?.map((supply: any) => {
+    const inventory = supplies?.map((supply: SupplyRow) => {
       const usageRatePerDay =
         supply.usage_rate_per_day != null && Number(supply.usage_rate_per_day) > 0
           ? Number(supply.usage_rate_per_day)
@@ -86,10 +88,10 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ data: inventory || [] })
-  } catch (error: any) {
+  } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage(error) },
       { status: 500 }
     )
   }
@@ -136,10 +138,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ data }, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage(error) },
       { status: 500 }
     )
   }

@@ -35,6 +35,8 @@ export default function MedicalIdPage() {
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
 
+  // Reading a browser-only global on mount (unavailable server-side) — not a data fetch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOrigin(window.location.origin), [])
 
   const load = useCallback(async () => {
@@ -56,6 +58,9 @@ export default function MedicalIdPage() {
     setLoading(false)
   }, [supabase])
 
+  // Standard fetch-on-mount; goes away once this page migrates to TanStack
+  // Query (already done for Home/Supplies/Reorder/Calendar).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const set = <K extends keyof MedicalProfile>(key: K, value: MedicalProfile[K]) =>

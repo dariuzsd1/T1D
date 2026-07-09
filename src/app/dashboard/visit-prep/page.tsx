@@ -5,7 +5,7 @@ import { Printer, Stethoscope, Package, Pill, Cpu, CalendarClock } from 'lucide-
 import { createClient } from '@/lib/supabase/client'
 import { useStore, type Product } from '@/lib/store'
 import { useProfile } from '@/components/profile/ProfileProvider'
-import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS, isRateEstimated } from '@/lib/depletion'
+import { displayStatus, isRateEstimated } from '@/lib/depletion'
 import { rowToPrescription, renewalStatus, type Prescription, type RenewalStatus } from '@/lib/prescriptions'
 import { rowToDevice, deviceLabel, DEVICE_KIND_KEY, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
 import { rowToAppointment, appointmentTiming, type Appointment } from '@/lib/appointments'

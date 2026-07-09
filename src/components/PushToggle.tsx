@@ -11,6 +11,7 @@ import {
   onForegroundMessage,
 } from '@/lib/firebase/messaging'
 import { useI18n } from '@/lib/i18n'
+import { errorMessage } from '@/lib/utils'
 
 type State =
   | 'checking'
@@ -50,7 +51,7 @@ export function PushToggle() {
       active = false
       unsub()
     }
-  }, [showToast])
+  }, [showToast, t])
 
   const enable = async () => {
     setState('working')
@@ -98,9 +99,9 @@ export function PushToggle() {
 
       setState('enabled')
       showToast(t('push.enabledToast'), 'success')
-    } catch (err: any) {
+    } catch (err) {
       setState('default')
-      showToast(err?.message || t('push.enableFail'), 'caution')
+      showToast(errorMessage(err, t('push.enableFail')), 'caution')
     }
   }
 

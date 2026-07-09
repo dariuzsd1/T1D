@@ -29,6 +29,7 @@ import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
+import { errorMessage } from '@/lib/utils'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -229,8 +230,8 @@ export default function ScanPage() {
         { usageRatePerDay: autoRate }
       )
       if (ok) router.push('/dashboard')
-    } catch (err: any) {
-      setError(err?.message || t('scan.errGenericSave'))
+    } catch (err) {
+      setError(errorMessage(err, t('scan.errGenericSave')))
     } finally {
       setSaving(false)
     }
@@ -282,8 +283,8 @@ export default function ScanPage() {
         { usageRatePerDay: autoRate }
       )
       if (ok) router.push('/dashboard')
-    } catch (err: any) {
-      setError(err?.message || t('scan.errGenericSave'))
+    } catch (err) {
+      setError(errorMessage(err, t('scan.errGenericSave')))
     } finally {
       setSaving(false)
     }
@@ -384,8 +385,8 @@ export default function ScanPage() {
         }
       )
       if (ok) router.push('/dashboard')
-    } catch (err: any) {
-      setError(err?.message || t('scan.errGenericSave'))
+    } catch (err) {
+      setError(errorMessage(err, t('scan.errGenericSave')))
     } finally {
       setSaving(false)
     }

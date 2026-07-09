@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { motion } from 'framer-motion'
 import {
   CheckCircle2, AlertTriangle, ShoppingCart, Minus, Loader2,
   Activity, ShieldCheck, Package,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
 import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS, isRateEstimated } from '@/lib/depletion'
@@ -20,7 +18,6 @@ type Safety = 'good' | 'watch' | 'act'
 
 export default function SafetyViewPage() {
   const { ownerId } = useParams<{ ownerId: string }>()
-  const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
   const { t } = useI18n()
 
