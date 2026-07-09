@@ -38,20 +38,28 @@ deleted entirely, not demoted. Push notifications (FCM) are deployed and verifie
 (daily `pg_cron` → Edge Function → FCM, confirmed by a real delivered notification). The app is
 translated across every page in English, French, and Spanish. Caregiver sharing's consent gate is
 verified: an invited-but-not-accepted caregiver has zero read access; accepting grants it. Device-aware
-Quick Actions replaced the hardcoded Insulet/Dexcom quick-log buttons. Dark mode is wired via
-`prefers-color-scheme`, contrast-verified. Wear-clock auto-depletion (supplement model — manual
-logging always wins) fills the gap when a wearable's site/device change is never logged by hand.
-TanStack Query is in place as a proof of concept on the Home + Supplies pages (caching, refetch on
-focus); the rest of the dashboard still uses the original `useEffect` + fetch pattern. All routes
-build clean; the test suite is green (153+ tests as of 2026-07-08).
+Quick Actions replaced the hardcoded Insulet/Dexcom quick-log buttons. Dark mode has both an OS-follow
+default and a manual light/dark/system toggle in Settings (cookie-persisted, contrast-verified). An
+optional per-device biometric app-lock (Face ID/Windows Hello/fingerprint via WebAuthn) is available,
+opt-in only, with a reset-on-device safety net — never a forced auth factor. Wear-clock auto-depletion
+(supplement model — manual logging always wins) fills the gap when a wearable's site/device change is
+never logged by hand. TanStack Query covers Home, Supplies, Reorder, and Calendar (shared cache, one
+`useInventory()` hook); the rest of the dashboard still uses the original `useEffect` + fetch pattern.
+The insurance refill engine models two real per-plan rule shapes (eligible at X% of days-supply used,
+or N days before run-out), editable per supply. Reorder is still a hand-off to a supplier's site (no
+vendor API), but the app now tracks it: a self-reported "Mark as ordered" note quiets the proactive
+nags (banner + push) for a grace window without ever hiding a true stockout. All routes build clean;
+the test suite is green (170+ tests as of 2026-07-09).
 
 **Known still-open, non-urgent (check `user-todo.md` memory for anything actively in flight):**
-- Expanding TanStack Query beyond the Home/Supplies POC to the rest of the dashboard — needs a fresh
-  scope decision (full migration vs. more POC pages), not started.
-- A user-facing light/dark toggle in Settings — dark mode currently follows OS preference only.
+- Expanding TanStack Query beyond Home/Supplies/Reorder/Calendar to the rest of the dashboard.
+- No route/component/E2E test coverage (unit tests only) and no `lint` step in CI — the main
+  technical gap identified by the 2026-07-08 re-audit.
+- Success-metric instrumentation (e.g. reorder-cycle completion rate) — not yet built.
+- True one-tap reorder via a supplier/DME API (real Edgepark/Byram/CCS integration) — needs a vendor
+  partnership, not just code; today's self-reported order tracking is the honest interim step.
 - Device-driven auto-depletion (Dexcom/Omnipod/Tandem session → auto-decrement) — blocked on vendor
   OAuth access, not something to build speculatively.
-- Biometric unlock — mentioned in earlier planning, never built. Not started.
 - Predictive/sick-day usage modeling and the B2B/HIPAA-BAA tier are V3, blocked on funding/legal.
 - **Prescription-photo intake is intentionally on hold** — see §4, a legal-review gate, not a backlog item.
 
