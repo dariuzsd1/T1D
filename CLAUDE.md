@@ -53,8 +53,8 @@ the test suite is green (170+ tests as of 2026-07-09).
 
 **Known still-open, non-urgent (check `user-todo.md` memory for anything actively in flight):**
 - Expanding TanStack Query beyond Home/Supplies/Reorder/Calendar to the rest of the dashboard.
-- No route/component/E2E test coverage (unit tests only) and no `lint` step in CI — the main
-  technical gap identified by the 2026-07-08 re-audit.
+- No route/component/E2E test coverage (unit tests only, though CI now also runs `eslint` on every
+  push) — the remaining technical gap identified by the 2026-07-08 re-audit.
 - Success-metric instrumentation (e.g. reorder-cycle completion rate) — not yet built.
 - True one-tap reorder via a supplier/DME API (real Edgepark/Byram/CCS integration) — needs a vendor
   partnership, not just code; today's self-reported order tracking is the honest interim step.
