@@ -4,6 +4,7 @@ import {
   effectiveRunwayDays,
   DEFAULT_SAFETY_BUFFER_DAYS,
 } from './depletion'
+import { effectiveBuffer, SURGE_BUFFER_KEY, type SurgeBuffer } from './surgeBuffer'
 
 export interface Product {
   id: string;
@@ -80,14 +81,25 @@ function withRunway(product: Product): Product {
 
 interface T1DStore {
   inventory: Product[];
+  /** The EFFECTIVE buffer every runway/alert surface reads: the steady base, plus
+   *  any active sick-day/travel surge (src/lib/surgeBuffer.ts). Derived — set via
+   *  setSafetyBufferDays (base) or setSurgeBuffer, never assigned directly. */
   safetyBufferDays: number;
+  /** The steady user setting on its own (no surge). This is what the Settings
+   *  slider shows and what PreferenceSync/localStorage persist. */
+  baseSafetyBufferDays: number;
+  /** Active time-boxed surge, or null. Non-PHI, cached in localStorage. */
+  surgeBuffer: SurgeBuffer | null;
 
   // Actions
   setInventory: (products: Product[]) => void;
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
+  /** Sets the steady BASE buffer (persisted); the effective value re-derives. */
   setSafetyBufferDays: (days: number) => void;
+  /** Turns a sick-day/travel surge on (pass a window) or off (pass null). */
+  setSurgeBuffer: (surge: SurgeBuffer | null) => void;
 }
 
 // NOTE: no `persist` middleware. Inventory is PHI; the dashboard re-fetches it
@@ -97,6 +109,8 @@ interface T1DStore {
 export const useStore = create<T1DStore>()((set) => ({
   inventory: [],
   safetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
+  baseSafetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
+  surgeBuffer: null,
 
   setInventory: (inventory) =>
     set({ inventory: inventory.map(withRunway) }),
@@ -211,13 +225,28 @@ export const useStore = create<T1DStore>()((set) => ({
     }))
   },
 
-  setSafetyBufferDays: (safetyBufferDays) => {
+  setSafetyBufferDays: (baseSafetyBufferDays) => {
     // The buffer is a non-PHI UI preference, so it's safe to remember locally
     // (PHI like inventory/site logs is still never persisted). PreferencesHydrator
     // re-applies this after mount to avoid any SSR/client hydration mismatch.
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SAFETY_BUFFER_KEY, String(safetyBufferDays))
+      window.localStorage.setItem(SAFETY_BUFFER_KEY, String(baseSafetyBufferDays))
     }
-    set({ safetyBufferDays })
+    // Re-derive the effective value against any active surge.
+    set((state) => ({
+      baseSafetyBufferDays,
+      safetyBufferDays: effectiveBuffer(baseSafetyBufferDays, state.surgeBuffer),
+    }))
+  },
+
+  setSurgeBuffer: (surgeBuffer) => {
+    if (typeof window !== 'undefined') {
+      if (surgeBuffer) window.localStorage.setItem(SURGE_BUFFER_KEY, JSON.stringify(surgeBuffer))
+      else window.localStorage.removeItem(SURGE_BUFFER_KEY)
+    }
+    set((state) => ({
+      surgeBuffer,
+      safetyBufferDays: effectiveBuffer(state.baseSafetyBufferDays, surgeBuffer),
+    }))
   },
 }))

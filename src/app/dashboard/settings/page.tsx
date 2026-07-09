@@ -25,17 +25,21 @@ import {
 } from '@/lib/biometricLock'
 import { useToast } from '@/components/ui/Toast'
 import {
+  surgeDaysLeft, surgeUntilInDays, parseSurgeDate, isSurgeActive,
+} from '@/lib/surgeBuffer'
+import {
   Bell, ShieldCheck, ExternalLink, Truck, User, Loader2,
   Lock, Eye, EyeOff, CheckCircle, AlertCircle, LogOut, Languages, SunMoon,
-  Mail, Download, Trash2, AlertTriangle, X, BarChart3, Fingerprint,
+  Mail, Download, Trash2, AlertTriangle, X, BarChart3, Fingerprint, Thermometer,
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
 
 export default function SettingsPage() {
-  const { safetyBufferDays, setSafetyBufferDays } = useStore()
+  const { safetyBufferDays, baseSafetyBufferDays, setSafetyBufferDays, surgeBuffer } = useStore()
   const { t } = useI18n()
   const { profile, email } = useProfile()
+  const surgeActive = isSurgeActive(surgeBuffer)
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
@@ -106,7 +110,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex items-end gap-4 mb-5">
-          <div className="text-5xl font-black tabular-nums text-ink">{safetyBufferDays}</div>
+          <div className="text-5xl font-black tabular-nums text-ink">{baseSafetyBufferDays}</div>
           <div className="text-sm font-medium text-muted pb-2">{t('settings.daysReserve')}</div>
         </div>
 
@@ -116,7 +120,7 @@ export default function SettingsPage() {
           type="range"
           min={1}
           max={45}
-          value={safetyBufferDays}
+          value={baseSafetyBufferDays}
           onChange={(e) => setSafetyBufferDays(parseInt(e.target.value, 10))}
           className="w-full accent-primary"
         />
@@ -126,9 +130,9 @@ export default function SettingsPage() {
             <button
               key={d}
               onClick={() => setSafetyBufferDays(d)}
-              aria-pressed={safetyBufferDays === d}
+              aria-pressed={baseSafetyBufferDays === d}
               className={
-                safetyBufferDays === d
+                baseSafetyBufferDays === d
                   ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white'
                   : 'px-4 py-2 rounded-xl text-sm font-semibold bg-surface-2 text-muted hover:text-ink transition-colors'
               }
@@ -137,7 +141,19 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
+
+        {/* When a surge is on, say so here so an earlier-than-usual "reorder soon"
+            is never a mystery — the effective reserve is base + surge right now. */}
+        {surgeActive && (
+          <p className="mt-4 flex items-center gap-1.5 text-sm font-medium text-primary">
+            <Thermometer className="w-4 h-4 shrink-0" />
+            {t('settings.surgeNote', { total: safetyBufferDays })}
+          </p>
+        )}
       </section>
+
+      {/* Sick-day / travel surge buffer — time-boxed, reverts on its own */}
+      <SurgeBufferControl />
 
       {/* Notifications — honest: needs one-time setup, not yet live */}
       <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
@@ -186,6 +202,120 @@ export default function SettingsPage() {
         </div>
       </section>
     </div>
+  )
+}
+
+// ── Sick-day / travel surge buffer (time-boxed, src/lib/surgeBuffer.ts) ─────────
+
+const SURGE_EXTRA_PRESETS = [7, 14, 21]
+const SURGE_DURATION_PRESETS: { days: number; key: 'settings.surgeDur7' | 'settings.surgeDur14' | 'settings.surgeDur30' }[] = [
+  { days: 7, key: 'settings.surgeDur7' },
+  { days: 14, key: 'settings.surgeDur14' },
+  { days: 30, key: 'settings.surgeDur30' },
+]
+
+function SurgeBufferControl() {
+  const { t } = useI18n()
+  const surgeBuffer = useStore((s) => s.surgeBuffer)
+  const setSurgeBuffer = useStore((s) => s.setSurgeBuffer)
+  const [pendingExtra, setPendingExtra] = useState(7)
+  const [pendingDays, setPendingDays] = useState(14)
+
+  const active = isSurgeActive(surgeBuffer)
+  const daysLeft = surgeDaysLeft(surgeBuffer)
+  const until = surgeBuffer ? parseSurgeDate(surgeBuffer.untilDate) : null
+  const untilLabel = until ? until.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''
+  const leftLabel =
+    daysLeft === null ? ''
+    : daysLeft === 0 ? t('settings.surgeEndsToday')
+    : t(daysLeft === 1 ? 'settings.surgeDaysLeftOne' : 'settings.surgeDaysLeftOther', { days: daysLeft })
+
+  const turnOn = () =>
+    setSurgeBuffer({ extraDays: pendingExtra, untilDate: surgeUntilInDays(pendingDays) })
+  const turnOff = () => setSurgeBuffer(null)
+
+  return (
+    <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+      <div className="flex items-start gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+          <Thermometer className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-ink">{t('settings.surgeTitle')}</h3>
+          <p className="text-sm text-muted">{t('settings.surgeBody')}</p>
+        </div>
+      </div>
+
+      {active ? (
+        <div className="flex items-center justify-between gap-4 rounded-2xl bg-primary/[0.06] border border-primary/20 p-4">
+          <div className="min-w-0">
+            <p className="font-semibold text-primary">
+              {t('settings.surgeActive', { days: surgeBuffer!.extraDays, date: untilLabel })}
+            </p>
+            {leftLabel && <p className="text-sm text-muted mt-0.5">{leftLabel}</p>}
+          </div>
+          <button
+            onClick={turnOff}
+            className="shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-semibold bg-surface-2 text-ink border border-line hover:bg-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {t('settings.surgeTurnOff')}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <fieldset>
+            <legend className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+              {t('settings.surgeExtraLabel')}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {SURGE_EXTRA_PRESETS.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setPendingExtra(d)}
+                  aria-pressed={pendingExtra === d}
+                  className={
+                    pendingExtra === d
+                      ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white'
+                      : 'px-4 py-2 rounded-xl text-sm font-semibold bg-surface-2 text-muted hover:text-ink transition-colors'
+                  }
+                >
+                  +{d} {t('settings.daysUnit')}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">
+              {t('settings.surgeDurationLabel')}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {SURGE_DURATION_PRESETS.map((opt) => (
+                <button
+                  key={opt.days}
+                  onClick={() => setPendingDays(opt.days)}
+                  aria-pressed={pendingDays === opt.days}
+                  className={
+                    pendingDays === opt.days
+                      ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white'
+                      : 'px-4 py-2 rounded-xl text-sm font-semibold bg-surface-2 text-muted hover:text-ink transition-colors'
+                  }
+                >
+                  {t(opt.key)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <button
+            onClick={turnOn}
+            className="min-h-[44px] px-5 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+          >
+            {t('settings.surgeTurnOn')}
+          </button>
+        </div>
+      )}
+    </section>
   )
 }
 

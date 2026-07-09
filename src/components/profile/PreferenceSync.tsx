@@ -23,7 +23,10 @@ export function PreferenceSync() {
   const { profile, loading } = useProfile()
   const { lang, setLang } = useI18n()
   const { theme, setTheme } = useTheme()
-  const safetyBufferDays = useStore((s) => s.safetyBufferDays)
+  // The BASE buffer (the steady setting), never the surged effective value — the
+  // surge is a transient, device-local override that must not overwrite the saved
+  // preference (src/lib/surgeBuffer.ts).
+  const baseSafetyBufferDays = useStore((s) => s.baseSafetyBufferDays)
   const setSafetyBufferDays = useStore((s) => s.setSafetyBufferDays)
   const seeded = useRef(false)
 
@@ -37,7 +40,7 @@ export function PreferenceSync() {
       if (profile.theme !== theme) setTheme(profile.theme as Theme)
     }
     if (typeof profile.safetyBufferDays === 'number' && profile.safetyBufferDays > 0) {
-      if (profile.safetyBufferDays !== safetyBufferDays) setSafetyBufferDays(profile.safetyBufferDays)
+      if (profile.safetyBufferDays !== baseSafetyBufferDays) setSafetyBufferDays(profile.safetyBufferDays)
     }
     seeded.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,12 +60,12 @@ export function PreferenceSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme])
 
-  // 4. Persist safety-buffer changes back to the profile.
+  // 4. Persist safety-buffer changes back to the profile (the base, not the surge).
   useEffect(() => {
-    if (!seeded.current || !profile || safetyBufferDays === profile.safetyBufferDays) return
-    supabase.from('profiles').update({ safety_buffer_days: safetyBufferDays }).eq('id', profile.id).then(() => {})
+    if (!seeded.current || !profile || baseSafetyBufferDays === profile.safetyBufferDays) return
+    supabase.from('profiles').update({ safety_buffer_days: baseSafetyBufferDays }).eq('id', profile.id).then(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [safetyBufferDays])
+  }, [baseSafetyBufferDays])
 
   return null
 }
