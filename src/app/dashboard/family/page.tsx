@@ -107,6 +107,9 @@ export default function FamilyPage() {
     active.forEach(s => loadStatus(s.ownerId))
   }, [supabase, loadStatus])
 
+  // Standard fetch-on-mount; goes away once this page migrates to TanStack
+  // Query (already done for Home/Supplies/Reorder/Calendar).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   // Accept/decline goes through a security-definer function that can only flip

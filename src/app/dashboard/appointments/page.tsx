@@ -76,6 +76,9 @@ export default function AppointmentsPage() {
   }, [supabase])
 
   useEffect(() => {
+    // Standard fetch-on-mount; goes away once this page migrates to TanStack
+    // Query (already done for Home/Supplies/Reorder/Calendar).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
 

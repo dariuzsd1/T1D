@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import { type Theme, THEME_COOKIE, normalizeTheme } from './shared'
+import { type Theme, THEME_COOKIE } from './shared'
 
 export type { Theme } from './shared'
 export { THEME_COOKIE, normalizeTheme } from './shared'

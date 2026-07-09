@@ -72,6 +72,9 @@ export default function PrescriptionsPage() {
   }, [supabase])
 
   useEffect(() => {
+    // Standard fetch-on-mount; goes away once this page migrates to TanStack
+    // Query (already done for Home/Supplies/Reorder/Calendar).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
     // Linked supplies (best-effort): lets each prescription show what it covers
     // and how long that stock lasts. A failure just hides the section.

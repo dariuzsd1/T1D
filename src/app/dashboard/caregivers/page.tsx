@@ -69,6 +69,9 @@ export default function SharingPage() {
     setLoading(false)
   }, [supabase])
 
+  // Standard fetch-on-mount; goes away once this page migrates to TanStack
+  // Query (already done for Home/Supplies/Reorder/Calendar).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const handleInvite = async () => {

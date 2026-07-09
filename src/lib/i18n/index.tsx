@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { en, fr, es, type TKey } from './dictionaries'
-import { type Lang, LANG_COOKIE, normalizeLang } from './shared'
+import { type Lang, LANG_COOKIE } from './shared'
 
 export type { Lang } from './shared'
 export { LANG_COOKIE, normalizeLang } from './shared'

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
 import {
   Cpu, Plus, Activity, Zap, Pen, TestTube2, ShoppingCart,
   Loader2, X, Trash2, Database, Package, Upload, Info,
@@ -16,7 +15,7 @@ import {
   rowToDevice, deviceToRow, deviceLabel, DEVICE_PRESETS, DEVICE_KIND_KEY,
 } from '@/lib/devices'
 import { isMissingTableError } from '@/lib/prescriptions'
-import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { displayStatus, isRateEstimated } from '@/lib/depletion'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -71,7 +70,10 @@ export default function DevicesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDelete = async (id: string) => {
     const device = devices.find((d) => d.id === id)

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -17,9 +17,13 @@ const FOCUSABLE =
 export function useDialog<T extends HTMLElement>(onClose: () => void) {
   const containerRef = useRef<T>(null)
   // Keep the latest onClose without re-running the effect (which would reset the
-  // saved focus target). Escape always calls the current handler.
+  // saved focus target). Escape always calls the current handler. Updated in a
+  // layout effect (not during render) so the ref mutation stays a side effect,
+  // not a render impurity, and is current before the browser can dispatch Escape.
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null

@@ -44,6 +44,31 @@ export interface Product {
   lastOrderedDate?: string | null;
 }
 
+/** Raw `supplies` row shape as read from Supabase (snake_case), scoped to just
+ *  the columns /api/inventory and the caregiver inventory route map into a
+ *  Product. Both routes `select('*')`, so extra DB columns are simply ignored
+ *  by this type — it only needs to describe what's actually read. */
+export interface SupplyRow {
+  id: string;
+  brand: string | null;
+  name: string;
+  quantity: number;
+  updated_at: string | null;
+  usage_rate_per_day: number | null;
+  expiration_date: string | null;
+  refill_interval_days: number | null;
+  last_filled_date: string | null;
+  refill_rule_kind: string | null;
+  refill_threshold_pct: number | null;
+  refill_days_before: number | null;
+  copay: number | null;
+  device_id: string | null;
+  prescription_id: string | null;
+  opened_date: string | null;
+  in_use_days: number | null;
+  last_ordered_date: string | null;
+}
+
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
 export const SAFETY_BUFFER_KEY = 't1d-safety-buffer'
 

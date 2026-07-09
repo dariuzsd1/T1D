@@ -11,7 +11,7 @@ import { BackButton } from '@/components/ui/BackButton'
 import { LanguageToggle } from '@/components/ui/LanguageToggle'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
-import { rowToProfile, userLabel, type Profile, type ProfileRow } from '@/lib/profile'
+import { rowToProfile, userLabel, type ProfileRow } from '@/lib/profile'
 import { useI18n } from '@/lib/i18n'
 import { useDialog } from '@/lib/useDialog'
 import { useProfile } from '@/components/profile/ProfileProvider'
@@ -335,7 +335,6 @@ function AccountSection() {
   const { t } = useI18n()
 
   const [email, setEmail] = useState<string | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
   const [nameMsg, setNameMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -368,7 +367,6 @@ function AccountSection() {
         .then(({ data }) => {
           if (data) {
             const p = rowToProfile(data as ProfileRow)
-            setProfile(p)
             setDisplayName(p.displayName ?? '')
           }
         })
@@ -387,7 +385,6 @@ function AccountSection() {
     if (error) {
       setNameMsg({ type: 'error', text: error.message })
     } else {
-      setProfile(prev => prev ? { ...prev, displayName: displayName.trim() || null } : null)
       setNameMsg({ type: 'success', text: t('settings.nameSaved') })
       setTimeout(() => setNameMsg(null), 3000)
     }

@@ -6,6 +6,7 @@ import { X, Loader2 } from 'lucide-react'
 import { type Appointment, APPOINTMENT_TYPES, APPOINTMENT_TYPE_KEY } from '@/lib/appointments'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
+import { errorMessage } from '@/lib/utils'
 
 interface AppointmentModalProps {
   /** Existing appointment to edit, or null to create a new one. */
@@ -60,8 +61,8 @@ export function AppointmentModal({ appointment, onClose, onSave }: AppointmentMo
         notes,
       })
       onClose()
-    } catch (err: any) {
-      setError(err?.message || t('apptModal.errGeneric'))
+    } catch (err) {
+      setError(errorMessage(err, t('apptModal.errGeneric')))
     } finally {
       setSaving(false)
     }

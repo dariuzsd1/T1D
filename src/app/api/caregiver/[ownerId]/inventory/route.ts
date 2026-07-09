@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { effectiveRunwayDays } from '@/lib/depletion'
+import { type SupplyRow } from '@/lib/store'
+import { errorMessage } from '@/lib/utils'
 
 /**
  * GET /api/caregiver/[ownerId]/inventory
@@ -49,7 +51,7 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch inventory' }, { status: 500 })
     }
 
-    const inventory = (supplies ?? []).map((supply: any) => {
+    const inventory = (supplies ?? []).map((supply: SupplyRow) => {
       const usageRatePerDay =
         supply.usage_rate_per_day != null && Number(supply.usage_rate_per_day) > 0
           ? Number(supply.usage_rate_per_day)
@@ -90,9 +92,9 @@ export async function GET(
       role: share.role,
       ownerEmail: share.owner_email,
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Caregiver inventory API error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }
 
@@ -139,7 +141,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+  } catch (err) {
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

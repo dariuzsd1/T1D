@@ -6,6 +6,7 @@ import { X, Loader2 } from 'lucide-react'
 import type { Prescription } from '@/lib/prescriptions'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
+import { errorMessage } from '@/lib/utils'
 
 interface PrescriptionModalProps {
   /** Existing prescription to edit, or null to create a new one. */
@@ -60,8 +61,8 @@ export function PrescriptionModal({ prescription, onClose, onSave }: Prescriptio
         notes,
       })
       onClose()
-    } catch (err: any) {
-      setError(err?.message || t('rxModal.errGeneric'))
+    } catch (err) {
+      setError(errorMessage(err, t('rxModal.errGeneric')))
     } finally {
       setSaving(false)
     }

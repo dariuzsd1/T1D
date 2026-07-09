@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { DollarSign, TrendingDown, PiggyBank, Info, CalendarClock } from 'lucide-react'
 import type { Product } from '@/lib/store'
 import { annualCost, isYearEndStockUpWindow, formatUsd } from '@/lib/cost'
+import { errorMessage } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { useI18n } from '@/lib/i18n'
 
@@ -22,8 +23,8 @@ export default function CostsPage() {
         const json = await res.json()
         setItems(json.data || [])
         setError(null)
-      } catch (e: any) {
-        setError(e.message)
+      } catch (e) {
+        setError(errorMessage(e))
       } finally {
         setLoading(false)
       }
