@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
@@ -8,6 +9,8 @@ import { displayStatus } from '@/lib/depletion'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/components/profile/ProfileProvider'
+import { trackEvent } from '@/lib/analytics'
 import { BackButton } from '@/components/ui/BackButton'
 import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
@@ -16,9 +19,14 @@ export default function ReorderPage() {
   const { inventory, safetyBufferDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
+  const { profile } = useProfile()
   // TanStack Query (shared with Home/Supplies): cached + deduplicated, so
   // arriving here from either of those pages reuses the already-fetched data.
   const { isLoading: loading } = useInventory()
+
+  useEffect(() => {
+    if (profile?.analyticsOptIn) void trackEvent('opened_reorder', true)
+  }, [profile?.analyticsOptIn])
 
   // Out first, then low — most urgent at the top. "ok" items aren't shown here,
   // and neither are unknown-rate items: their runway is a guess, so they get the
@@ -44,6 +52,7 @@ export default function ReorderPage() {
   const handleMarkOrdered = async (id: string, ordered: boolean) => {
     try {
       await updateProduct(id, { lastOrderedDate: ordered ? new Date().toISOString() : null })
+      if (ordered && profile?.analyticsOptIn) void trackEvent('marked_ordered', true)
     } catch (err) {
       console.error('Failed to update order status:', err)
       const name = inventory.find((p) => p.id === id)?.name ?? ''

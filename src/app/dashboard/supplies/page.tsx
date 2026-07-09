@@ -13,12 +13,15 @@ import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/components/profile/ProfileProvider'
+import { trackEvent } from '@/lib/analytics'
 import { Plus } from 'lucide-react'
 
 export default function SuppliesPage() {
   const { inventory, updateProduct, removeProduct, safetyBufferDays } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
+  const { profile } = useProfile()
   // TanStack Query POC (BACKLOG.md): cached + deduplicated with the Home
   // page, refetches on window focus. Still write-throughs into the zustand
   // store, so `inventory`/`updateProduct`/`removeProduct` are unchanged.
@@ -53,6 +56,10 @@ export default function SuppliesPage() {
         if (data) setPrescriptions(data.map(rowToPrescription))
       })
   }, [])
+
+  useEffect(() => {
+    if (profile?.analyticsOptIn) void trackEvent('opened_supplies', true)
+  }, [profile?.analyticsOptIn])
 
   // Three honest groups: real alarms (out/low on facts), unknown-rate items
   // (calm "set usage" prompt — never an alarm built on the fallback estimate),
