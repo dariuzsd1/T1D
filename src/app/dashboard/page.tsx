@@ -159,6 +159,16 @@ export default function DashboardPage() {
       'info'
     )
 
+  const handleMarkOrdered = async (id: string, ordered: boolean) => {
+    try {
+      await updateProduct(id, { lastOrderedDate: ordered ? new Date().toISOString() : null })
+    } catch (err) {
+      console.error('Failed to update order status:', err)
+      const name = inventory.find((p) => p.id === id)?.name ?? ''
+      showToast(t('product.toastMarkOrderedFail', { name }), 'caution')
+    }
+  }
+
   const handlePodChange = async () => {
     if (!pod) return
     if (pod.quantity > 0) {
@@ -349,6 +359,7 @@ export default function DashboardPage() {
               product={item}
               bufferDays={safetyBufferDays}
               onReorder={handleReorder}
+              onMarkOrdered={handleMarkOrdered}
             />
           ))}
         </section>

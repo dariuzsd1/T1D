@@ -10,7 +10,7 @@ import type { TKey } from '@/lib/i18n/dictionaries'
  * non-PHI analytics in analytics.ts.
  */
 
-export type ActivityAction = 'supply_added' | 'supply_used' | 'supply_restocked'
+export type ActivityAction = 'supply_added' | 'supply_used' | 'supply_restocked' | 'supply_reordered'
 
 export interface ActivityEntry {
   id: string
@@ -31,6 +31,7 @@ export const ACTIVITY_LABEL: Record<ActivityAction, TKey> = {
   supply_added: 'activity.supplyAdded',
   supply_used: 'activity.supplyUsed',
   supply_restocked: 'activity.supplyRestocked',
+  supply_reordered: 'activity.supplyReordered',
 }
 
 /** Best-effort: record an action. Never throws — logging must not break a flow. */

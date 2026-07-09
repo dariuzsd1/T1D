@@ -81,6 +81,7 @@ export async function GET(
         prescriptionId: supply.prescription_id ?? null,
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        lastOrderedDate: supply.last_ordered_date ?? null,
       }
     })
 

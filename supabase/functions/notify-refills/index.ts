@@ -4,10 +4,12 @@
  * Runs daily via pg_cron (supabase/cron.sql): scans every user's supplies with
  * the service-role key, finds real alerts, and pushes them through FCM HTTP v1.
  *
- * KEEP IN SYNC: the two pure engines below are ports of
- *   - src/lib/depletion.ts  (effectiveRunwayDays / stockStatus / displayStatus)
- *   - src/lib/refill.ts     (assessRefill — the insurance-gap moat)
- * If either source module changes, re-port it here. They are pure date/number
+ * KEEP IN SYNC: the pure engines below are ports of
+ *   - src/lib/depletion.ts     (effectiveRunwayDays / stockStatus / displayStatus)
+ *   - src/lib/refill.ts        (assessRefill — the insurance-gap moat)
+ *   - src/lib/orderTracking.ts (isOrderPending — quiets the low-stock push once
+ *     the user has self-reported an order in flight)
+ * If any source module changes, re-port it here. They are pure date/number
  * logic with no imports, so the copy is line-for-line.
  *
  * Honesty rules (CLAUDE.md §9), enforced server-side exactly like the UI:
@@ -15,6 +17,8 @@
  *     (0 on hand, or a real expiration date inside the lead window)
  *   - the insurance-gap alert only fires on a KNOWN rate — a gap computed from
  *     the fallback guess would be a fabricated emergency
+ *   - a true stockout always pushes, even with a self-reported order in flight —
+ *     zero on hand is an active emergency regardless; only "running low" quiets
  *   - nothing is sent twice: notification_log dedupes per item+kind for 3 days
  *   - quiet hours (user's timezone) are respected; the next daily run catches up
  */
@@ -141,6 +145,20 @@ function refillGapDays(
   const daysUntilEligible = daysUntilRefillEligible(lastFilledDate, rule)
   if (daysUntilEligible === null || daysUntilEligible <= 0) return 0
   return runwayDays < daysUntilEligible ? daysUntilEligible - runwayDays : 0
+}
+
+// ─── ported from src/lib/orderTracking.ts ────────────────────────────────────
+
+const ORDER_GRACE_DAYS = 10
+
+/** True while a self-reported "marked as ordered" note is still within its
+ *  grace window — quiets the low-stock push without ever hiding a stockout. */
+function isOrderPending(lastOrderedDate: string | null | undefined, now: Date = new Date()): boolean {
+  if (!lastOrderedDate) return false
+  const ordered = new Date(lastOrderedDate).getTime()
+  if (Number.isNaN(ordered)) return false
+  const daysSince = (now.getTime() - ordered) / MS_PER_DAY
+  return daysSince >= 0 && daysSince <= ORDER_GRACE_DAYS
 }
 
 // ─── FCM HTTP v1 (OAuth via the service-account JSON secret) ─────────────────
@@ -276,6 +294,7 @@ interface SupplyRow {
   last_filled_date: string | null
   opened_date: string | null
   in_use_days: number | null
+  last_ordered_date: string | null
 }
 interface PrefsRow {
   user_id: string
@@ -349,7 +368,7 @@ Deno.serve(async (req) => {
   const [tokensRes, suppliesRes, prefsRes, profilesRes, logRes] = await Promise.all([
     supabase.from('fcm_tokens').select('id, user_id, token'),
     supabase.from('supplies').select(
-      'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days'
+      'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days, last_ordered_date'
     ),
     supabase.from('notification_prefs').select('*'),
     supabase.from('profiles').select('id, timezone, safety_buffer_days'),
@@ -408,9 +427,11 @@ Deno.serve(async (req) => {
       const rateKnown = !isRateEstimated(s.usage_rate_per_day)
 
       // Alert 1 — run-out (facts only; 'unset' never alerts, same as the UI).
+      // A true 'out' always pushes; a routine 'low' the user already marked as
+      // ordered stays quiet for the grace window (never hidden, just not re-pushed).
       let runoutBody: string | null = null
       if (status === 'out') runoutBody = `${s.name} is out. Reorder now.`
-      else if (status === 'low') {
+      else if (status === 'low' && !isOrderPending(s.last_ordered_date)) {
         runoutBody = rateKnown
           ? `${s.name} runs low in about ${runway} day${runway === 1 ? '' : 's'}. Reorder soon.`
           : `${s.name} expires soon. Use it first and reorder.`

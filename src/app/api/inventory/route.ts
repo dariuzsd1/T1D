@@ -80,6 +80,8 @@ export async function GET(request: NextRequest) {
         // Insulin in-use clock (null until set / columns exist).
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        // Reorder-loop tracking (null until marked ordered / column exists).
+        lastOrderedDate: supply.last_ordered_date ?? null,
       }
     })
 

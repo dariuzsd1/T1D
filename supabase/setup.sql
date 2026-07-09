@@ -97,6 +97,11 @@ create table if not exists public.supplies (
   -- "Use one", a restock, a site-tracker log) also counts as a fresh reference
   -- point via `updated_at` below, so a manual tap can never be double-counted.
   auto_depleted_through timestamptz,
+  -- Reorder-loop tracking (src/lib/orderTracking.ts): when the user last tapped
+  -- "Mark as ordered". Self-reported, not a real vendor order status — used only
+  -- to soften proactive nags (banner/push) for a short grace window, never to
+  -- hide a true stockout. NULL = no order in flight.
+  last_ordered_date timestamptz,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -115,7 +120,8 @@ alter table public.supplies
   add column if not exists lot_number            text,
   add column if not exists opened_date           date,
   add column if not exists in_use_days           integer,
-  add column if not exists auto_depleted_through timestamptz;
+  add column if not exists auto_depleted_through timestamptz,
+  add column if not exists last_ordered_date     timestamptz;
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 

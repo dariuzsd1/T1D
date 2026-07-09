@@ -38,6 +38,10 @@ export interface Product {
   // current vial/pen was opened and its discard window (usually 28 days).
   openedDate?: string | null;
   inUseDays?: number | null;
+  // Reorder-loop tracking (src/lib/orderTracking.ts): when the user last tapped
+  // "Mark as ordered" on this supply. Self-reported, softens proactive nags for
+  // a grace window — never hides a true stockout, never fabricates a delivery date.
+  lastOrderedDate?: string | null;
 }
 
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
@@ -111,7 +115,8 @@ export const useStore = create<T1DStore>()((set) => ({
       updates.deviceId !== undefined ||
       updates.prescriptionId !== undefined ||
       updates.openedDate !== undefined ||
-      updates.inUseDays !== undefined
+      updates.inUseDays !== undefined ||
+      updates.lastOrderedDate !== undefined
     ) {
       const optionalPayload: Record<string, unknown> = {}
       if (updates.usageRatePerDay !== undefined)
@@ -142,6 +147,9 @@ export const useStore = create<T1DStore>()((set) => ({
         optionalPayload.opened_date = updates.openedDate || null
       if (updates.inUseDays !== undefined)
         optionalPayload.in_use_days = updates.inUseDays && updates.inUseDays > 0 ? updates.inUseDays : null
+      if (updates.lastOrderedDate !== undefined)
+        // NULL clears it — set on "Mark as ordered", cleared on undo or on restock.
+        optionalPayload.last_ordered_date = updates.lastOrderedDate || null
 
       const { error: optionalError } = await supabase
         .from('supplies')

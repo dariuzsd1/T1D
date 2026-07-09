@@ -2,6 +2,7 @@
 
 import { useStore } from '@/lib/store'
 import { displayStatus } from '@/lib/depletion'
+import { isOrderPending } from '@/lib/orderTracking'
 import { AlertTriangle, Clock, ArrowRight, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -15,8 +16,15 @@ export function RiskAlertBanner() {
 
   // displayStatus: items with an estimated rate stay out of this banner entirely —
   // an app-wide alarm may only rest on facts (real rate, real 0, real expiry).
+  // A true stockout always shows here regardless of a self-reported order — being
+  // at zero is an active emergency even with a box in transit. A routine "low"
+  // item that the user already marked as ordered is quieted for a grace window
+  // (src/lib/orderTracking.ts) — the Supplies/Reorder lists still show it honestly,
+  // this banner just stops re-nagging about something already being handled.
   const out = inventory.filter((p) => displayStatus(p, safetyBufferDays) === 'out')
-  const low = inventory.filter((p) => displayStatus(p, safetyBufferDays) === 'low')
+  const low = inventory.filter(
+    (p) => displayStatus(p, safetyBufferDays) === 'low' && !isOrderPending(p.lastOrderedDate)
+  )
 
   if (dismissed || (out.length === 0 && low.length === 0)) return null
 
