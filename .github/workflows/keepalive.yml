@@ -1,0 +1,41 @@
+name: Keep-alive
+
+# Belt-and-suspenders against Supabase's 7-day free-tier inactivity pause.
+# The daily notify-refills cron already keeps the DB warm, but only while push
+# is deployed; this pings a DB-touching endpoint on a schedule so the project
+# never pauses even if push is ever turned off. See src/app/api/keepalive/route.ts
+# (it issues one trivial public-read query, which is what actually wakes Postgres
+# — pinging /api/health would keep Vercel warm but never touch the database).
+#
+# SETUP: if the app is not deployed at the default URL below, set a repo variable
+# KEEPALIVE_URL (Settings → Secrets and variables → Actions → Variables) to the
+# full https://.../api/keepalive URL. No secrets required; the endpoint is public.
+
+on:
+  schedule:
+    # Mondays and Thursdays at 08:00 UTC. Twice weekly (never more than ~4 days
+    # apart) leaves comfortable margin under the 7-day pause even if GitHub delays
+    # or skips a scheduled run, which it occasionally does under load.
+    - cron: '0 8 * * 1,4'
+  workflow_dispatch: {}
+
+# A slow ping (e.g. a cold-start wake-up) should never let runs stack up.
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping keepalive endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping
+        env:
+          URL: ${{ vars.KEEPALIVE_URL || 'https://t1-d-52t5.vercel.app/api/keepalive' }}
+        run: |
+          echo "Pinging $URL"
+          # --retry covers a paused project's cold-start (the first hit wakes it
+          # and may be slow); -f fails the job only on a real app/infra outage
+          # (HTTP >= 400), which is the signal worth surfacing.
+          curl -fsS --retry 3 --retry-delay 10 --max-time 60 "$URL"
+          echo
