@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, Info, Loader2, Sparkles } from 'lucide-react'
+import { Check, Info, Loader2, Sparkles, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +26,7 @@ import {
   elapsedTextKey,
 } from '@/lib/siteRotation'
 import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
+import { RotationGuideModal } from '@/components/site/RotationGuideModal'
 
 export default function SiteTrackerPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -43,6 +44,8 @@ export default function SiteTrackerPage() {
   const [loading, setLoading] = useState(true)
   // Which zone's log dialog is open.
   const [logZone, setLogZone] = useState<BodyZone | null>(null)
+  // Whether the "How to rotate" education dialog is open.
+  const [guideOpen, setGuideOpen] = useState(false)
   // Zone driving the tooltip (hovered / keyboard-focused).
   const [activeId, setActiveId] = useState<string | null>(null)
   // Nonce → the post-log checkmark flash.
@@ -222,27 +225,59 @@ export default function SiteTrackerPage() {
             <Loader2 className="w-6 h-6 text-teal animate-spin" />
           </div>
         ) : (
-          <div className="relative mx-auto w-full max-w-[300px] aspect-[240/470]">
+          <div className="relative mx-auto w-full max-w-[300px] aspect-[260/520]">
             <svg
-              viewBox="0 0 240 470"
+              viewBox="0 0 260 520"
               className="absolute inset-0 h-full w-full"
               role="group"
               aria-label={view === 'front' ? t('siteTracker.bodyMapAriaFront') : t('siteTracker.bodyMapAriaBack')}
             >
-              {/* Base figure — unchanged from Stage 1 (figure shapes not in scope). */}
+              <defs>
+                {/* Soft grid that fills a resting (available) zone. Solid status
+                    color takes over when a zone is suggested/recent/active. */}
+                <pattern id="zone-mesh" width="7" height="7" patternUnits="userSpaceOnUse">
+                  <path d="M0 0 H7 M0 0 V7" stroke="var(--color-faint)" strokeWidth={0.6} fill="none" opacity={0.55} />
+                </pattern>
+              </defs>
+
+              {/* Naturalistic neutral silhouette (head, neck, torso, arms, legs).
+                  Shared by both views; interior contour lines differ per view. */}
               <g fill="var(--color-surface-2)" stroke="var(--color-line)" strokeWidth={2} strokeLinejoin="round">
-                <circle cx="120" cy="52" r="30" />
-                <rect x="108" y="76" width="24" height="24" rx="10" />
-                <path d="M70 108 Q72 97 84 96 L156 96 Q168 97 170 108 Q176 146 154 185 Q150 220 166 250 Q168 261 158 262 L82 262 Q72 261 74 250 Q90 220 86 185 Q64 146 70 108 Z" />
-                <rect x="48" y="112" width="24" height="140" rx="12" />
-                <rect x="168" y="112" width="24" height="140" rx="12" />
-                <rect x="78" y="248" width="38" height="204" rx="18" />
-                <rect x="124" y="248" width="38" height="204" rx="18" />
+                <ellipse cx="130" cy="54" rx="22" ry="28" />
+                <path d="M118 78 C117 90 116 96 113 105 L147 105 C144 96 143 90 142 78 Z" />
+                <path d="M78 118 C92 106 106 104 116 105 C121 98 139 98 144 105 C154 104 168 106 182 118 C177 148 171 170 166 196 C164 207 164 214 168 227 C172 245 176 251 177 259 L83 259 C84 251 88 245 92 227 C96 214 96 207 94 196 C89 170 83 148 78 118 Z" />
+                <path d="M79 116 C66 120 59 132 56 152 C53 178 54 206 58 232 C60 244 61 252 64 257 C68 260 74 259 76 253 C79 244 79 232 80 214 C82 184 83 150 84 126 C83 120 82 116 79 116 Z" />
+                <path d="M181 116 C194 120 201 132 204 152 C207 178 206 206 202 232 C200 244 199 252 196 257 C192 260 186 259 184 253 C181 244 181 232 180 214 C178 184 177 150 176 126 C177 120 178 116 181 116 Z" />
+                <path d="M84 259 L126 259 C127 276 126 300 123 330 C121 356 119 388 117 420 C116 446 115 462 113 470 C111 476 106 477 101 476 C95 476 90 474 89 468 C88 452 89 420 90 388 C91 356 90 320 89 300 C88 284 86 270 84 259 Z" />
+                <path d="M176 259 L134 259 C133 276 134 300 137 330 C139 356 141 388 143 420 C144 446 145 462 147 470 C149 476 154 477 159 476 C165 476 170 474 171 468 C172 452 171 420 170 388 C169 356 170 320 171 300 C172 284 174 270 176 259 Z" />
               </g>
 
-              {view === 'back' && (
-                <line x1="120" y1="104" x2="120" y2="210" stroke="var(--color-line)" strokeWidth={1.5} strokeLinecap="round" opacity={0.7} />
-              )}
+              {/* Interior contour detail — reads as a real body without becoming an
+                  anatomy chart. Front: clavicle, sternum midline, pecs, deltoids. */}
+              <g fill="none" stroke="var(--color-line)" strokeWidth={1.4} strokeLinecap="round" opacity={0.9}>
+                {view === 'front' ? (
+                  <>
+                    <path d="M104 120 C116 127 144 127 156 120" />
+                    <path d="M130 130 L130 166" />
+                    <path d="M101 138 C110 150 122 150 128 143" />
+                    <path d="M159 138 C150 150 138 150 132 143" />
+                    <path d="M80 122 C74 132 72 143 75 153" />
+                    <path d="M180 122 C186 132 188 143 185 153" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M130 110 L130 214" />
+                    <path d="M108 128 C112 140 118 146 124 146" />
+                    <path d="M152 128 C148 140 142 146 136 146" />
+                    <path d="M84 150 C80 168 82 188 91 200" />
+                    <path d="M176 150 C180 168 178 188 169 200" />
+                    <path d="M130 240 L130 264" />
+                  </>
+                )}
+                {/* Knees — present on both views. Sit below the thigh zones. */}
+                <path d="M95 362 C103 369 115 369 121 362" />
+                <path d="M139 362 C145 369 157 369 165 362" />
+              </g>
 
               {visibleZones.map((zone) => (
                 <ZoneShape
@@ -271,7 +306,7 @@ export default function SiteTrackerPage() {
               return (
                 <div
                   className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
-                  style={{ left: `${(cx / 240) * 100}%`, top: `${(cy / 470) * 100}%` }}
+                  style={{ left: `${(cx / 260) * 100}%`, top: `${(cy / 520) * 100}%` }}
                 >
                   <div className="mb-2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-white shadow-md">
                     <span className="block text-xs font-semibold">{t(zoneLabelKey(activeZone))}</span>
@@ -291,10 +326,22 @@ export default function SiteTrackerPage() {
 
       {/* Color key */}
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <LegendItem label={t('siteTracker.legendAvailable')} fill="var(--color-surface-2)" opacity={1} stroke="var(--color-faint)" />
+        <LegendItem label={t('siteTracker.legendAvailable')} mesh />
         <LegendItem label={t('siteTracker.legendFocused')} fill="var(--color-teal)" opacity={0.24} stroke="var(--color-teal)" />
         <LegendItem label={t('siteTracker.legendRecentOther', { days: RECENT_USE_DAYS })} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
         <LegendItem label={t('siteTracker.legendSuggested')} fill="var(--color-success)" opacity={0.2} stroke="var(--color-success)" />
+      </div>
+
+      {/* How to rotate — expert-based education, one tap away */}
+      <div className="flex justify-center">
+        <button
+          onClick={() => setGuideOpen(true)}
+          aria-haspopup="dialog"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-teal transition-colors hover:border-teal/40 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+        >
+          <RotateCcw className="w-4 h-4" aria-hidden="true" />
+          {t('siteTracker.howToRotate')}
+        </button>
       </div>
 
       <p className="flex items-start justify-center gap-2 text-center text-xs text-faint max-w-md mx-auto">
@@ -310,6 +357,8 @@ export default function SiteTrackerPage() {
           onSave={(input) => handleSave(logZone, input)}
         />
       )}
+
+      {guideOpen && <RotationGuideModal onClose={() => setGuideOpen(false)} />}
     </div>
   )
 }
@@ -348,10 +397,14 @@ function ZoneShape({
   const [focus, setFocus] = useState(false)
   const active = hover || focus || open
 
-  let fill = 'var(--color-surface-2)'
-  let fillOpacity = 1
-  let stroke = 'var(--color-faint)' // strengthened resting outline (reads as tappable)
-  let strokeWidth = 1.75
+  // Hybrid: a resting (available) zone shows the soft mesh grid; the moment it
+  // is active, suggested, or recently used it fills with a solid status color.
+  const isSolid = active || isSuggested || zoneView.isRecent
+
+  let fill = 'var(--color-teal)'
+  let fillOpacity = 0.14
+  let stroke = 'var(--color-teal)'
+  let strokeWidth = 2.25
   if (active) {
     fill = 'var(--color-teal)'
     fillOpacity = open ? 0.24 : 0.14
@@ -359,12 +412,12 @@ function ZoneShape({
     strokeWidth = open ? 3 : 2.25
   } else if (isSuggested) {
     fill = 'var(--color-success)'
-    fillOpacity = 0.12
+    fillOpacity = 0.16
     stroke = 'var(--color-success)'
     strokeWidth = 2.25
   } else if (zoneView.isRecent) {
     fill = 'var(--color-caution)'
-    fillOpacity = 0.12
+    fillOpacity = 0.16
     stroke = 'var(--color-caution)'
     strokeWidth = 2.25
   }
@@ -381,25 +434,40 @@ function ZoneShape({
   ariaParts.push(elapsedLabel.toLowerCase())
   const ariaLabel = ariaParts.join(', ')
 
+  const rectDims = { x: zone.x, y: zone.y, width: zone.w, height: zone.h, rx: zone.rx }
+
   return (
     <g>
+      {/* Visual layer (non-interactive). Solid color when active/flagged, else the
+          mesh grid over a clean base so any contour line under it stays tidy. */}
+      {isSolid ? (
+        <rect
+          {...rectDims}
+          style={{
+            fill,
+            fillOpacity,
+            stroke,
+            strokeWidth,
+            pointerEvents: 'none',
+            transition: 'fill .15s ease, fill-opacity .15s ease, stroke .15s ease, stroke-width .15s ease',
+          }}
+        />
+      ) : (
+        <>
+          <rect {...rectDims} style={{ fill: 'var(--color-surface-2)', pointerEvents: 'none' }} />
+          <rect {...rectDims} fill="url(#zone-mesh)" style={{ pointerEvents: 'none' }} />
+          <rect {...rectDims} style={{ fill: 'none', stroke: 'var(--color-faint)', strokeWidth: 1.75, pointerEvents: 'none' }} />
+        </>
+      )}
+
+      {/* Interactive hit target on top (transparent so the visual shows through). */}
       <rect
-        x={zone.x}
-        y={zone.y}
-        width={zone.w}
-        height={zone.h}
-        rx={zone.rx}
+        {...rectDims}
         role="button"
         tabIndex={0}
         aria-label={ariaLabel}
         className="cursor-pointer outline-none"
-        style={{
-          fill,
-          fillOpacity,
-          stroke,
-          strokeWidth,
-          transition: 'fill .15s ease, fill-opacity .15s ease, stroke .15s ease, stroke-width .15s ease',
-        }}
+        style={{ fill: 'transparent' }}
         onMouseEnter={() => { setHover(true); onActiveChange(true) }}
         onMouseLeave={() => { setHover(false); onActiveChange(false) }}
         onFocus={() => { setFocus(true); onActiveChange(true) }}
@@ -459,16 +527,26 @@ function LegendItem({
   fill,
   opacity,
   stroke,
+  mesh = false,
 }: {
   label: string
-  fill: string
-  opacity: number
-  stroke: string
+  /** Solid-swatch props (omit when `mesh`, which draws the available-zone grid). */
+  fill?: string
+  opacity?: number
+  stroke?: string
+  mesh?: boolean
 }) {
   return (
     <span className="inline-flex items-center gap-2 text-xs text-muted">
       <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0" aria-hidden="true">
-        <rect x="1" y="1" width="14" height="14" rx="4" style={{ fill, fillOpacity: opacity, stroke, strokeWidth: 1.5 }} />
+        {mesh ? (
+          <>
+            <rect x="1" y="1" width="14" height="14" rx="4" style={{ fill: 'var(--color-surface-2)', stroke: 'var(--color-faint)', strokeWidth: 1.5 }} />
+            <path d="M1 6 H15 M1 11 H15 M6 1 V15 M11 1 V15" style={{ stroke: 'var(--color-faint)', strokeWidth: 0.6, opacity: 0.55 }} fill="none" />
+          </>
+        ) : (
+          <rect x="1" y="1" width="14" height="14" rx="4" style={{ fill, fillOpacity: opacity, stroke, strokeWidth: 1.5 }} />
+        )}
       </svg>
       {label}
     </span>

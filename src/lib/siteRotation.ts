@@ -26,7 +26,7 @@ export interface BodyZone {
   region: string
   side: 'left' | 'right' | 'center'
   view: BodyView
-  // Rounded-rect geometry in the 240×470 SVG viewBox.
+  // Rounded-rect geometry in the 260×520 SVG viewBox (the naturalistic figure).
   x: number
   y: number
   w: number
@@ -35,18 +35,20 @@ export interface BodyZone {
 }
 
 // Order matters: ties for "suggested next" resolve to the first zone here.
+// Geometry is positioned on the redesigned silhouette (260×520 viewBox); the
+// figure's own paths live in site-tracker/page.tsx. Center line is x=130.
 export const BODY_ZONES: BodyZone[] = [
   // FRONT — mirrored (person faces you): person's left drawn on screen-right.
-  { id: 'abdomen_left', region: 'Abdomen', side: 'left', view: 'front', x: 124, y: 162, w: 32, h: 56, rx: 14 },
-  { id: 'abdomen_right', region: 'Abdomen', side: 'right', view: 'front', x: 84, y: 162, w: 32, h: 56, rx: 14 },
-  { id: 'thigh_left', region: 'Thigh', side: 'left', view: 'front', x: 128, y: 272, w: 30, h: 66, rx: 14 },
-  { id: 'thigh_right', region: 'Thigh', side: 'right', view: 'front', x: 82, y: 272, w: 30, h: 66, rx: 14 },
+  { id: 'abdomen_left', region: 'Abdomen', side: 'left', view: 'front', x: 136, y: 168, w: 28, h: 42, rx: 12 },
+  { id: 'abdomen_right', region: 'Abdomen', side: 'right', view: 'front', x: 96, y: 168, w: 28, h: 42, rx: 12 },
+  { id: 'thigh_left', region: 'Thigh', side: 'left', view: 'front', x: 143, y: 288, w: 27, h: 60, rx: 12 },
+  { id: 'thigh_right', region: 'Thigh', side: 'right', view: 'front', x: 90, y: 288, w: 27, h: 60, rx: 12 },
   // BACK — direct (person faces away): person's left drawn on screen-left.
-  { id: 'upper_arm_left', region: 'Upper arm', side: 'left', view: 'back', x: 50, y: 118, w: 20, h: 60, rx: 10 },
-  { id: 'upper_arm_right', region: 'Upper arm', side: 'right', view: 'back', x: 170, y: 118, w: 20, h: 60, rx: 10 },
-  { id: 'lower_back', region: 'Lower back', side: 'center', view: 'back', x: 92, y: 168, w: 56, h: 42, rx: 14 },
-  { id: 'hip_left', region: 'Hip / upper buttock', side: 'left', view: 'back', x: 84, y: 216, w: 32, h: 52, rx: 16 },
-  { id: 'hip_right', region: 'Hip / upper buttock', side: 'right', view: 'back', x: 124, y: 216, w: 32, h: 52, rx: 16 },
+  { id: 'upper_arm_left', region: 'Upper arm', side: 'left', view: 'back', x: 58, y: 150, w: 20, h: 58, rx: 9 },
+  { id: 'upper_arm_right', region: 'Upper arm', side: 'right', view: 'back', x: 182, y: 150, w: 20, h: 58, rx: 9 },
+  { id: 'lower_back', region: 'Lower back', side: 'center', view: 'back', x: 100, y: 196, w: 60, h: 38, rx: 13 },
+  { id: 'hip_left', region: 'Hip / upper buttock', side: 'left', view: 'back', x: 92, y: 242, w: 32, h: 48, rx: 15 },
+  { id: 'hip_right', region: 'Hip / upper buttock', side: 'right', view: 'back', x: 136, y: 242, w: 32, h: 48, rx: 15 },
 ]
 
 export const BODY_ZONE_IDS: readonly string[] = BODY_ZONES.map((z) => z.id)
