@@ -1,10 +1,19 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { X, RotateCcw } from 'lucide-react'
+import { X, RotateCcw, ExternalLink } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { TKey } from '@/lib/i18n/dictionaries'
+
+// Reference sources for the guidance above: a recognized authority (the primary
+// "Learn more") plus the two pages the user pointed us to.
+const AUTHORITY_URL =
+  'https://www.diabetes.org.uk/about-diabetes/looking-after-diabetes/treatments/insulin/injecting'
+const SOURCE_LINKS = [
+  { label: 'clinidiabet.com', url: 'https://clinidiabet.com/en/infodiabetes/education/treatment/insulin/10.htm' },
+  { label: 'fiercelydiabetic.com', url: 'https://fiercelydiabetic.com/tools/site-rotation.html' },
+]
 
 /**
  * "How to rotate your sites" — a short, accessible education dialog. Content is
@@ -76,9 +85,34 @@ export function RotationGuideModal({ onClose }: { onClose: () => void }) {
           ))}
         </ul>
 
-        <p className="mt-4 pt-4 border-t border-line text-xs text-faint">
-          {t('rotationGuide.disclaimer')}
-        </p>
+        <div className="mt-4 pt-4 border-t border-line space-y-2.5">
+          <a
+            href={AUTHORITY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+          >
+            {t('rotationGuide.learnMore')}
+            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+          </a>
+          <p className="text-xs text-faint">
+            {t('rotationGuide.sources')}{' '}
+            {SOURCE_LINKS.map((s, i) => (
+              <span key={s.url}>
+                {i > 0 && ', '}
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+                >
+                  {s.label}
+                </a>
+              </span>
+            ))}
+          </p>
+          <p className="text-xs text-faint">{t('rotationGuide.disclaimer')}</p>
+        </div>
       </motion.div>
     </div>
   )

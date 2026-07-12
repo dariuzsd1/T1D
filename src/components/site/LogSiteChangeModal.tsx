@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2, Syringe } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { Product } from '@/lib/store'
 import { type BodyZone, zoneLabelKey } from '@/lib/siteRotation'
+import { isSiteSupply } from '@/lib/siteSupplies'
 
 /** Local YYYY-MM-DD (for the date input default — today, no timezone drift). */
 function todayLocal(): string {
@@ -44,8 +45,21 @@ export function LogSiteChangeModal({
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // The picker only offers supplies worn/inserted at a body site (CGM sensors,
+  // pods, infusion sets) — never emergency/oral items. A "show all" escape hatch
+  // covers an unusually named item that auto-detection misses (src/lib/siteSupplies.ts).
+  const [showAll, setShowAll] = useState(false)
+  const siteSupplies = useMemo(() => inventory.filter(isSiteSupply), [inventory])
+  const shownSupplies = showAll ? inventory : siteSupplies
+  const hiddenCount = inventory.length - siteSupplies.length
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLSelectElement>(null)
+
+  // Revert to only site supplies without stranding a now-hidden selection.
+  const showSiteOnly = () => {
+    if (supplyId && !siteSupplies.some((p) => p.id === supplyId)) setSupplyId('')
+    setShowAll(false)
+  }
 
   useEffect(() => {
     firstFieldRef.current?.focus()
@@ -114,17 +128,44 @@ export function LogSiteChangeModal({
               className={fieldClass}
             >
               <option value="">{t('siteModal.notSpecified')}</option>
-              {inventory.map((p) => (
+              {shownSupplies.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.brand ? `${p.name} (${p.brand})` : p.name}
                 </option>
               ))}
             </select>
-            {inventory.length === 0 && (
+            {inventory.length === 0 ? (
               <p className="mt-1.5 text-xs text-faint">
                 {t('siteModal.noSuppliesYet')}
               </p>
-            )}
+            ) : !showAll && siteSupplies.length === 0 ? (
+              <p className="mt-1.5 text-xs text-faint">
+                {t('siteModal.noSiteSupplies')}{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  className="font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+                >
+                  {t('siteModal.showAll')}
+                </button>
+              </p>
+            ) : !showAll && hiddenCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="mt-1.5 text-xs font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+              >
+                {t('siteModal.showAllCount', { count: hiddenCount })}
+              </button>
+            ) : showAll ? (
+              <button
+                type="button"
+                onClick={showSiteOnly}
+                className="mt-1.5 text-xs font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+              >
+                {t('siteModal.showSiteOnly')}
+              </button>
+            ) : null}
             {(() => {
               const selected = inventory.find((p) => p.id === supplyId)
               if (!selected) return null
