@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, Info, Loader2, Sparkles, RotateCcw } from 'lucide-react'
+import { Check, Info, Loader2, Sparkles, RotateCcw, Trash2, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useI18n } from '@/lib/i18n'
 import { logActivity } from '@/lib/activity'
 import type { Product } from '@/lib/store'
@@ -32,6 +33,7 @@ import { ReuseWarningModal } from '@/components/site/ReuseWarningModal'
 export default function SiteTrackerPage() {
   const supabase = useMemo(() => createClient(), [])
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const { t } = useI18n()
   // Resolve a zone's elapsed text (never/unknown/N days) in the active language.
   const elapsedLabel = (elapsed: ZoneView['elapsed']) => {
@@ -66,6 +68,8 @@ export default function SiteTrackerPage() {
       id: String(r.id),
       body_zone: (r.body_zone as string | null) ?? null,
       applied_date: (r.applied_date as string | null) ?? null,
+      supply_id: (r.supply_id as string | null) ?? null,
+      notes: (r.notes as string | null) ?? null,
     }))
     setChanges(mapped)
     return mapped
@@ -186,6 +190,50 @@ export default function SiteTrackerPage() {
         showToast(usedLine ?? t('siteTracker.toastLoggedPlain'), 'success')
       }
     }
+  }
+
+  // Delete a logged change. Because logging also uses one of the linked supply,
+  // deleting returns that unit to the count (undoing the paired use) — stated up
+  // front in the confirm so the count change is never a surprise.
+  const handleDeleteChange = async (row: SiteChangeRow) => {
+    const linked = row.supply_id ? inventory.find((p) => p.id === row.supply_id) : null
+    const ok = await confirm({
+      title: t('siteHistory.deleteTitle'),
+      body: linked ? t('siteHistory.deleteBodyWithSupply', { name: linked.name }) : t('siteHistory.deleteBody'),
+      confirmLabel: t('siteHistory.deleteBtn'),
+      tone: 'danger',
+    })
+    if (!ok) return
+
+    const { error } = await supabase.from('site_changes').delete().eq('id', row.id)
+    if (error) {
+      showToast(t('siteHistory.deleteFail'), 'caution')
+      return
+    }
+    if (linked) {
+      const nextQty = linked.quantity + 1
+      const { error: incErr } = await supabase
+        .from('supplies')
+        .update({ quantity: nextQty, updated_at: new Date().toISOString() })
+        .eq('id', linked.id)
+      if (!incErr) {
+        setInventory((prev) => prev.map((p) => (p.id === linked.id ? { ...p, quantity: nextQty } : p)))
+      }
+    }
+    await loadChanges()
+    showToast(t('siteHistory.deleted'), 'success')
+  }
+
+  // "Jul 14, 2026" from a YYYY-MM-DD string, parsed as a LOCAL date (no TZ drift).
+  const formatChangeDate = (d: string | null): string => {
+    if (!d) return ''
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
+    if (!m) return d
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   return (
@@ -380,6 +428,44 @@ export default function SiteTrackerPage() {
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span>{t('siteTracker.footNote')}</span>
       </p>
+
+      {/* Recent changes — fix a mistaken log (delete now; edit next). */}
+      {!loading && changes.length > 0 && (
+        <section className="bg-surface border border-line rounded-3xl p-6">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink mb-4">
+            <History className="w-4 h-4 text-muted" aria-hidden="true" />
+            {t('siteHistory.title')}
+          </h2>
+          <ul className="divide-y divide-line">
+            {changes.slice(0, 8).map((row) => {
+              const zone = row.body_zone ? BODY_ZONES.find((z) => z.id === row.body_zone) ?? null : null
+              const supply = row.supply_id ? inventory.find((p) => p.id === row.supply_id) ?? null : null
+              return (
+                <li key={row.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink text-sm truncate">
+                      {zone ? t(zoneLabelKey(zone)) : t('siteHistory.noZone')}
+                    </p>
+                    <p className="text-xs text-muted truncate">
+                      {formatChangeDate(row.applied_date)}
+                      {supply ? ` · ${supply.name}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteChange(row)}
+                    aria-label={t('siteHistory.deleteAria', {
+                      zone: zone ? t(zoneLabelKey(zone)) : t('siteHistory.noZone'),
+                    })}
+                    className="shrink-0 p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:bg-surface-2 hover:text-urgent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       {logZone && (
         <LogSiteChangeModal

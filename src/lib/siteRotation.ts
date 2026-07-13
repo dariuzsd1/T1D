@@ -115,6 +115,10 @@ export interface SiteChangeRow {
   id: string
   body_zone: string | null
   applied_date: string | null
+  // Carried for the recent-changes history list (edit/delete). The rotation
+  // math (buildZoneViews) ignores these; only body_zone + applied_date matter there.
+  supply_id?: string | null
+  notes?: string | null
 }
 
 /** Real elapsed time since a zone's most recent logged change. */
