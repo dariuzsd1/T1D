@@ -66,6 +66,13 @@ export function LogSiteChangeModal({
   }, [])
 
   const handleSave = async () => {
+    // Recording WHAT was inserted is required whenever the user has supplies to
+    // pick from. Someone with nothing tracked yet isn't locked out — they can
+    // still log the site and add the consumable later.
+    if (inventory.length > 0 && !supplyId) {
+      setError(t('siteModal.errChooseSupply'))
+      return
+    }
     if (!appliedDate) {
       setError(t('siteModal.errChooseDate'))
       return
@@ -119,15 +126,22 @@ export function LogSiteChangeModal({
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="site-supply" className={labelClass}>{t('siteModal.deviceConsumable')}</label>
+            <label htmlFor="site-supply" className={labelClass}>
+              {t('siteModal.deviceConsumable')}
+              {inventory.length > 0 && <span className="text-caution"> *</span>}
+            </label>
             <select
               ref={firstFieldRef}
               id="site-supply"
               value={supplyId}
               onChange={(e) => setSupplyId(e.target.value)}
+              required={inventory.length > 0}
+              aria-required={inventory.length > 0}
               className={fieldClass}
             >
-              <option value="">{t('siteModal.notSpecified')}</option>
+              <option value="">
+                {inventory.length > 0 ? t('siteModal.selectSupply') : t('siteModal.notSpecified')}
+              </option>
               {shownSupplies.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.brand ? `${p.name} (${p.brand})` : p.name}
