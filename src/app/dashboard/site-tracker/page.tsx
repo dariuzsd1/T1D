@@ -27,6 +27,7 @@ import {
 } from '@/lib/siteRotation'
 import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
 import { RotationGuideModal } from '@/components/site/RotationGuideModal'
+import { ReuseWarningModal } from '@/components/site/ReuseWarningModal'
 
 export default function SiteTrackerPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -46,6 +47,8 @@ export default function SiteTrackerPage() {
   const [logZone, setLogZone] = useState<BodyZone | null>(null)
   // Whether the "How to rotate" education dialog is open.
   const [guideOpen, setGuideOpen] = useState(false)
+  // A recently-used zone the user tapped, held pending an "are you sure?" check.
+  const [pendingZone, setPendingZone] = useState<BodyZone | null>(null)
   // Zone driving the tooltip (hovered / keyboard-focused).
   const [activeId, setActiveId] = useState<string | null>(null)
   // Nonce → the post-log checkmark flash.
@@ -99,6 +102,13 @@ export default function SiteTrackerPage() {
   const suggestedZone = suggestedId ? BODY_ZONES.find((z) => z.id === suggestedId) ?? null : null
 
   const visibleZones = BODY_ZONES.filter((z) => z.view === view)
+
+  // Tapping a zone opens the log dialog, except a recently-used spot first gets an
+  // "are you sure?" nudge toward rotating (reuse is allowed, just not silent).
+  const handleZoneOpen = (zone: BodyZone) => {
+    if (views.get(zone.id)?.isRecent) setPendingZone(zone)
+    else setLogZone(zone)
+  }
   const activeZone = visibleZones.find((z) => z.id === activeId) ?? null
 
   const switchView = (v: BodyView) => {
@@ -286,7 +296,7 @@ export default function SiteTrackerPage() {
                   zoneView={views.get(zone.id)!}
                   isSuggested={zone.id === suggestedId}
                   open={logZone?.id === zone.id}
-                  onOpen={() => setLogZone(zone)}
+                  onOpen={() => handleZoneOpen(zone)}
                   onActiveChange={(on) =>
                     setActiveId((cur) => (on ? zone.id : cur === zone.id ? null : cur))
                   }
@@ -355,6 +365,23 @@ export default function SiteTrackerPage() {
           inventory={inventory}
           onClose={() => setLogZone(null)}
           onSave={(input) => handleSave(logZone, input)}
+        />
+      )}
+
+      {pendingZone && (
+        <ReuseWarningModal
+          zone={pendingZone}
+          elapsedLabel={elapsedLabel(views.get(pendingZone.id)!.elapsed)}
+          onCancel={() => setPendingZone(null)}
+          onLogAnyway={() => {
+            const z = pendingZone
+            setPendingZone(null)
+            setLogZone(z)
+          }}
+          onViewGuide={() => {
+            setPendingZone(null)
+            setGuideOpen(true)
+          }}
         />
       )}
 

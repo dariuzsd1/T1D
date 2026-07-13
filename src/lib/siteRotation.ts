@@ -49,6 +49,13 @@ export const BODY_ZONES: BodyZone[] = [
   { id: 'lower_back', region: 'Lower back', side: 'center', view: 'back', x: 100, y: 196, w: 60, h: 38, rx: 13 },
   { id: 'hip_left', region: 'Hip / upper buttock', side: 'left', view: 'back', x: 92, y: 242, w: 32, h: 48, rx: 15 },
   { id: 'hip_right', region: 'Hip / upper buttock', side: 'right', view: 'back', x: 136, y: 242, w: 32, h: 48, rx: 15 },
+  // Upper arms are also reachable from the FRONT (the outer/front upper arm),
+  // distinct from the back-of-arm zones above.
+  { id: 'arm_front_left', region: 'Upper arm', side: 'left', view: 'front', x: 182, y: 150, w: 20, h: 58, rx: 9 },
+  { id: 'arm_front_right', region: 'Upper arm', side: 'right', view: 'front', x: 58, y: 150, w: 20, h: 58, rx: 9 },
+  // Top of the shoulder (deltoid) — a further-apart option some people use.
+  { id: 'shoulder_left', region: 'Shoulder', side: 'left', view: 'back', x: 78, y: 122, w: 30, h: 26, rx: 12 },
+  { id: 'shoulder_right', region: 'Shoulder', side: 'right', view: 'back', x: 152, y: 122, w: 30, h: 26, rx: 12 },
 ]
 
 export const BODY_ZONE_IDS: readonly string[] = BODY_ZONES.map((z) => z.id)
@@ -66,6 +73,11 @@ const ZONE_LABEL_KEY: Record<string, TKey> = {
   lower_back: 'zone.lowerBack',
   hip_left: 'zone.hipLeft',
   hip_right: 'zone.hipRight',
+  // Front upper arms reuse the arm labels (view context disambiguates them).
+  arm_front_left: 'zone.upperArmLeft',
+  arm_front_right: 'zone.upperArmRight',
+  shoulder_left: 'zone.shoulderLeft',
+  shoulder_right: 'zone.shoulderRight',
 }
 
 const ZONE_ARIA_KEY: Record<string, TKey> = {
@@ -78,6 +90,10 @@ const ZONE_ARIA_KEY: Record<string, TKey> = {
   lower_back: 'zone.lowerBack', // center zone: label and aria are the same phrase
   hip_left: 'zone.hipLeftAria',
   hip_right: 'zone.hipRightAria',
+  arm_front_left: 'zone.upperArmLeftAria',
+  arm_front_right: 'zone.upperArmRightAria',
+  shoulder_left: 'zone.shoulderLeftAria',
+  shoulder_right: 'zone.shoulderRightAria',
 }
 
 /** Translation key for the short display label, e.g. "Left abdomen". Render with t(). */
