@@ -54,22 +54,21 @@ export default function SiteTrackerPage() {
   // Nonce → the post-log checkmark flash.
   const [justLogged, setJustLogged] = useState<number | null>(null)
 
-  const loadChanges = useCallback(async () => {
+  const loadChanges = useCallback(async (): Promise<SiteChangeRow[]> => {
     // select('*') stays forward-compatible: `body_zone` surfaces automatically
     // once the migration is applied, and its absence never errors the read.
     const { data, error } = await supabase
       .from('site_changes')
       .select('*')
       .order('applied_date', { ascending: false })
-    if (!error && data) {
-      setChanges(
-        data.map((r: Record<string, unknown>) => ({
-          id: String(r.id),
-          body_zone: (r.body_zone as string | null) ?? null,
-          applied_date: (r.applied_date as string | null) ?? null,
-        }))
-      )
-    }
+    if (error || !data) return []
+    const mapped: SiteChangeRow[] = data.map((r: Record<string, unknown>) => ({
+      id: String(r.id),
+      body_zone: (r.body_zone as string | null) ?? null,
+      applied_date: (r.applied_date as string | null) ?? null,
+    }))
+    setChanges(mapped)
+    return mapped
   }, [supabase])
 
   useEffect(() => {
@@ -102,6 +101,11 @@ export default function SiteTrackerPage() {
   const suggestedZone = suggestedId ? BODY_ZONES.find((z) => z.id === suggestedId) ?? null : null
 
   const visibleZones = BODY_ZONES.filter((z) => z.view === view)
+
+  // Glanceable status across ALL zones (both views), for the summary line — so a
+  // touch user sees the picture without hovering or opening anything.
+  const recentCount = BODY_ZONES.filter((z) => views.get(z.id)?.isRecent).length
+  const availableCount = BODY_ZONES.length - recentCount
 
   // Tapping a zone opens the log dialog, except a recently-used spot first gets an
   // "are you sure?" nudge toward rotating (reuse is allowed, just not silent).
@@ -166,12 +170,21 @@ export default function SiteTrackerPage() {
       }
     }
 
-    await loadChanges()
+    const fresh = await loadChanges()
     setJustLogged(Date.now())
     if (usedFailed) {
       showToast(t('siteTracker.toastLoggedButFailed', { name: usedFailed }), 'caution')
     } else {
-      showToast(usedLine ?? t('siteTracker.toastLoggedPlain'), 'success')
+      // Close the loop: name the best next spot to rotate to (from the freshly
+      // reloaded history, so it already reflects the change we just logged).
+      const nextId = hasZoneHistory(fresh) ? suggestedZoneId(buildZoneViews(fresh)) : null
+      const nextZone = nextId ? BODY_ZONES.find((z) => z.id === nextId) ?? null : null
+      if (nextZone) {
+        const base = usedLine ?? t('siteTracker.toastLogged')
+        showToast(`${base} ${t('siteTracker.nextBestSpot', { zone: t(zoneLabelKey(nextZone)) })}`, 'success')
+      } else {
+        showToast(usedLine ?? t('siteTracker.toastLoggedPlain'), 'success')
+      }
     }
   }
 
@@ -333,6 +346,15 @@ export default function SiteTrackerPage() {
           </div>
         )}
       </div>
+
+      {/* Compact status summary — glanceable, works without hover (mobile). */}
+      {!loading && (
+        <p className="text-center text-sm text-muted">
+          {recentCount === 0
+            ? t('siteTracker.summaryAllReady', { count: BODY_ZONES.length })
+            : t('siteTracker.summaryStatus', { recent: recentCount, days: RECENT_USE_DAYS, available: availableCount })}
+        </p>
+      )}
 
       {/* Color key */}
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">

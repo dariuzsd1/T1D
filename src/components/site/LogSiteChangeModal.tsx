@@ -113,6 +113,16 @@ export function LogSiteChangeModal({
             <div>
               <h2 id="log-site-title" className="text-xl font-bold text-ink leading-tight">{t('siteModal.title')}</h2>
               <p className="text-sm text-muted">{t(zoneLabelKey(zone))}</p>
+              {/* The figure is mirrored on the front view, so spell out whose side
+                  it is to remove any left/right doubt. */}
+              {zone.side !== 'center' && (
+                <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-semibold text-teal">
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-teal/15 text-[10px]">
+                    {zone.side === 'left' ? t('siteModal.sideLetterLeft') : t('siteModal.sideLetterRight')}
+                  </span>
+                  {zone.side === 'left' ? t('siteModal.yourLeft') : t('siteModal.yourRight')}
+                </p>
+              )}
             </div>
           </div>
           <button
