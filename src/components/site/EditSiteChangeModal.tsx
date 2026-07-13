@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2, Pencil } from 'lucide-react'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { Product } from '@/lib/store'
+import { isSiteSupply } from '@/lib/siteSupplies'
 import { BODY_ZONES, zoneLabelKey, type BodyView, type SiteChangeRow } from '@/lib/siteRotation'
 
 /** Local YYYY-MM-DD (today, no timezone drift). */
@@ -47,6 +48,19 @@ export function EditSiteChangeModal({
   const [saving, setSaving] = useState(false)
   const dialogRef = useDialog<HTMLDivElement>(onClose)
   const firstFieldRef = useRef<HTMLSelectElement>(null)
+
+  // Same rule as logging: only worn/inserted supplies (sensors, pods, infusion
+  // sets) are offered, with a "show all" fallback. If this entry's current supply
+  // is not one of those (a legacy pick), start expanded so it stays visible.
+  const siteSupplies = useMemo(() => inventory.filter(isSiteSupply), [inventory])
+  const currentSupply = change.supply_id ? inventory.find((p) => p.id === change.supply_id) : null
+  const [showAll, setShowAll] = useState(!!currentSupply && !isSiteSupply(currentSupply))
+  const shownSupplies = showAll ? inventory : siteSupplies
+  const hiddenCount = inventory.length - siteSupplies.length
+  const showSiteOnly = () => {
+    if (supplyId && !siteSupplies.some((p) => p.id === supplyId)) setSupplyId('')
+    setShowAll(false)
+  }
 
   useEffect(() => {
     firstFieldRef.current?.focus()
@@ -131,12 +145,40 @@ export function EditSiteChangeModal({
               className={fieldClass}
             >
               <option value="">{t('siteModal.notSpecified')}</option>
-              {inventory.map((p) => (
+              {shownSupplies.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.brand ? `${p.name} (${p.brand})` : p.name}
                 </option>
               ))}
             </select>
+            {!showAll && siteSupplies.length === 0 && inventory.length > 0 ? (
+              <p className="mt-1.5 text-xs text-faint">
+                {t('siteModal.noSiteSupplies')}{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  className="font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+                >
+                  {t('siteModal.showAll')}
+                </button>
+              </p>
+            ) : !showAll && hiddenCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="mt-1.5 text-xs font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+              >
+                {t('siteModal.showAllCount', { count: hiddenCount })}
+              </button>
+            ) : showAll ? (
+              <button
+                type="button"
+                onClick={showSiteOnly}
+                className="mt-1.5 text-xs font-semibold text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+              >
+                {t('siteModal.showSiteOnly')}
+              </button>
+            ) : null}
             {change.supply_id && supplyId !== change.supply_id && (
               <p className="mt-1.5 text-xs text-caution">{t('siteHistory.supplyChangeHint')}</p>
             )}
