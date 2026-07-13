@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, Info, Loader2, Sparkles, RotateCcw, Trash2, History } from 'lucide-react'
+import { Check, Info, Loader2, Sparkles, RotateCcw, Trash2, History, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
@@ -29,6 +29,7 @@ import {
 import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
 import { RotationGuideModal } from '@/components/site/RotationGuideModal'
 import { ReuseWarningModal } from '@/components/site/ReuseWarningModal'
+import { EditSiteChangeModal, type EditSiteChangeInput } from '@/components/site/EditSiteChangeModal'
 
 export default function SiteTrackerPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -51,6 +52,8 @@ export default function SiteTrackerPage() {
   const [guideOpen, setGuideOpen] = useState(false)
   // A recently-used zone the user tapped, held pending an "are you sure?" check.
   const [pendingZone, setPendingZone] = useState<BodyZone | null>(null)
+  // A logged change being edited (from the recent-changes list).
+  const [editRow, setEditRow] = useState<SiteChangeRow | null>(null)
   // Zone driving the tooltip (hovered / keyboard-focused).
   const [activeId, setActiveId] = useState<string | null>(null)
   // Nonce → the post-log checkmark flash.
@@ -222,6 +225,49 @@ export default function SiteTrackerPage() {
     }
     await loadChanges()
     showToast(t('siteHistory.deleted'), 'success')
+  }
+
+  // Save edits to a past change. Body_zone is written separately (best-effort) so
+  // a pre-migration constraint can't fail the whole edit. If the supply changed,
+  // the counts are reconciled: one goes back to the old supply, one comes from the
+  // new (matching how logging decremented it in the first place).
+  const handleEditSave = async (values: EditSiteChangeInput) => {
+    const row = editRow
+    if (!row) return
+
+    const { error } = await supabase
+      .from('site_changes')
+      .update({
+        supply_id: values.supplyId,
+        applied_date: values.appliedDate,
+        notes: values.notes || null,
+      })
+      .eq('id', row.id)
+    if (error) throw new Error(error.message)
+
+    const { error: zoneErr } = await supabase
+      .from('site_changes')
+      .update({ body_zone: values.zoneId })
+      .eq('id', row.id)
+    if (zoneErr) console.warn('body_zone not saved — run supabase/setup.sql:', zoneErr.message)
+
+    if ((row.supply_id ?? null) !== (values.supplyId ?? null)) {
+      const old = row.supply_id ? inventory.find((p) => p.id === row.supply_id) : null
+      if (old) {
+        const q = old.quantity + 1
+        await supabase.from('supplies').update({ quantity: q, updated_at: new Date().toISOString() }).eq('id', old.id)
+        setInventory((prev) => prev.map((p) => (p.id === old.id ? { ...p, quantity: q } : p)))
+      }
+      const next = values.supplyId ? inventory.find((p) => p.id === values.supplyId) : null
+      if (next && next.quantity > 0) {
+        const q = next.quantity - 1
+        await supabase.from('supplies').update({ quantity: q, updated_at: new Date().toISOString() }).eq('id', next.id)
+        setInventory((prev) => prev.map((p) => (p.id === next.id ? { ...p, quantity: q } : p)))
+      }
+    }
+
+    await loadChanges()
+    showToast(t('siteHistory.edited'), 'success')
   }
 
   // "Jul 14, 2026" from a YYYY-MM-DD string, parsed as a LOCAL date (no TZ drift).
@@ -451,15 +497,26 @@ export default function SiteTrackerPage() {
                       {supply ? ` · ${supply.name}` : ''}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteChange(row)}
-                    aria-label={t('siteHistory.deleteAria', {
-                      zone: zone ? t(zoneLabelKey(zone)) : t('siteHistory.noZone'),
-                    })}
-                    className="shrink-0 p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:bg-surface-2 hover:text-urgent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="shrink-0 flex items-center gap-1">
+                    <button
+                      onClick={() => setEditRow(row)}
+                      aria-label={t('siteHistory.editAria', {
+                        zone: zone ? t(zoneLabelKey(zone)) : t('siteHistory.noZone'),
+                      })}
+                      className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:bg-surface-2 hover:text-teal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteChange(row)}
+                      aria-label={t('siteHistory.deleteAria', {
+                        zone: zone ? t(zoneLabelKey(zone)) : t('siteHistory.noZone'),
+                      })}
+                      className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-faint hover:bg-surface-2 hover:text-urgent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-urgent"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </li>
               )
             })}
@@ -490,6 +547,15 @@ export default function SiteTrackerPage() {
             setPendingZone(null)
             setGuideOpen(true)
           }}
+        />
+      )}
+
+      {editRow && (
+        <EditSiteChangeModal
+          change={editRow}
+          inventory={inventory}
+          onClose={() => setEditRow(null)}
+          onSave={handleEditSave}
         />
       )}
 
