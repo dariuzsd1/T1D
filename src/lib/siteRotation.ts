@@ -53,9 +53,10 @@ export const BODY_ZONES: BodyZone[] = [
   // distinct from the back-of-arm zones above.
   { id: 'arm_front_left', region: 'Upper arm', side: 'left', view: 'front', x: 182, y: 150, w: 20, h: 58, rx: 9 },
   { id: 'arm_front_right', region: 'Upper arm', side: 'right', view: 'front', x: 58, y: 150, w: 20, h: 58, rx: 9 },
-  // Top of the shoulder (deltoid cap) — out on the shoulders, not the upper back.
-  { id: 'shoulder_left', region: 'Shoulder', side: 'left', view: 'back', x: 60, y: 120, w: 30, h: 26, rx: 13 },
-  { id: 'shoulder_right', region: 'Shoulder', side: 'right', view: 'back', x: 170, y: 120, w: 30, h: 26, rx: 13 },
+  // Top of the shoulder (deltoid cap), shown on the FRONT view. Mirrored like the
+  // other front zones: the person's left is drawn on screen-right (higher x).
+  { id: 'shoulder_left', region: 'Shoulder', side: 'left', view: 'front', x: 170, y: 120, w: 30, h: 26, rx: 13 },
+  { id: 'shoulder_right', region: 'Shoulder', side: 'right', view: 'front', x: 60, y: 120, w: 30, h: 26, rx: 13 },
 ]
 
 export const BODY_ZONE_IDS: readonly string[] = BODY_ZONES.map((z) => z.id)
