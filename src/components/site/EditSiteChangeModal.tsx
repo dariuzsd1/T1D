@@ -7,7 +7,7 @@ import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { Product } from '@/lib/store'
 import { isSiteSupply } from '@/lib/siteSupplies'
-import { BODY_ZONES, zoneLabelKey, type BodyView, type SiteChangeRow } from '@/lib/siteRotation'
+import { BODY_ZONES, zoneLabelKey, type SiteChangeRow } from '@/lib/siteRotation'
 
 /** Local YYYY-MM-DD (today, no timezone drift). */
 function todayLocal(): string {
@@ -65,8 +65,6 @@ export function EditSiteChangeModal({
   useEffect(() => {
     firstFieldRef.current?.focus()
   }, [])
-
-  const viewLabel = (v: BodyView) => (v === 'front' ? t('siteTracker.front') : t('siteTracker.back'))
 
   const handleSave = async () => {
     if (!appliedDate) {
@@ -130,7 +128,7 @@ export function EditSiteChangeModal({
               <option value="">{t('siteHistory.noZone')}</option>
               {BODY_ZONES.map((z) => (
                 <option key={z.id} value={z.id}>
-                  {t(zoneLabelKey(z))} · {viewLabel(z.view)}
+                  {t(zoneLabelKey(z))}
                 </option>
               ))}
             </select>

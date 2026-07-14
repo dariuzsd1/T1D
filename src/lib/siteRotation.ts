@@ -74,9 +74,9 @@ const ZONE_LABEL_KEY: Record<string, TKey> = {
   lower_back: 'zone.lowerBack',
   hip_left: 'zone.hipLeft',
   hip_right: 'zone.hipRight',
-  // Front upper arms reuse the arm labels (view context disambiguates them).
-  arm_front_left: 'zone.upperArmLeft',
-  arm_front_right: 'zone.upperArmRight',
+  // Front upper arms have their own labels, distinct from the back-of-arm ones.
+  arm_front_left: 'zone.upperArmFrontLeft',
+  arm_front_right: 'zone.upperArmFrontRight',
   shoulder_left: 'zone.shoulderLeft',
   shoulder_right: 'zone.shoulderRight',
 }
@@ -91,8 +91,8 @@ const ZONE_ARIA_KEY: Record<string, TKey> = {
   lower_back: 'zone.lowerBack', // center zone: label and aria are the same phrase
   hip_left: 'zone.hipLeftAria',
   hip_right: 'zone.hipRightAria',
-  arm_front_left: 'zone.upperArmLeftAria',
-  arm_front_right: 'zone.upperArmRightAria',
+  arm_front_left: 'zone.upperArmFrontLeftAria',
+  arm_front_right: 'zone.upperArmFrontRightAria',
   shoulder_left: 'zone.shoulderLeftAria',
   shoulder_right: 'zone.shoulderRightAria',
 }
