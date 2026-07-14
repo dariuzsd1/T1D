@@ -165,7 +165,8 @@ alter table public.site_changes drop constraint if exists site_changes_body_zone
 alter table public.site_changes add constraint site_changes_body_zone_check
   check (body_zone is null or body_zone in (
     'abdomen_left','abdomen_right','thigh_left','thigh_right',
-    'upper_arm_left','upper_arm_right','hip_left','hip_right','lower_back'
+    'upper_arm_left','upper_arm_right','hip_left','hip_right','lower_back',
+    'arm_front_left','arm_front_right','shoulder_left','shoulder_right'
   ));
 
 create index if not exists site_changes_user_id_idx on public.site_changes(user_id);
