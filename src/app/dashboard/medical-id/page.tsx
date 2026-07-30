@@ -14,6 +14,11 @@ import { isMissingTableError } from '@/lib/prescriptions'
 import {
   type MedicalProfile, rowToProfile, profileToRow, emptyProfile,
 } from '@/lib/medicalId'
+import type { Product } from '@/lib/store'
+import { rescueKindOf, rescueExpiryStatus } from '@/lib/rescueItems'
+import { daysUntilExpiration } from '@/lib/depletion'
+import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 // The travel checklist + TSA note are static, universally-true guidance whose
 // text lives in the i18n dictionary so it follows the active language.
@@ -34,6 +39,19 @@ export default function MedicalIdPage() {
   const [error, setError] = useState<string | null>(null)
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
+  // Rescue meds (glucagon, ketones, hypo carbs) pulled from the user's supplies,
+  // so the emergency card can name what they carry and flag anything expiring.
+  const [rescueMeds, setRescueMeds] = useState<Product[]>([])
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res) => {
+        const items: Product[] = Array.isArray(res.data) ? res.data : []
+        setRescueMeds(items.filter((p) => rescueKindOf(p) !== null))
+      })
+      .catch(() => {})
+  }, [])
 
   // Reading a browser-only global on mount (unavailable server-side) — not a data fetch.
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -99,6 +117,25 @@ export default function MedicalIdPage() {
     } catch {
       showToast(t('medicalId.copyFail'), 'caution')
     }
+  }
+
+  // Append a concise rescue-med summary to the emergency note the card shows, so
+  // a responder sees what the person carries. User-initiated; edits their own field.
+  const addRescueToNote = () => {
+    const summary = rescueMeds
+      .map((m) => {
+        const exp = m.expirationDate ? format(new Date(m.expirationDate), 'MMM yyyy') : null
+        return exp ? t('medicalId.rescueNoteItem', { name: m.name, date: exp }) : m.name
+      })
+      .join('; ')
+    const line = `${t('medicalId.rescueNotePrefix')}: ${summary}`
+    // Don't double-append if the prefix is already present.
+    if (profile.notes.includes(t('medicalId.rescueNotePrefix'))) {
+      showToast(t('medicalId.rescueAlreadyInNote'), 'info')
+      return
+    }
+    set('notes', profile.notes ? `${profile.notes}\n${line}` : line)
+    showToast(t('medicalId.rescueAddedToNote'), 'success')
   }
 
   const field =
@@ -225,6 +262,55 @@ export default function MedicalIdPage() {
           {/* ---- Preview + share + travel ---- */}
           <div className="space-y-6 lg:sticky lg:top-6">
             <EmergencyCard profile={profile} />
+
+            {/* Rescue meds — pulled from supplies, expiry-flagged */}
+            {rescueMeds.length > 0 && (
+              <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-urgent-soft border border-urgent/20 flex items-center justify-center shrink-0">
+                    <ShieldAlert className="w-5 h-5 text-urgent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-ink">{t('medicalId.rescueTitle')}</h3>
+                    <p className="text-sm text-muted">{t('medicalId.rescueBody')}</p>
+                  </div>
+                </div>
+
+                <ul className="space-y-2">
+                  {rescueMeds.map((m) => {
+                    const st = rescueExpiryStatus(m)
+                    const d = daysUntilExpiration(m.expirationDate)
+                    const expLine =
+                      d === null
+                        ? t('medicalId.rescueNoDate')
+                        : d <= 0
+                        ? t('medicalId.rescueExpired')
+                        : t('medicalId.rescueExpiresOn', { date: format(new Date(m.expirationDate!), 'MMM d, yyyy') })
+                    return (
+                      <li key={m.id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-ink truncate">{m.name}</span>
+                        <span
+                          className={cn(
+                            'shrink-0 text-xs font-semibold',
+                            st === 'out' ? 'text-urgent' : st === 'low' ? 'text-caution' : st === 'unset' ? 'text-faint' : 'text-muted'
+                          )}
+                        >
+                          {expLine}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                <button
+                  onClick={addRescueToNote}
+                  className="inline-flex items-center gap-2 bg-surface-2 hover:bg-line border border-line text-ink px-3 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  {t('medicalId.rescueAddToNote')}
+                </button>
+              </section>
+            )}
 
             {/* Share */}
             <section className="bg-surface border border-line rounded-3xl p-6 shadow-sm space-y-4">

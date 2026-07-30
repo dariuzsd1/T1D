@@ -15,7 +15,8 @@ import {
   rowToDevice, deviceToRow, deviceLabel, DEVICE_PRESETS, DEVICE_KIND_KEY,
 } from '@/lib/devices'
 import { isMissingTableError } from '@/lib/prescriptions'
-import { displayStatus, isRateEstimated } from '@/lib/depletion'
+import { isRateEstimated, effectiveLeadTimeDays } from '@/lib/depletion'
+import { itemDisplayStatus } from '@/lib/rescueItems'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useDialog } from '@/lib/useDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -290,8 +291,12 @@ function DeviceCard({
 /** One linked consumable: name, runway (honest), status, reorder hand-off. */
 function ConsumableRow({ product, bufferDays }: { product: Product; bufferDays: number }) {
   const { t } = useI18n()
+  // Read the account lead-time default straight from the store (avoids threading a
+  // second prop through DeviceCard); per-item override still wins via the helper.
+  const shippingLeadTimeDays = useStore((s) => s.shippingLeadTimeDays)
   // displayStatus: an unknown rate renders neutral, never an alarm on a guess.
-  const status = displayStatus(product, bufferDays)
+  // Lead time folds into the reorder trigger so slow-shipping items flag earlier.
+  const status = itemDisplayStatus(product, bufferDays, effectiveLeadTimeDays(product, shippingLeadTimeDays))
   const estimated = isRateEstimated(product.usageRatePerDay)
   const reorder = reorderTargetFor(product)
   const tone =

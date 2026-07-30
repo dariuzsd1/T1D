@@ -63,6 +63,12 @@ create table if not exists public.supplies (
   user_id         uuid not null references auth.users(id) on delete cascade,
   name            text not null,
   category_id     uuid references public.supply_categories(id) on delete set null,
+  -- Denormalized catalog category text (e.g. 'glucagon', 'ketone_supply',
+  -- 'hypo_treatment', 'cgm_sensor'), copied from the catalog product on add.
+  -- Distinct from category_id (the 6-row supply_categories taxonomy): this
+  -- carries the finer product category the rescue-item logic keys on
+  -- (src/lib/rescueItems.ts). NULL for older rows → name/brand fallback covers them.
+  category        text,
   brand           text,
   model           text,
   quantity        numeric not null default 1,
@@ -104,12 +110,18 @@ create table if not exists public.supplies (
   -- to soften proactive nags (banner/push) for a short grace window, never to
   -- hide a true stockout. NULL = no order in flight.
   last_ordered_date timestamptz,
+  -- Vendor-aware reorder timing (src/lib/depletion.ts effectiveLeadTimeDays): how
+  -- many days THIS item takes to arrive once ordered. NULL = inherit the account
+  -- default (client-side setting). Folded into the reorder trigger so a slow-
+  -- shipping item flags "reorder soon" earlier. Lead time only ever adds reserve.
+  lead_time_days  integer,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
 
 -- For older projects that created `supplies` before these columns existed:
 alter table public.supplies
+  add column if not exists category              text,
   add column if not exists model                text,
   add column if not exists usage_rate_per_day    numeric,
   add column if not exists copay                 numeric,
@@ -123,7 +135,8 @@ alter table public.supplies
   add column if not exists opened_date           date,
   add column if not exists in_use_days           integer,
   add column if not exists auto_depleted_through timestamptz,
-  add column if not exists last_ordered_date     timestamptz;
+  add column if not exists last_ordered_date     timestamptz,
+  add column if not exists lead_time_days        integer;
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 

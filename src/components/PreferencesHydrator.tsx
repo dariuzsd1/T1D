@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useStore, SAFETY_BUFFER_KEY } from '@/lib/store'
+import { useStore, SAFETY_BUFFER_KEY, SHIPPING_LEAD_TIME_KEY } from '@/lib/store'
 import { SURGE_BUFFER_KEY, readStoredSurge } from '@/lib/surgeBuffer'
 
 /**
@@ -12,6 +12,7 @@ import { SURGE_BUFFER_KEY, readStoredSurge } from '@/lib/surgeBuffer'
 export function PreferencesHydrator() {
   const setSafetyBufferDays = useStore((s) => s.setSafetyBufferDays)
   const setSurgeBuffer = useStore((s) => s.setSurgeBuffer)
+  const setShippingLeadTimeDays = useStore((s) => s.setShippingLeadTimeDays)
 
   useEffect(() => {
     // Base buffer first, so the surge re-derive below layers on the right base.
@@ -24,7 +25,13 @@ export function PreferencesHydrator() {
     const surge = readStoredSurge(window.localStorage.getItem(SURGE_BUFFER_KEY))
     if (surge) setSurgeBuffer(surge)
     else window.localStorage.removeItem(SURGE_BUFFER_KEY)
-  }, [setSafetyBufferDays, setSurgeBuffer])
+    // Account-wide shipping lead-time default (0 is a valid, meaningful value).
+    const lead = window.localStorage.getItem(SHIPPING_LEAD_TIME_KEY)
+    if (lead !== null) {
+      const n = parseInt(lead, 10)
+      if (!Number.isNaN(n) && n >= 0) setShippingLeadTimeDays(n)
+    }
+  }, [setSafetyBufferDays, setSurgeBuffer, setShippingLeadTimeDays])
 
   return null
 }

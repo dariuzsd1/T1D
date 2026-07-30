@@ -67,11 +67,14 @@ export function daysOfStock(quantity: number, usageRatePerDay: number): number {
 }
 
 /** Days until the boxed stock expires (shelf life), or null if unknown. */
-export function daysUntilExpiration(expirationDate?: string | null): number | null {
+export function daysUntilExpiration(
+  expirationDate?: string | null,
+  now: Date = new Date()
+): number | null {
   if (!expirationDate) return null
   const ms = new Date(expirationDate).getTime()
   if (Number.isNaN(ms)) return null
-  return Math.floor((ms - Date.now()) / MS_PER_DAY)
+  return Math.floor((ms - now.getTime()) / MS_PER_DAY)
 }
 
 /**
@@ -110,18 +113,51 @@ export function effectiveRunwayDays(p: RunwayInput): number {
   return Math.max(0, Math.min(...caps))
 }
 
+export const DEFAULT_SHIPPING_LEAD_TIME_DAYS = 5
+
+/**
+ * The reorder trigger for a specific item = the shared safety buffer PLUS how
+ * long a replacement takes to arrive. Ordering when the runway hits this point
+ * means the new stock lands while you still hold `bufferDays` of reserve — the
+ * whole point of "vendor-aware" timing. Lead time only ever ADDS reserve, so it
+ * fails safe: a wrong (too-high) lead time makes you reorder a little early,
+ * never late.
+ */
+export function reorderThresholdDays(
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
+  leadTimeDays: number = 0
+): number {
+  return bufferDays + Math.max(0, leadTimeDays)
+}
+
+/**
+ * Resolve the lead time that applies to an item: its own per-supply override, or
+ * the account-wide default when the item hasn't set one. A per-item value of 0
+ * (e.g. same-day pharmacy pickup) is honored, not treated as "unset".
+ */
+export function effectiveLeadTimeDays(
+  item: { leadTimeDays?: number | null },
+  accountDefaultDays: number = DEFAULT_SHIPPING_LEAD_TIME_DAYS
+): number {
+  const v = item.leadTimeDays ?? accountDefaultDays
+  return Number.isFinite(v) && v > 0 ? v : 0
+}
+
 export type StockStatus = 'out' | 'low' | 'ok'
 
 /**
  * Status against the user's safety buffer (their reserve), not against zero.
- * `low` means "you'd dip below your reserve" — the moment to reorder.
+ * `low` means "you'd dip below your reserve" — the moment to reorder. When a
+ * shipping `leadTimeDays` is given, `low` fires earlier so an order placed now
+ * still arrives before the reserve is touched.
  */
 export function stockStatus(
   runwayDays: number,
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
+  leadTimeDays: number = 0
 ): StockStatus {
   if (runwayDays <= 0) return 'out'
-  if (runwayDays <= bufferDays) return 'low'
+  if (runwayDays <= reorderThresholdDays(bufferDays, leadTimeDays)) return 'low'
   return 'ok'
 }
 
@@ -142,15 +178,18 @@ export type DisplayStatus = StockStatus | 'unset'
 
 export function displayStatus(
   p: RunwayInput,
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
+  leadTimeDays: number = 0
 ): DisplayStatus {
   if (p.quantity <= 0) return 'out'
   if (!isRateEstimated(p.usageRatePerDay)) {
-    return stockStatus(effectiveRunwayDays(p), bufferDays)
+    return stockStatus(effectiveRunwayDays(p), bufferDays, leadTimeDays)
   }
   const exp = daysUntilExpiration(p.expirationDate)
   if (exp !== null && exp <= 0) return 'out'
-  if (exp !== null && exp <= bufferDays) return 'low'
+  // Expiry is dated fact, so it may still flag an estimated-rate item — and the
+  // reorder window here includes shipping lead time, same as a known-rate item.
+  if (exp !== null && exp <= reorderThresholdDays(bufferDays, leadTimeDays)) return 'low'
   return 'unset'
 }
 
@@ -160,8 +199,9 @@ export function displayStatus(
  */
 export function reorderByDate(
   runwayDays: number,
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS
+  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
+  leadTimeDays: number = 0
 ): Date {
-  const daysUntilReorder = Math.max(0, runwayDays - bufferDays)
+  const daysUntilReorder = Math.max(0, runwayDays - reorderThresholdDays(bufferDays, leadTimeDays))
   return new Date(Date.now() + daysUntilReorder * MS_PER_DAY)
 }

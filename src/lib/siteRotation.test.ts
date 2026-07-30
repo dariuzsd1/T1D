@@ -64,6 +64,16 @@ describe('buildZoneViews', () => {
     const views = buildZoneViews([{ id: 'x', body_zone: 'lower_back', applied_date: 'garbage' }], NOW)
     expect(views.get('lower_back')!.elapsed.kind).toBe('unknown')
   })
+
+  it('honors a custom rest window: a spot rested past the default can still read recent under a longer one', () => {
+    const changes = [change('hip_left', 20)] // 20 days ago
+    // Default 14-day window: 20 > 14 → rested/ready.
+    expect(buildZoneViews(changes, NOW).get('hip_left')!.isRecent).toBe(false)
+    // A user who sets a 28-day window still sees it as recently used.
+    expect(buildZoneViews(changes, NOW, 28).get('hip_left')!.isRecent).toBe(true)
+    // And a 21-day window: 20 <= 21 → still recent.
+    expect(buildZoneViews(changes, NOW, 21).get('hip_left')!.isRecent).toBe(true)
+  })
 })
 
 describe('suggestedZoneId', () => {

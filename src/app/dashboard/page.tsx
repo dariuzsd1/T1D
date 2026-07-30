@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useStore } from '@/lib/store'
+import { useStore, type Product } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
-import { displayStatus } from '@/lib/depletion'
+import { effectiveLeadTimeDays } from '@/lib/depletion'
+import { itemDisplayStatus } from '@/lib/rescueItems'
 import { nextEligibleRefillDate, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { logActivity } from '@/lib/activity'
@@ -27,7 +28,7 @@ import {
 } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { inventory, safetyBufferDays, updateProduct } = useStore()
+  const { inventory, safetyBufferDays, shippingLeadTimeDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const { profile, loading: profileLoading } = useProfile()
@@ -101,16 +102,14 @@ export default function DashboardPage() {
   const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
   // displayStatus, not raw stockStatus: an estimated rate never alarms ('unset'),
   // so a freshly added box doesn't greet the user with a warning built on a guess.
+  const leadFor = (p: Product) => effectiveLeadTimeDays(p, shippingLeadTimeDays)
+  const statusOf = (p: Product) => itemDisplayStatus(p, safetyBufferDays, leadFor(p))
   const needsAttention = sorted.filter((p) => {
-    const s = displayStatus(p, safetyBufferDays)
+    const s = statusOf(p)
     return s === 'out' || s === 'low'
   })
-  const hasOut = needsAttention.some(
-    (p) => displayStatus(p, safetyBufferDays) === 'out'
-  )
-  const unsetCount = inventory.filter(
-    (p) => displayStatus(p, safetyBufferDays) === 'unset'
-  ).length
+  const hasOut = needsAttention.some((p) => statusOf(p) === 'out')
+  const unsetCount = inventory.filter((p) => statusOf(p) === 'unset').length
   const allGood = inventory.length > 0 && needsAttention.length === 0
 
   // Forward-looking agenda, built from real dated data only (refill-eligible,
@@ -359,6 +358,7 @@ export default function DashboardPage() {
               key={item.id}
               product={item}
               bufferDays={safetyBufferDays}
+              shippingLeadTimeDays={shippingLeadTimeDays}
               onReorder={handleReorder}
               onMarkOrdered={handleMarkOrdered}
             />

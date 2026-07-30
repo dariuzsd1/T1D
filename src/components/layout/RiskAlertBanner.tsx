@@ -1,7 +1,8 @@
 'use client'
 
 import { useStore } from '@/lib/store'
-import { displayStatus } from '@/lib/depletion'
+import { effectiveLeadTimeDays, daysUntilExpiration } from '@/lib/depletion'
+import { itemDisplayStatus, isRescueItem } from '@/lib/rescueItems'
 import { isOrderPending } from '@/lib/orderTracking'
 import { AlertTriangle, Clock, ArrowRight, X } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -10,21 +11,27 @@ import { useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 
 export function RiskAlertBanner() {
-  const { inventory, safetyBufferDays } = useStore()
+  const { inventory, safetyBufferDays, shippingLeadTimeDays } = useStore()
   const [dismissed, setDismissed] = useState(false)
   const { t } = useI18n()
 
-  // displayStatus: items with an estimated rate stay out of this banner entirely —
-  // an app-wide alarm may only rest on facts (real rate, real 0, real expiry).
-  // A true stockout always shows here regardless of a self-reported order — being
-  // at zero is an active emergency even with a box in transit. A routine "low"
-  // item that the user already marked as ordered is quieted for a grace window
-  // (src/lib/orderTracking.ts) — the Supplies/Reorder lists still show it honestly,
-  // this banner just stops re-nagging about something already being handled.
-  const out = inventory.filter((p) => displayStatus(p, safetyBufferDays) === 'out')
-  const low = inventory.filter(
-    (p) => displayStatus(p, safetyBufferDays) === 'low' && !isOrderPending(p.lastOrderedDate)
-  )
+  // itemDisplayStatus: items with an estimated rate stay out of this banner
+  // entirely — an app-wide alarm may only rest on facts (real rate, real 0, real
+  // expiry). Rescue items (glucagon, ketones, hypo) are judged on expiry, and a
+  // per-item shipping lead time folds into the reorder trigger. A true stockout
+  // always shows regardless of a self-reported order — being at zero is an active
+  // emergency even with a box in transit. A routine "low" item already marked as
+  // ordered is quieted for a grace window (src/lib/orderTracking.ts).
+  const statusOf = (p: (typeof inventory)[number]) =>
+    itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
+  // Rescue items lead within each tier — an expired/expiring rescue med is the
+  // most important thing on the screen.
+  const byRescueFirst = (a: (typeof inventory)[number], b: (typeof inventory)[number]) =>
+    Number(isRescueItem(b)) - Number(isRescueItem(a))
+  const out = inventory.filter((p) => statusOf(p) === 'out').sort(byRescueFirst)
+  const low = inventory
+    .filter((p) => statusOf(p) === 'low' && !isOrderPending(p.lastOrderedDate))
+    .sort(byRescueFirst)
 
   if (dismissed || (out.length === 0 && low.length === 0)) return null
 
@@ -32,22 +39,36 @@ export function RiskAlertBanner() {
   const isUrgent = out.length > 0
   const items = isUrgent ? out : low
   const others = items.length - 1
+  const head = items[0]
+  const headRescue = isRescueItem(head)
+  const headExpiryDays = daysUntilExpiration(head.expirationDate)
 
   const tone = isUrgent
     ? 'bg-urgent-soft text-urgent border-urgent/30'
     : 'bg-caution-soft text-caution border-caution/30'
 
-  const message = isUrgent
+  // A rescue headline speaks in expiry, not a usage-days count.
+  const rescueMessage = isUrgent
     ? (others === 0
-        ? t('riskBanner.outMessage', { name: items[0].name })
-        : others === 1
-          ? t('riskBanner.outMessagePlusOne', { name: items[0].name })
-          : t('riskBanner.outMessagePlusMany', { name: items[0].name, count: others }))
+        ? t('riskBanner.rescueOutMessage', { name: head.name })
+        : t('riskBanner.rescueOutMessagePlus', { name: head.name, count: others }))
     : (others === 0
-        ? t('riskBanner.lowMessage', { name: items[0].name, days: items[0].remainingDays })
+        ? t('riskBanner.rescueLowMessage', { name: head.name, days: headExpiryDays ?? 0 })
+        : t('riskBanner.rescueLowMessagePlus', { name: head.name, days: headExpiryDays ?? 0, count: others }))
+
+  const supplyMessage = isUrgent
+    ? (others === 0
+        ? t('riskBanner.outMessage', { name: head.name })
         : others === 1
-          ? t('riskBanner.lowMessagePlusOne', { name: items[0].name, days: items[0].remainingDays })
-          : t('riskBanner.lowMessagePlusMany', { name: items[0].name, days: items[0].remainingDays, count: others }))
+          ? t('riskBanner.outMessagePlusOne', { name: head.name })
+          : t('riskBanner.outMessagePlusMany', { name: head.name, count: others }))
+    : (others === 0
+        ? t('riskBanner.lowMessage', { name: head.name, days: head.remainingDays })
+        : others === 1
+          ? t('riskBanner.lowMessagePlusOne', { name: head.name, days: head.remainingDays })
+          : t('riskBanner.lowMessagePlusMany', { name: head.name, days: head.remainingDays, count: others }))
+
+  const message = headRescue ? rescueMessage : supplyMessage
 
   return (
     <motion.div

@@ -3,6 +3,7 @@ import { createClient } from './supabase/client'
 import {
   effectiveRunwayDays,
   DEFAULT_SAFETY_BUFFER_DAYS,
+  DEFAULT_SHIPPING_LEAD_TIME_DAYS,
 } from './depletion'
 import { effectiveBuffer, SURGE_BUFFER_KEY, type SurgeBuffer } from './surgeBuffer'
 
@@ -43,6 +44,11 @@ export interface Product {
   // "Mark as ordered" on this supply. Self-reported, softens proactive nags for
   // a grace window — never hides a true stockout, never fabricates a delivery date.
   lastOrderedDate?: string | null;
+  // Vendor-aware reorder timing (src/lib/depletion.ts effectiveLeadTimeDays):
+  // how many days THIS item takes to arrive once ordered. null = inherit the
+  // account default (store.shippingLeadTimeDays). Folded into the reorder
+  // trigger so a slow-shipping item flags "reorder soon" earlier.
+  leadTimeDays?: number | null;
 }
 
 /** Raw `supplies` row shape as read from Supabase (snake_case), scoped to just
@@ -53,6 +59,7 @@ export interface SupplyRow {
   id: string;
   brand: string | null;
   name: string;
+  category: string | null;
   quantity: number;
   updated_at: string | null;
   usage_rate_per_day: number | null;
@@ -68,10 +75,14 @@ export interface SupplyRow {
   opened_date: string | null;
   in_use_days: number | null;
   last_ordered_date: string | null;
+  lead_time_days: number | null;
 }
 
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */
 export const SAFETY_BUFFER_KEY = 't1d-safety-buffer'
+
+/** localStorage key for the non-PHI account-wide shipping lead-time default. */
+export const SHIPPING_LEAD_TIME_KEY = 't1d-shipping-lead-time'
 
 /** Always derive the headline runway from quantity/usage/expiry so it stays honest
  *  and responds to "Use One" / restock actions. */
@@ -90,6 +101,9 @@ interface T1DStore {
   baseSafetyBufferDays: number;
   /** Active time-boxed surge, or null. Non-PHI, cached in localStorage. */
   surgeBuffer: SurgeBuffer | null;
+  /** Account-wide default shipping lead time (days) for items that haven't set
+   *  their own. Non-PHI UI preference, cached in localStorage like the buffer. */
+  shippingLeadTimeDays: number;
 
   // Actions
   setInventory: (products: Product[]) => void;
@@ -100,6 +114,8 @@ interface T1DStore {
   setSafetyBufferDays: (days: number) => void;
   /** Turns a sick-day/travel surge on (pass a window) or off (pass null). */
   setSurgeBuffer: (surge: SurgeBuffer | null) => void;
+  /** Sets the account-wide default shipping lead time (persisted locally). */
+  setShippingLeadTimeDays: (days: number) => void;
 }
 
 // NOTE: no `persist` middleware. Inventory is PHI; the dashboard re-fetches it
@@ -111,6 +127,7 @@ export const useStore = create<T1DStore>()((set) => ({
   safetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
   baseSafetyBufferDays: DEFAULT_SAFETY_BUFFER_DAYS,
   surgeBuffer: null,
+  shippingLeadTimeDays: DEFAULT_SHIPPING_LEAD_TIME_DAYS,
 
   setInventory: (inventory) =>
     set({ inventory: inventory.map(withRunway) }),
@@ -155,7 +172,8 @@ export const useStore = create<T1DStore>()((set) => ({
       updates.prescriptionId !== undefined ||
       updates.openedDate !== undefined ||
       updates.inUseDays !== undefined ||
-      updates.lastOrderedDate !== undefined
+      updates.lastOrderedDate !== undefined ||
+      updates.leadTimeDays !== undefined
     ) {
       const optionalPayload: Record<string, unknown> = {}
       if (updates.usageRatePerDay !== undefined)
@@ -189,6 +207,10 @@ export const useStore = create<T1DStore>()((set) => ({
       if (updates.lastOrderedDate !== undefined)
         // NULL clears it — set on "Mark as ordered", cleared on undo or on restock.
         optionalPayload.last_ordered_date = updates.lastOrderedDate || null
+      if (updates.leadTimeDays !== undefined)
+        // NULL = "inherit the account default"; 0 (same-day pickup) is a real value.
+        optionalPayload.lead_time_days =
+          updates.leadTimeDays != null && updates.leadTimeDays >= 0 ? updates.leadTimeDays : null
 
       const { error: optionalError } = await supabase
         .from('supplies')
@@ -248,5 +270,15 @@ export const useStore = create<T1DStore>()((set) => ({
       surgeBuffer,
       safetyBufferDays: effectiveBuffer(state.baseSafetyBufferDays, surgeBuffer),
     }))
+  },
+
+  setShippingLeadTimeDays: (days) => {
+    const clamped = Math.max(0, Math.round(days))
+    // Non-PHI UI preference, same rationale as the safety buffer — cached locally
+    // and re-applied after mount by PreferencesHydrator (no hydration mismatch).
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SHIPPING_LEAD_TIME_KEY, String(clamped))
+    }
+    set({ shippingLeadTimeDays: clamped })
   },
 }))

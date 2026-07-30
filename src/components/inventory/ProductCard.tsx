@@ -5,7 +5,7 @@ import { RefillStatusBar } from "./RefillStatusBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package, Trash2, Edit3, ShoppingCart, Minus, Loader2,
-  CalendarClock, ChevronDown, PackagePlus, Pill, Droplet, CheckCircle2, Undo2,
+  CalendarClock, ChevronDown, PackagePlus, Pill, Droplet, CheckCircle2, Undo2, ShieldAlert,
 } from "lucide-react";
 import { rxSupplyStatus, type Prescription } from "@/lib/prescriptions";
 import { useToast } from "@/components/ui/Toast";
@@ -14,14 +14,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import {
-  displayStatus,
   reorderByDate,
   daysUntilExpiration,
   inUseDaysRemaining,
   isRateEstimated,
+  effectiveLeadTimeDays,
   DEFAULT_SAFETY_BUFFER_DAYS,
+  DEFAULT_SHIPPING_LEAD_TIME_DAYS,
 } from "@/lib/depletion";
 import { reorderTargetFor } from "@/lib/suppliers";
+import { rescueKindOf, itemDisplayStatus } from "@/lib/rescueItems";
 import { isOrderPending, daysSinceOrdered } from "@/lib/orderTracking";
 import { logActivity } from "@/lib/activity";
 import { trackEvent } from "@/lib/analytics";
@@ -32,6 +34,9 @@ import { useI18n } from "@/lib/i18n";
 interface ProductCardProps {
   product: Product;
   bufferDays?: number;
+  /** Account-wide shipping lead-time default, for items without their own.
+   *  Folded into the reorder trigger + reorder-by date. */
+  shippingLeadTimeDays?: number;
   /** The prescription this supply is linked to (if any) — enables the honest
    *  runway ↔ refills-left reconciliation line. */
   linkedRx?: Prescription | null;
@@ -44,6 +49,7 @@ interface ProductCardProps {
 export function ProductCard({
   product,
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
+  shippingLeadTimeDays = DEFAULT_SHIPPING_LEAD_TIME_DAYS,
   linkedRx = null,
   onEdit,
   onDelete,
@@ -52,9 +58,16 @@ export function ProductCard({
 }: ProductCardProps) {
   const { t } = useI18n()
   const { profile } = useProfile()
+  // This item's shipping lead time (its own override, or the account default),
+  // folded into the reorder trigger so a slow-shipping item flags earlier.
+  const leadTime = effectiveLeadTimeDays(product, shippingLeadTimeDays)
+  // Emergency rescue items (glucagon, ketones, hypo carbs) are judged on expiry,
+  // not a usage runway — so we suppress the usage nudge and lead with the date.
+  const rescueKind = rescueKindOf(product)
+  const isRescue = rescueKind !== null
   // Semantic color: red is reserved for a true stockout; routine low stock is
   // amber; an unknown usage rate is neutral 'unset' (an estimate never alarms).
-  const status = displayStatus(product, bufferDays)
+  const status = itemDisplayStatus(product, bufferDays, leadTime)
 
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -73,7 +86,7 @@ export function ProductCard({
       ? { dot: 'bg-faint', number: 'text-ink', iconBg: 'bg-surface-2 border-line', icon: 'text-muted', btn: 'bg-primary text-white' }
       : { dot: 'bg-success', number: 'text-ink', iconBg: 'bg-primary/10 border-primary/20', icon: 'text-primary', btn: 'bg-primary text-white' }
 
-  const reorderBy = reorderByDate(product.remainingDays, bufferDays)
+  const reorderBy = reorderByDate(product.remainingDays, bufferDays, leadTime)
   const expiryDays = daysUntilExpiration(product.expirationDate)
   const reorder = reorderTargetFor(product)
   const orderPending = isOrderPending(product.lastOrderedDate)
@@ -127,8 +140,22 @@ export function ProductCard({
   const daysPhrase = estimated
     ? t('product.daysEstimate', { days: product.remainingDays })
     : t('product.daysExact', { days: product.remainingDays })
-  const summary =
-    status === 'out'
+  const expiryDateLabel = product.expirationDate
+    ? format(new Date(product.expirationDate), 'MMM d, yyyy')
+    : ''
+  const rescueSummary =
+    product.quantity <= 0
+      ? t('product.summaryOut')
+      : expiryDays === null
+      ? t('product.summaryRescueNoDate')
+      : expiryDays <= 0
+      ? t('product.summaryRescueExpired', { date: expiryDateLabel })
+      : status === 'low'
+      ? t('product.summaryRescueSoon', { date: expiryDateLabel, days: expiryDays })
+      : t('product.summaryRescueOk', { date: expiryDateLabel })
+  const summary = isRescue
+    ? rescueSummary
+    : status === 'out'
       ? t('product.summaryOut')
       : status === 'unset'
       ? t('product.summaryUnset', { quantity: product.quantity })
@@ -261,12 +288,34 @@ export function ProductCard({
               </div>
 
               <div className="text-right shrink-0">
-                <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
-                  {estimated ? '~' : ''}{product.remainingDays}
-                </div>
-                <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
-                  {estimated ? t('product.estDaysLeft') : t('product.daysLeftLabel')}
-                </div>
+                {isRescue ? (
+                  // Rescue items lead with expiry, not a usage runway.
+                  expiryDays === null ? (
+                    <>
+                      <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>–</div>
+                      <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">{t('product.rescueNoExpiry')}</div>
+                    </>
+                  ) : expiryDays <= 0 ? (
+                    <>
+                      <div className={cn("text-2xl font-black leading-none", tone.number)}>!</div>
+                      <div className="text-[10px] font-semibold text-urgent uppercase tracking-wider mt-0.5">{t('product.rescueExpired')}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>{expiryDays}</div>
+                      <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">{t('product.rescueDaysToExpiry')}</div>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
+                      {estimated ? '~' : ''}{product.remainingDays}
+                    </div>
+                    <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
+                      {estimated ? t('product.estDaysLeft') : t('product.daysLeftLabel')}
+                    </div>
+                  </>
+                )}
               </div>
 
               <ChevronDown
@@ -302,28 +351,41 @@ export function ProductCard({
                 className="overflow-hidden"
               >
                 <div className="px-5 pb-5 pt-1 space-y-4 border-t border-line">
-                  {/* Usage rate + edit hand-off */}
+                  {/* Usage rate + edit hand-off. Rescue items skip the usage
+                      nudge entirely — they're tracked by expiry, not daily use. */}
                   <div className="flex items-center gap-1.5 pt-3 text-xs text-muted">
-                    <span
-                      className={cn(
-                        "inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                        estimated
-                          ? "bg-caution-soft text-caution border border-caution/30"
-                          : "bg-success-soft text-success border border-success/30"
-                      )}
-                    >
-                      {estimated ? t('product.estimateBadge') : t('product.trackedBadge')}
-                    </span>
-                    <span>
-                      {estimated ? t('product.usageNotSet') : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
-                    </span>
+                    {isRescue ? (
+                      <>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-urgent-soft text-urgent border border-urgent/30">
+                          <ShieldAlert className="w-3 h-3" aria-hidden="true" />
+                          {t('product.rescueBadge')}
+                        </span>
+                        <span>{t('product.rescueTrackExpiry')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className={cn(
+                            "inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                            estimated
+                              ? "bg-caution-soft text-caution border border-caution/30"
+                              : "bg-success-soft text-success border border-success/30"
+                          )}
+                        >
+                          {estimated ? t('product.estimateBadge') : t('product.trackedBadge')}
+                        </span>
+                        <span>
+                          {estimated ? t('product.usageNotSet') : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
+                        </span>
+                      </>
+                    )}
                     <span aria-hidden="true">·</span>
                     <button
                       onClick={() => onEdit?.(product.id)}
                       aria-label={t('common.editAria', { name: product.name })}
                       className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
                     >
-                      {estimated ? t('product.setRate') : t('common.edit')}
+                      {isRescue ? t('common.edit') : estimated ? t('product.setRate') : t('common.edit')}
                     </button>
                   </div>
 
@@ -385,9 +447,13 @@ export function ProductCard({
                     )
                   )}
 
-                  <div className="bg-surface-2 rounded-xl p-4 border border-line">
-                    <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} status={status} />
-                  </div>
+                  {/* The runway bar is meaningless for a rescue item (no usage
+                      forecast) — its expiry line above carries the status instead. */}
+                  {!isRescue && (
+                    <div className="bg-surface-2 rounded-xl p-4 border border-line">
+                      <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} status={status} />
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex flex-wrap items-center gap-2">

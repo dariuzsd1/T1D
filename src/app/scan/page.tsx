@@ -486,6 +486,12 @@ export default function ScanPage() {
 
                   {preview && (
                     <div className="relative inline-block mb-5">
+                      {/* `preview` is an ephemeral client-only blob: object URL from the
+                          user's camera/file pick. next/image can't optimize a blob URL
+                          (it needs a configured host or `unoptimized` + fixed dimensions
+                          for an arbitrary-aspect photo), and there's no LCP/bandwidth win
+                          on a local preview behind interaction — a plain <img> is correct. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={preview} alt={t('scan.referenceOnly')} className="max-h-48 rounded-xl shadow-md" />
                       <button
                         onClick={() => { setPreview(null); setPhotoNote(null) }}
@@ -568,6 +574,8 @@ export default function ScanPage() {
 
               {preview && (
                 <div>
+                  {/* Same ephemeral blob: preview as above — <img> is the right tool here. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={preview} alt={t('scan.referenceOnly')} className="max-h-56 rounded-xl shadow-md mx-auto" />
                   <p className="text-center text-xs text-faint mt-2">{t('scan.referenceOnly')}</p>
                 </div>

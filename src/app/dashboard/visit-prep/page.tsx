@@ -5,7 +5,8 @@ import { Printer, Stethoscope, Package, Pill, Cpu, CalendarClock } from 'lucide-
 import { createClient } from '@/lib/supabase/client'
 import { useStore, type Product } from '@/lib/store'
 import { useProfile } from '@/components/profile/ProfileProvider'
-import { displayStatus, isRateEstimated } from '@/lib/depletion'
+import { isRateEstimated, effectiveLeadTimeDays } from '@/lib/depletion'
+import { itemDisplayStatus } from '@/lib/rescueItems'
 import { rowToPrescription, renewalStatus, type Prescription, type RenewalStatus } from '@/lib/prescriptions'
 import { rowToDevice, deviceLabel, DEVICE_KIND_KEY, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
 import { rowToAppointment, appointmentTiming, type Appointment } from '@/lib/appointments'
@@ -24,7 +25,7 @@ import type { TKey } from '@/lib/i18n/dictionaries'
 export default function VisitPrepPage() {
   const supabase = useMemo(() => createClient(), [])
   const { profile, email } = useProfile()
-  const { safetyBufferDays } = useStore()
+  const { safetyBufferDays, shippingLeadTimeDays } = useStore()
   const { t } = useI18n()
 
   const [supplies, setSupplies] = useState<Product[]>([])
@@ -67,13 +68,13 @@ export default function VisitPrepPage() {
   // shows everywhere (an unknown usage rate reads "usage not set", never alarm).
   const rankedSupplies = useMemo(() => {
     const rank: Record<string, number> = { out: 0, low: 1, unset: 2, ok: 3 }
-    return [...supplies].sort(
-      (a, b) => rank[displayStatus(a, safetyBufferDays)] - rank[displayStatus(b, safetyBufferDays)]
-    )
-  }, [supplies, safetyBufferDays])
+    const statusOf = (p: Product) =>
+      itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
+    return [...supplies].sort((a, b) => rank[statusOf(a)] - rank[statusOf(b)])
+  }, [supplies, safetyBufferDays, shippingLeadTimeDays])
 
   const attention = rankedSupplies.filter((p) => {
-    const s = displayStatus(p, safetyBufferDays)
+    const s = itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
     return s === 'out' || s === 'low'
   }).length
   const rxNeedingRenewal = prescriptions.filter((rx) => renewalStatus(rx) !== 'ok').length
@@ -155,7 +156,7 @@ export default function VisitPrepPage() {
             ) : (
               <SummaryTable head={[t('visitPrep.colSupply'), t('visitPrep.colOnHand'), t('visitPrep.colDaysLeft'), t('visitPrep.colStatus')]}>
                 {rankedSupplies.map((p) => {
-                  const s = displayStatus(p, safetyBufferDays)
+                  const s = itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
                   const estimated = isRateEstimated(p.usageRatePerDay)
                   return (
                     <tr key={p.id} className="border-t border-line">

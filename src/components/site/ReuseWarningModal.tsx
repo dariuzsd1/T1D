@@ -17,6 +17,7 @@ import { type BodyZone, zoneLabelKey, RECENT_USE_DAYS } from '@/lib/siteRotation
 export function ReuseWarningModal({
   zone,
   elapsedLabel,
+  recentUseDays = RECENT_USE_DAYS,
   onCancel,
   onLogAnyway,
   onViewGuide,
@@ -24,6 +25,8 @@ export function ReuseWarningModal({
   zone: BodyZone
   /** Pre-translated elapsed text, e.g. "Last used 3 days ago". */
   elapsedLabel: string
+  /** The user's configured rest window; defaults to RECENT_USE_DAYS. */
+  recentUseDays?: number
   onCancel: () => void
   onLogAnyway: () => void
   onViewGuide: () => void
@@ -74,7 +77,7 @@ export function ReuseWarningModal({
         </div>
 
         <p id="reuse-warn-body" className="text-sm text-muted leading-relaxed">
-          {t('reuseWarn.body', { days: RECENT_USE_DAYS })}
+          {t('reuseWarn.body', { days: recentUseDays })}
         </p>
 
         <button
