@@ -23,7 +23,7 @@ export const en = {
   'nav.home': 'Home',
   'nav.supplies': 'Supplies',
   'nav.add': 'Add',
-  'nav.reorder': 'Refills',
+  'nav.reorder': 'Reorder',
   'nav.profile': 'My Profile',
   'nav.peopleICareFor': 'People I Care For',
   'nav.sharing': 'Sharing',
@@ -133,9 +133,9 @@ export const en = {
   'home.cardAllSupplies': 'All supplies',
   'home.cardTrackedOne': '{count} tracked',
   'home.cardTrackedOther': '{count} tracked',
-  'home.cardReorder': 'Refills',
-  'home.cardToReorderOne': '{count} to refill',
-  'home.cardToReorderOther': '{count} to refill',
+  'home.cardReorder': 'Reorder',
+  'home.cardToReorderOne': '{count} to reorder',
+  'home.cardToReorderOther': '{count} to reorder',
   'home.nothingNeeded': 'Nothing needed',
   'home.addSupply': 'Add a supply',
 
@@ -168,11 +168,11 @@ export const en = {
   'row.ordered': 'Ordered',
 
   // ── reorder page ──
-  'reorder.kicker': 'Refills',
+  'reorder.kicker': 'Reorder',
   'reorder.title': 'What to reorder',
   'reorder.intro':
     "Only the supplies that would dip below your {buffer}-day reserve. Each button opens the supplier's reorder page. We never place an order for you.",
-  'reorder.nothingTitle': 'Nothing to refill',
+  'reorder.nothingTitle': 'Nothing to reorder',
   'reorder.nothingBody':
     'Everything you track is comfortably above your reserve. Check back when something runs low.',
   'reorder.viewAll': 'View all supplies',
@@ -1184,7 +1184,7 @@ export const fr: Record<TKey, string> = {
   'nav.home': 'Accueil',
   'nav.supplies': 'Fournitures',
   'nav.add': 'Ajouter',
-  'nav.reorder': 'Renouvellements',
+  'nav.reorder': 'Recommander',
   'nav.profile': 'Mon profil',
   'nav.peopleICareFor': 'Personnes dont je prends soin',
   'nav.sharing': 'Partage',
@@ -1297,9 +1297,9 @@ export const fr: Record<TKey, string> = {
   'home.cardAllSupplies': 'Toutes les fournitures',
   'home.cardTrackedOne': '{count} suivie',
   'home.cardTrackedOther': '{count} suivies',
-  'home.cardReorder': 'Renouvellements',
-  'home.cardToReorderOne': '{count} à renouveler',
-  'home.cardToReorderOther': '{count} à renouveler',
+  'home.cardReorder': 'Recommander',
+  'home.cardToReorderOne': '{count} à recommander',
+  'home.cardToReorderOther': '{count} à recommander',
   'home.nothingNeeded': 'Rien à faire',
   'home.addSupply': 'Ajouter une fourniture',
 
@@ -1332,11 +1332,11 @@ export const fr: Record<TKey, string> = {
   'row.ordered': 'Commandé',
 
   // ── reorder page ──
-  'reorder.kicker': 'Renouvellements',
+  'reorder.kicker': 'Recommander',
   'reorder.title': 'À recommander',
   'reorder.intro':
     "Seules les fournitures qui passeraient sous votre réserve de {buffer} jours. Chaque bouton ouvre la page de commande du fournisseur. Nous ne passons jamais de commande à votre place.",
-  'reorder.nothingTitle': 'Rien à renouveler',
+  'reorder.nothingTitle': 'Rien à recommander',
   'reorder.nothingBody':
     'Tout ce que vous suivez est confortablement au-dessus de votre réserve. Revenez quand quelque chose vient à manquer.',
   'reorder.viewAll': 'Voir toutes les fournitures',
@@ -2348,7 +2348,7 @@ export const es: Record<TKey, string> = {
   'nav.home': 'Inicio',
   'nav.supplies': 'Suministros',
   'nav.add': 'Añadir',
-  'nav.reorder': 'Reposiciones',
+  'nav.reorder': 'Reponer',
   'nav.profile': 'Mi perfil',
   'nav.peopleICareFor': 'Personas a mi cargo',
   'nav.sharing': 'Compartir',
@@ -2458,7 +2458,7 @@ export const es: Record<TKey, string> = {
   'home.cardAllSupplies': 'Todos los suministros',
   'home.cardTrackedOne': '{count} controlado',
   'home.cardTrackedOther': '{count} controlados',
-  'home.cardReorder': 'Reposiciones',
+  'home.cardReorder': 'Reponer',
   'home.cardToReorderOne': '{count} por reponer',
   'home.cardToReorderOther': '{count} por reponer',
   'home.nothingNeeded': 'Nada pendiente',
@@ -2493,7 +2493,7 @@ export const es: Record<TKey, string> = {
   'row.ordered': 'Pedido',
 
   // ── reorder page ──
-  'reorder.kicker': 'Reposiciones',
+  'reorder.kicker': 'Reponer',
   'reorder.title': 'Qué reponer',
   'reorder.intro':
     'Solo los suministros que bajarían de tu reserva de {buffer} días. Cada botón abre la página de reposición del proveedor. Nunca hacemos un pedido por ti.',
