@@ -78,6 +78,10 @@ export default function ScanPage() {
   // Manual entry (the photo doubles as a barcode source and an on-screen reference).
   const [manualName, setManualName] = useState('')
   const [manualBrand, setManualBrand] = useState('')
+  // Failure capture: when the camera can't read a box, the user can type the code
+  // printed on it. Parsed and saved on the supply just like a scan — feeding their
+  // personal catalog and the shared-catalog export, so a miss becomes real data.
+  const [manualCode, setManualCode] = useState('')
 
   // Photo path: we try to read a barcode out of the picture before falling back
   // to using it as a reference for manual entry.
@@ -266,6 +270,7 @@ export default function ScanPage() {
     setError(null)
     setManualName('')
     setManualBrand('')
+    setManualCode('')
     setQuantity(1)
     setAutoRate(0)
     setExpirationDate('')
@@ -301,9 +306,12 @@ export default function ScanPage() {
     setSaving(true)
     setError(null)
     try {
+      // Capture a hand-typed code (box wouldn't scan): parse it so a GTIN vs. PZN
+      // is routed correctly, then store it on the supply like a real scan would.
+      const typed = manualCode.trim() ? parseSupplyCode(manualCode.trim()) : null
       const ok = await saveSupply(
         { name: manualName, brand: manualBrand },
-        { usageRatePerDay: autoRate }
+        { gtin: typed?.gtin, pzn: typed?.pzn, usageRatePerDay: autoRate }
       )
       if (ok) router.push('/dashboard')
     } catch (err) {
@@ -648,6 +656,19 @@ export default function ScanPage() {
                     onChange={(e) => setManualBrand(e.target.value)}
                     className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                   />
+                </div>
+                <div>
+                  <label htmlFor="m-code" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.codeOptional')}</label>
+                  <input
+                    id="m-code"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={t('scan.codePlaceholder')}
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    className="w-full bg-surface border border-line rounded-xl p-3.5 font-mono text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                  />
+                  <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{t('scan.codeHelp')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
