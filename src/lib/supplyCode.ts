@@ -29,8 +29,6 @@ export interface SupplyCode {
   pzn?: string
   /** French CIP, from the NHRN AI (711) or a CIP13-based GTIN (3400…). */
   cip?: string
-  /** US National Drug Code (10-digit), derived from a US drug GTIN (003 + NDC). */
-  ndc?: string
   /** Full IFA product code, when the box used a PPN. */
   ppn?: string
   /** Expiration date as YYYY-MM-DD (GS1 AI 17 or PPN data identifier D). */
@@ -54,20 +52,18 @@ export function pznFromNtinGtin(gtin?: string): string | undefined {
   return m ? m[1] : undefined
 }
 
-/**
- * A US drug's NDC is embedded in its GTIN: GTIN-14 = "003" + 10-digit NDC + check
- * (the UPC-A drug number-system "3"). Recover the 10-digit NDC when that shape
- * matches; return undefined otherwise. Best-effort — never guessed.
- */
-export function ndcFromGtin(gtin?: string): string | undefined {
-  if (!gtin) return undefined
-  const m = /^003(\d{10})\d$/.exec(gtin)
-  return m ? m[1] : undefined
-}
+// NOTE: there is deliberately no ndcFromGtin(). A US drug's GTIN uses the legacy
+// UPC drug number-system ("003…"), but so do many DEVICE GTINs (Dexcom, Libre,
+// Tandem, BD, Novo, OneTouch, Accu-Chek all start 003) — an audit found ~45% of
+// real catalog device GTINs would yield a bogus "NDC". The GTIN prefix cannot
+// distinguish a drug from a device, so NDC is NOT auto-extracted: US products
+// match by GTIN. Canada's DIN likewise isn't in the barcode. (French CIP is safe
+// because the 3400 prefix is reserved for pharmacy.)
 
 /**
- * A French CIP13 *is* a GTIN-13 beginning "3400"; as a GTIN-14 it's "0" + CIP13.
- * Recover the 13-digit CIP when that shape matches; return undefined otherwise.
+ * A French CIP13 *is* a GTIN-13 beginning "3400" (a prefix reserved for French
+ * pharmacy); as a GTIN-14 it's "0" + CIP13. Recover the 13-digit CIP when that
+ * shape matches; return undefined otherwise.
  */
 export function cipFromGtin(gtin?: string): string | undefined {
   if (!gtin) return undefined
@@ -124,7 +120,6 @@ export function parseSupplyCode(value: string, format?: string): SupplyCode {
     // Prefer a code the box stated outright (NHRN AI); else derive from the GTIN.
     pzn: g.pzn ?? pznFromNtinGtin(g.gtin),
     cip: g.cip ?? cipFromGtin(g.gtin),
-    ndc: ndcFromGtin(g.gtin),
     expirationDate: g.expirationDate,
     lot: g.lot,
     serial: g.serial,

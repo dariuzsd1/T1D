@@ -74,11 +74,6 @@ export async function lookupProductByPzn(pzn: string): Promise<CatalogProduct | 
   return data ?? null
 }
 
-/** Resolve a US National Drug Code via the product_codes table. Null on no match. */
-export async function lookupProductByNdc(ndc: string): Promise<CatalogProduct | null> {
-  return lookupViaCodeTable('ndc', ndc)
-}
-
 /** Resolve a French CIP via the product_codes table. Null on no match. */
 export async function lookupProductByCip(cip: string): Promise<CatalogProduct | null> {
   return lookupViaCodeTable('cip', cip)

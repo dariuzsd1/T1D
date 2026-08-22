@@ -3,7 +3,6 @@ import {
   lookupProductByGtin,
   lookupProductByName,
   lookupProductByPzn,
-  lookupProductByNdc,
   lookupProductByCip,
 } from '@/lib/catalog'
 
@@ -16,10 +15,8 @@ export async function GET(req: NextRequest) {
   const pzn = req.nextUrl.searchParams.get('pzn')
   if (pzn) return NextResponse.json(await lookupProductByPzn(pzn))
 
-  // National drug codes: US NDC and French CIP, as cross-region join keys.
-  const ndc = req.nextUrl.searchParams.get('ndc')
-  if (ndc) return NextResponse.json(await lookupProductByNdc(ndc))
-
+  // French CIP, as a cross-region join key (US NDC / Canadian DIN are not
+  // reliably extractable from a barcode, so those products match by GTIN).
   const cip = req.nextUrl.searchParams.get('cip')
   if (cip) return NextResponse.json(await lookupProductByCip(cip))
 

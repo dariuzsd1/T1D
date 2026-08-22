@@ -107,11 +107,12 @@ describe('parseSupplyCode — one entry point, any country', () => {
     expect(c.serial).toBe('300979928536')
   })
 
-  it('derives a US NDC from a US drug GTIN (003 + NDC + check)', () => {
-    const c = parseSupplyCode('(01)00312345678901(17)270131(10)LOT9')
-    expect(c.codeType).toBe('gs1')
-    expect(c.ndc).toBe('1234567890')
-    expect(c.expirationDate).toBe('2027-01-31')
+  it('does NOT extract an NDC from a device GTIN in the 003 range (Dexcom etc.)', () => {
+    // The 003 UPC drug range is shared by many devices, so NDC is not derived at
+    // all — a US product matches by GTIN, not a fabricated NDC.
+    const c = parseSupplyCode('(01)00386270002839(17)261130(10)LOT9')
+    expect(c.gtin).toBe('00386270002839')
+    expect((c as { ndc?: string }).ndc).toBeUndefined()
   })
 
   it('derives a French CIP from a CIP13-based GTIN (3400…)', () => {
