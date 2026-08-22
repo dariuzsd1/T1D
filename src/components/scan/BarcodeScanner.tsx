@@ -5,7 +5,8 @@ import { motion } from 'framer-motion'
 import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat } from '@zxing/library'
-import { barcodeHints } from '@/lib/barcode'
+import { barcodeHints, type ScanMode } from '@/lib/barcode'
+import { cn } from '@/lib/utils'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
 import type { TKey } from '@/lib/i18n/dictionaries'
@@ -36,8 +37,12 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
   const detectedRef = useRef(false)
   const [phase, setPhase] = useState<Phase>('checking')
   // Store a translation KEY, not a resolved string, so a mid-error language
-  // switch re-renders in the new language (the effect only runs once).
+  // switch re-renders in the new language.
   const [messageKey, setMessageKey] = useState<TKey | null>(null)
+  // Scan mode: 'all' (default, every symbology) or 'matrix' (focus the decoder
+  // on 2D square codes for the small, dense pharmacy DataMatrix). Switching it
+  // restarts the camera with the matching decoder hints.
+  const [mode, setMode] = useState<ScanMode>('all')
 
   const stopCamera = useCallback(() => {
     controlsRef.current?.stop()
@@ -71,10 +76,11 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
       const video = videoRef.current
       if (!video) return
 
+      detectedRef.current = false
       setPhase('starting')
       // delayBetweenScanAttempts: analyse a frame roughly every 120ms — frequent
       // enough to feel instant, throttled enough that TRY_HARDER doesn't peg the CPU.
-      const reader = new BrowserMultiFormatReader(barcodeHints(), {
+      const reader = new BrowserMultiFormatReader(barcodeHints(mode), {
         delayBetweenScanAttempts: 120,
       })
 
@@ -106,6 +112,22 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         }
         controlsRef.current = controls
         setPhase('scanning')
+
+        // Best-effort optical zoom in 2D mode: a small, dense square then fills
+        // more of the sensor, which markedly helps decoding. Silently ignored
+        // where the camera doesn't expose zoom (e.g. iOS Safari, most laptops).
+        if (mode === 'matrix') {
+          const track = (video.srcObject as MediaStream | null)?.getVideoTracks?.()[0]
+          const caps = track?.getCapabilities?.() as { zoom?: { min: number; max: number } } | undefined
+          if (track && caps?.zoom) {
+            const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 2))
+            try {
+              await track.applyConstraints({ advanced: [{ zoom: z }] } as unknown as MediaTrackConstraints)
+            } catch {
+              // Zoom is a nice-to-have; a failure must never break scanning.
+            }
+          }
+        }
       } catch (err: unknown) {
         if (cancelled) return
         const name = (err as { name?: string })?.name
@@ -127,8 +149,9 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
       cancelled = true
       stopCamera()
     }
+    // Re-run (restart the camera with new decoder hints) when the mode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [mode])
 
   const showOverlay = phase !== 'scanning'
 
@@ -159,6 +182,36 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           </button>
         </div>
 
+        {/* Mode toggle: focus the decoder on 1D barcodes or the 2D square code. */}
+        <div
+          className="mb-4 flex gap-1 rounded-xl bg-surface-2 p-1"
+          role="group"
+          aria-label={t('barcodeScanner.title')}
+        >
+          <button
+            type="button"
+            onClick={() => setMode('all')}
+            aria-pressed={mode === 'all'}
+            className={cn(
+              'flex-1 rounded-lg py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              mode === 'all' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+            )}
+          >
+            {t('barcodeScanner.modeBarcode')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('matrix')}
+            aria-pressed={mode === 'matrix'}
+            className={cn(
+              'flex-1 rounded-lg py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              mode === 'matrix' ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+            )}
+          >
+            {t('barcodeScanner.mode2d')}
+          </button>
+        </div>
+
         {/* Camera viewport. The <video> is ALWAYS mounted and visible (never
             display:none) because iOS Safari will not play a hidden video; overlays
             sit on top of it until the stream is live. */}
@@ -174,7 +227,14 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
           {/* Aiming frame, shown once the camera is live */}
           {phase === 'scanning' && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-28 w-3/4 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+              {/* A square reticle in 2D mode nudges the user to fill it with the
+                  dot-grid square; a wide one suits a striped 1D barcode. */}
+              <div
+                className={cn(
+                  'rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]',
+                  mode === 'matrix' ? 'aspect-square w-3/5 max-w-56' : 'h-28 w-3/4'
+                )}
+              />
             </div>
           )}
 
@@ -199,7 +259,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
 
         {phase === 'scanning' && (
           <p className="mt-4 text-center text-sm text-muted">
-            {t('barcodeScanner.hint')}
+            {mode === 'matrix' ? t('barcodeScanner.hint2d') : t('barcodeScanner.hint')}
           </p>
         )}
 

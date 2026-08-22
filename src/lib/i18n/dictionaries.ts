@@ -1094,6 +1094,9 @@ export const en = {
   'barcodeScanner.unsupported': 'Scanning needs a camera and a secure (https) connection. You can enter the supply by hand instead.',
   'barcodeScanner.hint': 'Hold the barcode on the box or pharmacy label inside the frame.',
   'barcodeScanner.enterManually': 'Enter manually instead',
+  'barcodeScanner.modeBarcode': 'Barcode',
+  'barcodeScanner.mode2d': 'QR / 2D square',
+  'barcodeScanner.hint2d': 'Fill the frame with the small square of dots (a QR or DataMatrix code).',
 
   // ── photo capture ──
   'cameraCapture.title': 'Take a photo',
@@ -2220,6 +2223,9 @@ export const fr: Record<TKey, string> = {
   'barcodeScanner.unsupported': "Le scan nécessite une caméra et une connexion sécurisée (https). Vous pouvez saisir la fourniture à la main.",
   'barcodeScanner.hint': 'Maintenez le code-barres de la boîte ou de l\'étiquette de la pharmacie dans le cadre.',
   'barcodeScanner.enterManually': 'Saisir manuellement',
+  'barcodeScanner.modeBarcode': 'Code-barres',
+  'barcodeScanner.mode2d': 'Carré QR / 2D',
+  'barcodeScanner.hint2d': 'Remplissez le cadre avec le petit carré de points (un code QR ou DataMatrix).',
 
   // ── photo capture ──
   'cameraCapture.title': 'Prendre une photo',
@@ -3372,6 +3378,9 @@ export const es: Record<TKey, string> = {
   'barcodeScanner.unsupported': 'El escaneo necesita una cámara y una conexión segura (https). Puedes ingresar el suministro a mano.',
   'barcodeScanner.hint': 'Mantén el código de barras de la caja o la etiqueta de la farmacia dentro del recuadro.',
   'barcodeScanner.enterManually': 'Ingresar manualmente',
+  'barcodeScanner.modeBarcode': 'Código de barras',
+  'barcodeScanner.mode2d': 'Cuadro QR / 2D',
+  'barcodeScanner.hint2d': 'Llena el recuadro con el pequeño cuadro de puntos (un código QR o DataMatrix).',
 
   // ── photo capture ──
   'cameraCapture.title': 'Tomar una foto',
