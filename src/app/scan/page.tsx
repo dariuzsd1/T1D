@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Clock,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
@@ -102,8 +103,11 @@ export default function ScanPage() {
   // Recognized from the user's OWN prior scans (their personal catalog), when the
   // shared catalog doesn't have this barcode yet.
   const [personalMatch, setPersonalMatch] = useState(false)
+  // Duplicate guard: an inventory row the user ALREADY has for this exact code, so
+  // a re-scan can restock it instead of silently creating a second row.
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string; quantity: number } | null>(null)
 
-  const { addProduct } = useStore()
+  const { addProduct, updateProduct } = useStore()
   const router = useRouter()
   const supabase = createClient()
 
@@ -348,6 +352,32 @@ export default function ScanPage() {
     setCatalogCategory(null)
     setCatalogMatch(false)
     setPersonalMatch(false)
+    setDuplicate(null)
+
+    // Duplicate guard: does this exact code already exist in YOUR inventory? RLS
+    // scopes this to the signed-in user. If so we offer a restock instead of
+    // quietly creating a second row for the same box.
+    for (const [column, value] of [
+      ['barcode', parsed.gtin],
+      ['pzn', parsed.pzn],
+    ] as const) {
+      if (!value) continue
+      try {
+        const { data: existing } = await supabase
+          .from('supplies')
+          .select('id, name, quantity')
+          .eq(column, value)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (existing?.id) {
+          setDuplicate({ id: existing.id, name: existing.name, quantity: Number(existing.quantity) || 0 })
+          break
+        }
+      } catch {
+        // Best-effort: a pre-migration column must never block the scan.
+      }
+    }
 
     // Look up the code in the shared products catalog. Try the GTIN first, then the
     // German PZN — an NTIN medicine carries BOTH (a GTIN that embeds the PZN), and
@@ -415,6 +445,23 @@ export default function ScanPage() {
     }
 
     setStep('BARCODE_CONFIRM')
+  }
+
+  /** Restock the existing inventory row instead of adding a duplicate one. */
+  const handleRestockDuplicate = async () => {
+    if (!duplicate) return
+    const added = typeof quantity === 'number' && quantity > 0 ? quantity : 1
+    setSaving(true)
+    setError(null)
+    try {
+      await updateProduct(duplicate.id, { quantity: duplicate.quantity + added })
+      void logActivity('supply_added', duplicate.name)
+      router.push('/dashboard')
+    } catch (err) {
+      setError(errorMessage(err, t('scan.errGenericSave')))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSaveBarcode = async () => {
@@ -848,6 +895,29 @@ export default function ScanPage() {
                 <p className="flex items-center gap-2 text-xs text-muted">
                   <Tag className="w-3.5 h-3.5" /> {t('scan.lotNumber', { lot: scanned.lot })}
                 </p>
+              )}
+
+              {/* Duplicate guard: this code is already in the user's inventory.
+                  Offer a restock; adding a separate row stays available below. */}
+              {duplicate && (
+                <div className="rounded-xl border border-caution/30 bg-caution-soft p-4 space-y-3" role="status">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-caution shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-sm text-ink">
+                      {t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleRestockDuplicate}
+                    disabled={saving}
+                    className="w-full rounded-xl bg-caution py-3 font-semibold text-white transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-caution"
+                  >
+                    {t('scan.duplicateRestock', {
+                      count: typeof quantity === 'number' ? quantity : 1,
+                      total: duplicate.quantity + (typeof quantity === 'number' ? quantity : 1),
+                    })}
+                  </button>
+                </div>
               )}
 
               {catalogMatch ? (

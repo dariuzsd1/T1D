@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
+import { X, ScanBarcode, CameraOff, Loader2, Flashlight, FlashlightOff } from 'lucide-react'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat } from '@zxing/library'
 import { barcodeHints, type ScanMode } from '@/lib/barcode'
@@ -48,8 +48,34 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
   // on 2D square codes for the small, dense pharmacy DataMatrix). Switching it
   // restarts the camera with the matching decoder hints.
   const [mode, setMode] = useState<ScanMode>('all')
+  // Torch (flashlight): only offered when the active camera track reports the
+  // capability — it's absent on most laptops and on iOS Safari.
+  const [torchSupported, setTorchSupported] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
+
+  /** The live video track, whichever decode path started the camera. */
+  const activeTrack = useCallback((): MediaStreamTrack | null => {
+    const stream =
+      matrixStreamRef.current ?? (videoRef.current?.srcObject as MediaStream | null)
+    return stream?.getVideoTracks?.()[0] ?? null
+  }, [])
+
+  const toggleTorch = useCallback(async () => {
+    const track = activeTrack()
+    if (!track) return
+    const next = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] } as unknown as MediaTrackConstraints)
+      setTorchOn(next)
+    } catch {
+      // Some devices advertise torch but refuse mid-stream; keep the UI honest.
+      setTorchSupported(false)
+    }
+  }, [activeTrack, torchOn])
 
   const stopCamera = useCallback(() => {
+    setTorchOn(false)
+    setTorchSupported(false)
     // ZXing-js path
     controlsRef.current?.stop()
     controlsRef.current = null
@@ -90,6 +116,13 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         setPhase('error')
         setMessageKey('barcodeScanner.error')
       }
+    }
+
+    // Offer the torch only if this camera actually reports the capability.
+    function detectTorch(stream: MediaStream | null) {
+      const track = stream?.getVideoTracks?.()[0]
+      const caps = track?.getCapabilities?.() as { torch?: boolean } | undefined
+      if (!cancelled && caps?.torch) setTorchSupported(true)
     }
 
     // Best-effort optical zoom so a small, dense code fills more of the sensor.
@@ -137,6 +170,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         }
         controlsRef.current = controls
         setPhase('scanning')
+        detectTorch(video.srcObject as MediaStream | null)
       } catch (err) {
         handleCamError(err)
       }
@@ -173,6 +207,7 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         return
       }
       setPhase('scanning')
+      detectTorch(stream)
       await applyZoom(stream)
 
       const canvas = document.createElement('canvas')
@@ -315,6 +350,22 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
                 )}
               />
             </div>
+          )}
+
+          {/* Torch toggle — only rendered when the camera reports the capability. */}
+          {phase === 'scanning' && torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-pressed={torchOn}
+              aria-label={t(torchOn ? 'barcodeScanner.torchOff' : 'barcodeScanner.torchOn')}
+              className={cn(
+                'absolute bottom-3 right-3 rounded-full p-3 shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
+                torchOn ? 'bg-white text-ink' : 'bg-ink/60 text-white'
+              )}
+            >
+              {torchOn ? <FlashlightOff className="w-5 h-5" /> : <Flashlight className="w-5 h-5" />}
+            </button>
           )}
 
           {(phase === 'checking' || phase === 'starting') && (
