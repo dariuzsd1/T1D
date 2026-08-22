@@ -47,7 +47,9 @@ export function QuickActionHub() {
     label: t('quickActions.scanSupply'),
     sub: t('quickActions.scanSupplySub'),
     icon: Scan,
-    href: '/scan' as const,
+    // Jump straight to the camera scanner, skipping the intake landing page — the
+    // scan page opens the barcode scanner on mount when it sees ?scan=1.
+    href: '/scan?scan=1' as const,
     color: 'bg-primary',
     onClick: undefined,
   }

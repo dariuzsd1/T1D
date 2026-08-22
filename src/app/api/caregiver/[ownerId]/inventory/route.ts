@@ -67,7 +67,7 @@ export async function GET(
         id: supply.id,
         brand: supply.brand || '',
         name: supply.name,
-        category: 'medical_supply',
+        category: supply.category ?? 'medical_supply',
         quantity: supply.quantity,
         remainingDays,
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -84,6 +84,7 @@ export async function GET(
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
         lastOrderedDate: supply.last_ordered_date ?? null,
+        leadTimeDays: supply.lead_time_days ?? null,
       }
     })
 

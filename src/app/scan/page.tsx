@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -25,7 +25,7 @@ import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrows
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import { CameraCapture } from '@/components/scan/CameraCapture'
 import { createClient } from '@/lib/supabase/client'
-import { parseGs1, type Gs1Parsed } from '@/lib/gs1'
+import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
@@ -61,7 +61,10 @@ export default function ScanPage() {
   const [step, setStep] = useState<ScanStep>('UPLOAD')
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [quantity, setQuantity] = useState(1)
+  // number | '' so the field can be fully cleared while typing (empty snaps back
+  // to 1 on blur). The old `parseInt(value) || 1` forced it to 1 the instant it
+  // went empty, which trapped the leading digit — you couldn't change 10 to 40.
+  const [quantity, setQuantity] = useState<number | ''>(1)
   const [expirationDate, setExpirationDate] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -86,7 +89,7 @@ export default function ScanPage() {
   const [showCatalog, setShowCatalog] = useState(false)
   const [showStarterKit, setShowStarterKit] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
-  const [scanned, setScanned] = useState<Gs1Parsed | null>(null)
+  const [scanned, setScanned] = useState<SupplyCode | null>(null)
   const [expiryFromBarcode, setExpiryFromBarcode] = useState(false)
   const [bcName, setBcName] = useState('')
   const [bcBrand, setBcBrand] = useState('')
@@ -99,6 +102,22 @@ export default function ScanPage() {
   const { addProduct } = useStore()
   const router = useRouter()
   const supabase = createClient()
+
+  // Deep-link from the "+" → Scan supply action: open the camera scanner straight
+  // away instead of landing on the intake options. Read from the URL directly (no
+  // useSearchParams) so the client page needs no Suspense boundary.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('scan') === '1') setShowScanner(true)
+  }, [])
+
+  // Fully-editable quantity input: allow an empty value mid-edit, clamp to >= 1,
+  // and restore 1 only when the user leaves an empty field.
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    setQuantity(v === '' ? '' : Math.max(1, parseInt(v, 10) || 1))
+  }
+  const handleQuantityBlur = () => setQuantity((q) => (q === '' ? 1 : q))
 
   // Shared by both photo sources (file upload and live camera capture): try to
   // read a barcode straight out of the image. A sharp, close still is often easier
@@ -128,13 +147,16 @@ export default function ScanPage() {
   // Shared insert used by the manual, catalog, and barcode paths.
   const saveSupply = async (
     fields: { name: string; brand: string },
-    opts?: { gtin?: string | null; lot?: string | null; usageRatePerDay?: number | null }
+    opts?: { gtin?: string | null; pzn?: string | null; lot?: string | null; usageRatePerDay?: number | null }
   ) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.id) {
       setError(t('scan.errNotAuthenticated'))
       return false
     }
+
+    // The quantity field can be empty mid-edit; never save a blank quantity.
+    const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1
 
     const { data, error: insertError } = await supabase
       .from('supplies')
@@ -143,7 +165,7 @@ export default function ScanPage() {
         name: fields.name.trim(),
         brand: fields.brand.trim() || null,
         category_id: null,
-        quantity,
+        quantity: qty,
         unit: 'pieces',
         expiration_date: expirationDate || null,
       })
@@ -162,6 +184,7 @@ export default function ScanPage() {
     const rate = opts?.usageRatePerDay && opts.usageRatePerDay > 0 ? opts.usageRatePerDay : 0
     const idPayload: Record<string, unknown> = {}
     if (opts?.gtin) idPayload.barcode = opts.gtin
+    if (opts?.pzn) idPayload.pzn = opts.pzn
     if (opts?.lot) idPayload.lot_number = opts.lot
     if (rate > 0) idPayload.usage_rate_per_day = rate
     if (Object.keys(idPayload).length > 0) {
@@ -292,8 +315,11 @@ export default function ScanPage() {
 
   // --- Barcode capture -------------------------------------------------------
 
-  const handleBarcodeDetected = async (rawValue: string) => {
-    const parsed = parseGs1(rawValue)
+  const handleBarcodeDetected = async (rawValue: string, format?: string) => {
+    // One parser for every country: GS1 (devices + US/EU drugs), IFA PPN and the
+    // German PZN linear barcode (medicines). The symbology helps tell a bare PZN
+    // apart from a bare GTIN. We match on whichever code the box carried.
+    const parsed = parseSupplyCode(rawValue, format)
     setScanned(parsed)
     setShowScanner(false)
     setError(null)
@@ -315,12 +341,18 @@ export default function ScanPage() {
     setCatalogMatch(false)
     setPersonalMatch(false)
 
-    // Look up the GTIN in the shared products catalog. Pre-fill name/brand/quantity/
-    // wear rate if found — every field stays editable. A miss is not an error.
+    // Look up the code in the shared products catalog — by GTIN when the box had
+    // one, otherwise by the German PZN (EU medicines). Pre-fill name/brand/
+    // quantity/wear rate if found — every field stays editable. A miss isn't an error.
+    const lookupQuery = parsed.gtin
+      ? `gtin=${encodeURIComponent(parsed.gtin)}`
+      : parsed.pzn
+        ? `pzn=${encodeURIComponent(parsed.pzn)}`
+        : null
     let matched = false
-    if (parsed.gtin) {
+    if (lookupQuery) {
       try {
-        const res = await fetch(`/api/scan/lookup?gtin=${encodeURIComponent(parsed.gtin)}`)
+        const res = await fetch(`/api/scan/lookup?${lookupQuery}`)
         if (res.ok) {
           const product = await res.json()
           if (product) {
@@ -339,16 +371,19 @@ export default function ScanPage() {
     }
 
     // Personal catalog: if the shared catalog doesn't know this code yet, check
-    // whether YOU have scanned and identified it before. Your own confirmed product
-    // is reliable, so we reuse it — this is how your catalog grows as you scan, with
-    // no maintainer step. (The barcode column may be pre-migration; a miss is fine.)
-    if (!matched && parsed.gtin) {
+    // whether YOU have scanned and identified it before — matched by GTIN or PZN,
+    // whichever the box carried. Your own confirmed product is reliable, so we
+    // reuse it; this is how your catalog grows as you scan, with no maintainer step.
+    // (The barcode/pzn columns may be pre-migration; a miss is fine.)
+    if (!matched && (parsed.gtin || parsed.pzn)) {
       try {
-        const { data: prior } = await supabase
+        const priorQuery = supabase
           .from('supplies')
           .select('name, brand, usage_rate_per_day')
-          .eq('barcode', parsed.gtin)
           .not('name', 'is', null)
+        const { data: prior } = await (parsed.gtin
+          ? priorQuery.eq('barcode', parsed.gtin)
+          : priorQuery.eq('pzn', parsed.pzn as string))
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -380,6 +415,7 @@ export default function ScanPage() {
         { name: bcName, brand: bcBrand },
         {
           gtin: scanned.gtin,
+          pzn: scanned.pzn,
           lot: scanned.lot,
           usageRatePerDay: autoRate,
         }
@@ -392,7 +428,7 @@ export default function ScanPage() {
     }
   }
 
-  const scannedCodeLabel = scanned?.gtin || scanned?.raw || ''
+  const scannedCodeLabel = scanned?.gtin || (scanned?.pzn ? `PZN ${scanned.pzn}` : '') || scanned?.raw || ''
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -486,6 +522,12 @@ export default function ScanPage() {
 
                   {preview && (
                     <div className="relative inline-block mb-5">
+                      {/* `preview` is an ephemeral client-only blob: object URL from the
+                          user's camera/file pick. next/image can't optimize a blob URL
+                          (it needs a configured host or `unoptimized` + fixed dimensions
+                          for an arbitrary-aspect photo), and there's no LCP/bandwidth win
+                          on a local preview behind interaction — a plain <img> is correct. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={preview} alt={t('scan.referenceOnly')} className="max-h-48 rounded-xl shadow-md" />
                       <button
                         onClick={() => { setPreview(null); setPhotoNote(null) }}
@@ -568,6 +610,8 @@ export default function ScanPage() {
 
               {preview && (
                 <div>
+                  {/* Same ephemeral blob: preview as above — <img> is the right tool here. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={preview} alt={t('scan.referenceOnly')} className="max-h-56 rounded-xl shadow-md mx-auto" />
                   <p className="text-center text-xs text-faint mt-2">{t('scan.referenceOnly')}</p>
                 </div>
@@ -606,7 +650,8 @@ export default function ScanPage() {
                       type="number"
                       min="1"
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      onChange={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
                       className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                     />
                   </div>
@@ -626,7 +671,7 @@ export default function ScanPage() {
                     <Loader2 className="w-3 h-3 animate-spin" /> {t('scan.checkingDuration')}
                   </p>
                 ) : (
-                  <WearReadout rate={autoRate} quantity={quantity} />
+                  <WearReadout rate={autoRate} quantity={quantity || 0} />
                 )}
               </div>
 
@@ -709,7 +754,8 @@ export default function ScanPage() {
                       type="number"
                       min="1"
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      onChange={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
                       className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                     />
                   </div>
@@ -724,7 +770,7 @@ export default function ScanPage() {
                     />
                   </div>
                 </div>
-                <WearReadout rate={autoRate} quantity={quantity} />
+                <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 
               <div className="space-y-3 pt-2">
@@ -837,7 +883,8 @@ export default function ScanPage() {
                       type="number"
                       min="1"
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      onChange={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
                       className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                     />
                   </div>
@@ -857,7 +904,7 @@ export default function ScanPage() {
                     )}
                   </div>
                 </div>
-                <WearReadout rate={autoRate} quantity={quantity} />
+                <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 
               <div className="space-y-3 pt-2">

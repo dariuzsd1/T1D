@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils'
 import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
-import { displayStatus, stockStatus, type StockStatus } from '@/lib/depletion'
+import { displayStatus, stockStatus, effectiveLeadTimeDays, type StockStatus } from '@/lib/depletion'
+import { isRescueItem } from '@/lib/rescueItems'
 import { assessRefill, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useI18n } from '@/lib/i18n'
@@ -33,7 +34,7 @@ type DayEventKind = 'runout' | 'eligible'
 
 export default function CalendarPage() {
   const { t } = useI18n()
-  const { inventory, safetyBufferDays } = useStore()
+  const { inventory, safetyBufferDays, shippingLeadTimeDays } = useStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   // TanStack Query (shared with Home/Supplies/Reorder): cached + deduplicated,
   // so arriving here from any of those pages reuses the already-fetched data.
@@ -47,11 +48,17 @@ export default function CalendarPage() {
   // markers stay — those come from real entered dates.
   const items = inventory.map((item) => {
     const rule = refillRuleFrom(item)
+    const lead = effectiveLeadTimeDays(item, shippingLeadTimeDays)
+    // A rescue item (glucagon, ketones, hypo carbs) has no usage-driven run-out —
+    // its meaningful date is expiry, surfaced elsewhere. Treat it as unset here so
+    // the calendar never plots a bogus usage run-out marker for it. Its
+    // refill-eligible marker (from real entered dates) still shows.
+    const rescue = isRescueItem(item)
     return {
       item,
-      unset: displayStatus(item, safetyBufferDays) === 'unset',
+      unset: rescue || displayStatus(item, safetyBufferDays, lead) === 'unset',
       runOutDate: addDays(new Date(), item.remainingDays),
-      status: stockStatus(item.remainingDays, safetyBufferDays),
+      status: stockStatus(item.remainingDays, safetyBufferDays, lead),
       assessment: assessRefill(item.remainingDays, item.lastFilledDate, rule),
     }
   })

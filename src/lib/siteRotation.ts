@@ -16,8 +16,12 @@ import type { TKey } from './i18n/dictionaries'
 
 export type BodyView = 'front' | 'back'
 
-/** Any zone used within this many days counts as "recently used" (amber). Kept a
- *  single constant so it can later be made device-type-aware; not per-device now. */
+/**
+ * DEFAULT rest window: a zone used within this many days counts as "recently
+ * used" (amber). This is only the default — clinical rest guidance varies (2 to
+ * 4 weeks) and an endo may advise a specific interval, so `buildZoneViews`
+ * accepts a per-user override (persisted per-device in `src/lib/siteRestWindow.ts`).
+ */
 export const RECENT_USE_DAYS = 14
 
 export interface BodyZone {
@@ -160,10 +164,16 @@ export function hasZoneHistory(changes: SiteChangeRow[]): boolean {
   return changes.some((c) => c.body_zone != null && BODY_ZONE_IDS.includes(c.body_zone))
 }
 
-/** Build the per-zone view (most recent real change → elapsed + recent flag). */
+/**
+ * Build the per-zone view (most recent real change → elapsed + recent flag).
+ * `recentUseDays` is the rest window a zone must clear to stop reading as
+ * "recently used"; defaults to RECENT_USE_DAYS but callers may pass the user's
+ * configured value.
+ */
 export function buildZoneViews(
   changes: SiteChangeRow[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  recentUseDays: number = RECENT_USE_DAYS
 ): Map<string, ZoneView> {
   // Newest real dated change per zone.
   const latest = new Map<string, string>()
@@ -183,7 +193,7 @@ export function buildZoneViews(
       const days = daysSince(date, now)
       elapsed = days == null ? { kind: 'unknown' } : { kind: 'days', days, date }
     }
-    const isRecent = elapsed.kind === 'days' && elapsed.days <= RECENT_USE_DAYS
+    const isRecent = elapsed.kind === 'days' && elapsed.days <= recentUseDays
     views.set(zone.id, { zone, elapsed, isRecent })
   }
   return views

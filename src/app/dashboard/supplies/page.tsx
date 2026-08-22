@@ -8,7 +8,8 @@ import { useInventory } from '@/lib/useInventory'
 import { createClient } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/inventory/ProductCard'
 import { EditProductModal } from '@/components/inventory/EditProductModal'
-import { displayStatus } from '@/lib/depletion'
+import { effectiveLeadTimeDays } from '@/lib/depletion'
+import { itemDisplayStatus } from '@/lib/rescueItems'
 import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { BackButton } from '@/components/ui/BackButton'
@@ -18,7 +19,7 @@ import { trackEvent } from '@/lib/analytics'
 import { Plus } from 'lucide-react'
 
 export default function SuppliesPage() {
-  const { inventory, updateProduct, removeProduct, safetyBufferDays } = useStore()
+  const { inventory, updateProduct, removeProduct, safetyBufferDays, shippingLeadTimeDays } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const { profile } = useProfile()
@@ -65,7 +66,8 @@ export default function SuppliesPage() {
   // (calm "set usage" prompt — never an alarm built on the fallback estimate),
   // and the genuinely well stocked.
   const sortedInventory = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
-  const statusOf = (p: (typeof inventory)[number]) => displayStatus(p, safetyBufferDays)
+  const statusOf = (p: (typeof inventory)[number]) =>
+    itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
   const needsAttention = sortedInventory.filter((p) => {
     const s = statusOf(p)
     return s === 'out' || s === 'low'
@@ -136,6 +138,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                shippingLeadTimeDays={shippingLeadTimeDays}
                 linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
@@ -159,6 +162,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                shippingLeadTimeDays={shippingLeadTimeDays}
                 linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}
@@ -179,6 +183,7 @@ export default function SuppliesPage() {
                 key={item.id}
                 product={item}
                 bufferDays={safetyBufferDays}
+                shippingLeadTimeDays={shippingLeadTimeDays}
                 linkedRx={linkedRxFor(item)}
                 onUpdate={updateProduct}
                 onDelete={removeProduct}

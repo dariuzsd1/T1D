@@ -34,9 +34,12 @@ import {
 } from 'lucide-react'
 
 const BUFFER_PRESETS = [7, 14, 21, 30]
+const LEAD_TIME_PRESETS = [0, 3, 7, 14]
 
 export default function SettingsPage() {
   const { safetyBufferDays, baseSafetyBufferDays, setSafetyBufferDays, surgeBuffer } = useStore()
+  const shippingLeadTimeDays = useStore((s) => s.shippingLeadTimeDays)
+  const setShippingLeadTimeDays = useStore((s) => s.setShippingLeadTimeDays)
   const { t } = useI18n()
   const { profile, email } = useProfile()
   const surgeActive = isSurgeActive(surgeBuffer)
@@ -150,6 +153,54 @@ export default function SettingsPage() {
             {t('settings.surgeNote', { total: safetyBufferDays })}
           </p>
         )}
+      </section>
+
+      {/* Shipping lead time — how long orders take to arrive. Folded into the
+          reorder trigger so slow-shipping items flag "reorder soon" earlier.
+          An account-wide default; a single item can override it in its Edit dialog. */}
+      <section className="bg-surface border border-line rounded-3xl p-7 shadow-sm">
+        <div className="flex items-start gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <Truck className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-ink">{t('settings.leadTimeTitle')}</h3>
+            <p className="text-sm text-muted">{t('settings.leadTimeBody')}</p>
+          </div>
+        </div>
+
+        <div className="flex items-end gap-4 mb-5">
+          <div className="text-5xl font-black tabular-nums text-ink">{shippingLeadTimeDays}</div>
+          <div className="text-sm font-medium text-muted pb-2">{t('settings.leadTimeUnit')}</div>
+        </div>
+
+        <label htmlFor="lead-time-range" className="sr-only">{t('settings.leadTimeTitle')}</label>
+        <input
+          id="lead-time-range"
+          type="range"
+          min={0}
+          max={30}
+          value={shippingLeadTimeDays}
+          onChange={(e) => setShippingLeadTimeDays(parseInt(e.target.value, 10))}
+          className="w-full accent-primary"
+        />
+
+        <div className="flex flex-wrap gap-2 mt-4">
+          {LEAD_TIME_PRESETS.map((d) => (
+            <button
+              key={d}
+              onClick={() => setShippingLeadTimeDays(d)}
+              aria-pressed={shippingLeadTimeDays === d}
+              className={
+                shippingLeadTimeDays === d
+                  ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white'
+                  : 'px-4 py-2 rounded-xl text-sm font-semibold bg-surface-2 text-muted hover:text-ink transition-colors'
+              }
+            >
+              {d === 0 ? t('settings.leadTimeSameDay') : `${d} ${t('settings.daysUnit')}`}
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Sick-day / travel surge buffer — time-boxed, reverts on its own */}

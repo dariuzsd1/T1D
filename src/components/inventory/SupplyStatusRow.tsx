@@ -1,7 +1,8 @@
 'use client'
 
 import type { Product } from '@/lib/store'
-import { displayStatus, isRateEstimated, DEFAULT_SAFETY_BUFFER_DAYS } from '@/lib/depletion'
+import { isRateEstimated, effectiveLeadTimeDays, daysUntilExpiration, DEFAULT_SAFETY_BUFFER_DAYS, DEFAULT_SHIPPING_LEAD_TIME_DAYS } from '@/lib/depletion'
+import { rescueKindOf, itemDisplayStatus } from '@/lib/rescueItems'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { isOrderPending } from '@/lib/orderTracking'
 import { ShoppingCart, CheckCircle2, Undo2, Loader2 } from 'lucide-react'
@@ -18,20 +19,27 @@ import { useState } from 'react'
 export function SupplyStatusRow({
   product,
   bufferDays = DEFAULT_SAFETY_BUFFER_DAYS,
+  shippingLeadTimeDays = DEFAULT_SHIPPING_LEAD_TIME_DAYS,
   onReorder,
   onMarkOrdered,
 }: {
   product: Product
   bufferDays?: number
+  /** Account-wide shipping lead-time default, folded into the reorder trigger. */
+  shippingLeadTimeDays?: number
   onReorder?: (label: string) => void
   /** Self-report a placed order (src/lib/orderTracking.ts) — softens the nag
    *  for a grace window without hiding the real status. Omit to hide the toggle. */
   onMarkOrdered?: (id: string, ordered: boolean) => Promise<void>
 }) {
   const { t } = useI18n()
-  // displayStatus: an unknown rate renders neutral 'unset', never an alarm.
-  const status = displayStatus(product, bufferDays)
+  // Rescue items (glucagon, ketones, hypo) are judged on expiry, not runway.
+  const isRescue = rescueKindOf(product) !== null
+  // itemDisplayStatus: rescue → expiry-driven; else the usage/expiry status with
+  // lead time folded into the reorder trigger. An unknown rate stays neutral 'unset'.
+  const status = itemDisplayStatus(product, bufferDays, effectiveLeadTimeDays(product, shippingLeadTimeDays))
   const estimated = isRateEstimated(product.usageRatePerDay)
+  const expiryDays = daysUntilExpiration(product.expirationDate)
   const reorder = reorderTargetFor(product)
   const orderPending = isOrderPending(product.lastOrderedDate)
   const [isToggling, setIsToggling] = useState(false)
@@ -62,8 +70,15 @@ export function SupplyStatusRow({
     product.remainingDays === 1 ? 'row.daysLeftOne' : 'row.daysLeftOther',
     { count: `${estimated ? '~' : ''}${product.remainingDays}` }
   )
+  // Rescue items speak in expiry, not days-of-stock.
+  const rescueDaysLine =
+    product.quantity <= 0 ? t('row.noneOnHand')
+    : expiryDays === null ? t('row.rescueAddExpiry')
+    : expiryDays <= 0 ? t('row.rescueExpired')
+    : t(expiryDays === 1 ? 'row.rescueExpiresOne' : 'row.rescueExpiresOther', { count: expiryDays })
   const daysLine =
-    status === 'out' ? t('row.noneOnHand')
+    isRescue ? rescueDaysLine
+    : status === 'out' ? t('row.noneOnHand')
     : status === 'unset' ? t('row.unsetDays')
     : daysLabel
 

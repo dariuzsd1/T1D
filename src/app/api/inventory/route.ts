@@ -61,7 +61,9 @@ export async function GET() {
         id: supply.id,
         brand: supply.brand || '',
         name: supply.name,
-        category: 'medical_supply', // Default; could map category_id to name
+        // Real catalog category (persisted on add) drives the rescue-item logic;
+        // 'medical_supply' is only the fallback for older rows with none stored.
+        category: supply.category ?? 'medical_supply',
         quantity: supply.quantity,
         remainingDays,
         lastScanned: supply.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -84,6 +86,8 @@ export async function GET() {
         inUseDays: supply.in_use_days ?? null,
         // Reorder-loop tracking (null until marked ordered / column exists).
         lastOrderedDate: supply.last_ordered_date ?? null,
+        // Per-item shipping lead time (null = inherit the account default).
+        leadTimeDays: supply.lead_time_days ?? null,
       }
     })
 

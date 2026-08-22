@@ -12,6 +12,9 @@ import {
   stockStatus,
   displayStatus,
   reorderByDate,
+  reorderThresholdDays,
+  effectiveLeadTimeDays,
+  DEFAULT_SHIPPING_LEAD_TIME_DAYS,
 } from './depletion'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -223,5 +226,59 @@ describe('reorderByDate', () => {
   })
   it('is in the future when there is slack above the buffer', () => {
     expect(reorderByDate(30, 14).getTime()).toBeGreaterThan(Date.now())
+  })
+  it('shipping lead time pulls the reorder-by date earlier', () => {
+    const noLead = reorderByDate(30, 14).getTime()
+    const withLead = reorderByDate(30, 14, 7).getTime()
+    // 30 - 14 = 16 days out with no lead; 30 - (14+7) = 9 days out with a week
+    // of shipping — strictly sooner. Lead time only ever moves reorder earlier.
+    expect(withLead).toBeLessThan(noLead)
+  })
+})
+
+describe('vendor-aware lead time', () => {
+  it('default matches the documented constant', () => {
+    expect(DEFAULT_SHIPPING_LEAD_TIME_DAYS).toBe(5)
+  })
+
+  describe('reorderThresholdDays', () => {
+    it('adds lead time to the buffer, never subtracts', () => {
+      expect(reorderThresholdDays(14, 0)).toBe(14)
+      expect(reorderThresholdDays(14, 7)).toBe(21)
+      // A negative/garbage lead time can never shorten the reserve.
+      expect(reorderThresholdDays(14, -10)).toBe(14)
+    })
+  })
+
+  describe('effectiveLeadTimeDays', () => {
+    it('uses the account default when the item has no override', () => {
+      expect(effectiveLeadTimeDays({}, 5)).toBe(5)
+      expect(effectiveLeadTimeDays({ leadTimeDays: null }, 5)).toBe(5)
+    })
+    it("honors the item's own override, including an explicit 0 (same-day pickup)", () => {
+      expect(effectiveLeadTimeDays({ leadTimeDays: 10 }, 5)).toBe(10)
+      expect(effectiveLeadTimeDays({ leadTimeDays: 0 }, 5)).toBe(0)
+    })
+    it('clamps a nonsense negative override to 0', () => {
+      expect(effectiveLeadTimeDays({ leadTimeDays: -3 }, 5)).toBe(0)
+    })
+  })
+
+  it('stockStatus flags low earlier when a lead time is supplied', () => {
+    // 18 days of runway, 14-day reserve: ok on its own …
+    expect(stockStatus(18, 14)).toBe('ok')
+    // … but with a week of shipping (reorder at 21 days), it is already low.
+    expect(stockStatus(18, 14, 7)).toBe('low')
+  })
+
+  it('displayStatus folds lead time into the low band for a known rate', () => {
+    // 18 days of stock at a known rate; ok until shipping is considered.
+    expect(displayStatus({ quantity: 18, usageRatePerDay: 1 }, 14)).toBe('ok')
+    expect(displayStatus({ quantity: 18, usageRatePerDay: 1 }, 14, 7)).toBe('low')
+  })
+
+  it('lead time never manufactures an alarm on an estimated rate', () => {
+    // Unknown rate + no dated expiry stays the calm 'unset', lead time or not.
+    expect(displayStatus({ quantity: 5, usageRatePerDay: 0 }, 14, 7)).toBe('unset')
   })
 })

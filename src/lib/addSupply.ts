@@ -36,12 +36,18 @@ export async function createSupplies(
   const { data, error } = await supabase.from('supplies').insert(rows).select()
   if (error || !data) throw new Error(error?.message || 'Failed to add supplies')
 
-  // Best-effort per-row usage rate (the column is optional pre-migration).
+  // Best-effort per-row optional columns (both optional pre-migration): the usage
+  // rate, and the catalog `category` the rescue-item logic keys on. Written
+  // separately so a "column does not exist" error can't break the core insert.
   await Promise.all(
     data.map((row: { id: string }, i: number) => {
+      const patch: Record<string, unknown> = {}
       const rate = items[i]?.usageRatePerDay ?? 0
-      return rate > 0
-        ? supabase.from('supplies').update({ usage_rate_per_day: rate }).eq('id', row.id)
+      if (rate > 0) patch.usage_rate_per_day = rate
+      const category = items[i]?.category?.trim()
+      if (category && category !== 'unknown') patch.category = category
+      return Object.keys(patch).length
+        ? supabase.from('supplies').update(patch).eq('id', row.id)
         : Promise.resolve()
     }),
   )

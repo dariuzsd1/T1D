@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
-import { Product } from '@/lib/store'
+import { Product, useStore } from '@/lib/store'
 import { useDialog } from '@/lib/useDialog'
 import { createClient } from '@/lib/supabase/client'
 import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
@@ -80,6 +80,12 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [copay, setCopay] = useState<string>(
     product.copay != null ? String(product.copay) : ''
   )
+  // Per-item shipping lead time (blank = inherit the account default). Folded
+  // into the reorder trigger so a slow-shipping item flags "reorder soon" earlier.
+  const accountLeadTimeDays = useStore((s) => s.shippingLeadTimeDays)
+  const [leadTimeDays, setLeadTimeDays] = useState<string>(
+    product.leadTimeDays != null ? String(product.leadTimeDays) : ''
+  )
   const [deviceId, setDeviceId] = useState<string>(product.deviceId ?? '')
   const [devices, setDevices] = useState<MedicalDevice[]>([])
   const [prescriptionId, setPrescriptionId] = useState<string>(product.prescriptionId ?? '')
@@ -152,6 +158,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         refillDaysBefore:
           refillRuleKind === 'days_before' && refillDaysBefore ? parseInt(refillDaysBefore, 10) : null,
         copay: copay ? parseFloat(copay) : null,
+        // Blank clears the override → inherit the account default. '0' (same-day
+        // pickup) is a real value, so guard on '' not falsiness.
+        leadTimeDays: leadTimeDays.trim() !== '' ? Math.max(0, parseInt(leadTimeDays, 10) || 0) : null,
         deviceId: deviceId || null,
         prescriptionId: prescriptionId || null,
         // In-use clock: only meaningful on the insulin tab. Elsewhere the fields
@@ -500,7 +509,25 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
                   className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
                 />
               </div>
+
+              <div>
+                <label htmlFor="edit-lead-time" className="block text-[11px] font-medium text-muted mb-1.5">{t('editModal.leadTimeLabel')}</label>
+                <input
+                  id="edit-lead-time"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder={t('editModal.leadTimePlaceholder', { days: accountLeadTimeDays })}
+                  value={leadTimeDays}
+                  onChange={(e) => setLeadTimeDays(e.target.value)}
+                  className="w-full bg-surface border border-line rounded-xl p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+                />
+              </div>
             </div>
+            <p className="text-xs text-faint mt-2">
+              {t('editModal.leadTimeHint', { days: accountLeadTimeDays })}
+            </p>
             <p className="text-xs text-faint mt-2">
               {t('editModal.copayHint')}
             </p>

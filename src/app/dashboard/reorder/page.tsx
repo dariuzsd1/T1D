@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
-import { displayStatus } from '@/lib/depletion'
+import { effectiveLeadTimeDays } from '@/lib/depletion'
+import { itemDisplayStatus } from '@/lib/rescueItems'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
@@ -16,7 +17,7 @@ import { SupplyStatusRow } from '@/components/inventory/SupplyStatusRow'
 import { CheckCircle2, ExternalLink, Truck } from 'lucide-react'
 
 export default function ReorderPage() {
-  const { inventory, safetyBufferDays, updateProduct } = useStore()
+  const { inventory, safetyBufferDays, shippingLeadTimeDays, updateProduct } = useStore()
   const { showToast } = useToast()
   const { t } = useI18n()
   const { profile } = useProfile()
@@ -33,12 +34,12 @@ export default function ReorderPage() {
   // quiet "not forecast yet" list below instead of an urgency ranking.
   const toReorder = [...inventory]
     .filter((p) => {
-      const s = displayStatus(p, safetyBufferDays)
+      const s = itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays))
       return s === 'out' || s === 'low'
     })
     .sort((a, b) => a.remainingDays - b.remainingDays)
   const notForecast = inventory.filter(
-    (p) => displayStatus(p, safetyBufferDays) === 'unset'
+    (p) => itemDisplayStatus(p, safetyBufferDays, effectiveLeadTimeDays(p, shippingLeadTimeDays)) === 'unset'
   )
 
   const handleReorder = (label: string) =>
@@ -109,6 +110,7 @@ export default function ReorderPage() {
               key={item.id}
               product={item}
               bufferDays={safetyBufferDays}
+              shippingLeadTimeDays={shippingLeadTimeDays}
               onReorder={handleReorder}
               onMarkOrdered={handleMarkOrdered}
             />

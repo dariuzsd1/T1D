@@ -26,6 +26,11 @@ import {
   zoneCenter,
   elapsedTextKey,
 } from '@/lib/siteRotation'
+import {
+  REST_WINDOW_OPTIONS,
+  getSiteRestWindowDays,
+  setSiteRestWindowDays,
+} from '@/lib/siteRestWindow'
 import { LogSiteChangeModal, type SiteChangeInput } from '@/components/site/LogSiteChangeModal'
 import { RotationGuideModal } from '@/components/site/RotationGuideModal'
 import { ReuseWarningModal } from '@/components/site/ReuseWarningModal'
@@ -58,6 +63,9 @@ export default function SiteTrackerPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   // Nonce → the post-log checkmark flash.
   const [justLogged, setJustLogged] = useState<number | null>(null)
+  // The user's configured rest window (per-device). Starts at the default and is
+  // hydrated from localStorage after mount, so server and first client render agree.
+  const [restWindowDays, setRestWindowDays] = useState<number>(RECENT_USE_DAYS)
 
   const loadChanges = useCallback(async (): Promise<SiteChangeRow[]> => {
     // select('*') stays forward-compatible: `body_zone` surfaces automatically
@@ -94,6 +102,16 @@ export default function SiteTrackerPage() {
     return () => { cancelled = true }
   }, [loadChanges])
 
+  // Hydrate the per-device rest-window preference once, after mount. localStorage
+  // doesn't exist during SSR, so this can't be a lazy useState initializer without
+  // a server/client hydration mismatch: server and the first client render both
+  // use the default, then this effect corrects it a tick later. Same accepted
+  // tradeoff as BiometricLockGate — deliberately excepted from the rule below.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRestWindowDays(getSiteRestWindowDays())
+  }, [])
+
   // Auto-clear the checkmark flash.
   useEffect(() => {
     if (justLogged == null) return
@@ -101,7 +119,10 @@ export default function SiteTrackerPage() {
     return () => clearTimeout(t)
   }, [justLogged])
 
-  const views = useMemo(() => buildZoneViews(changes), [changes])
+  const views = useMemo(
+    () => buildZoneViews(changes, new Date(), restWindowDays),
+    [changes, restWindowDays]
+  )
   const historyExists = useMemo(() => hasZoneHistory(changes), [changes])
   // Only surface a suggestion once there's real history (else it's meaningless).
   const suggestedId = historyExists ? suggestedZoneId(views) : null
@@ -446,7 +467,7 @@ export default function SiteTrackerPage() {
         <p className="text-center text-sm text-muted">
           {recentCount === 0
             ? t('siteTracker.summaryAllReady', { count: BODY_ZONES.length })
-            : t('siteTracker.summaryStatus', { recent: recentCount, days: RECENT_USE_DAYS, available: availableCount })}
+            : t('siteTracker.summaryStatus', { recent: recentCount, days: restWindowDays, available: availableCount })}
         </p>
       )}
 
@@ -454,8 +475,35 @@ export default function SiteTrackerPage() {
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
         <LegendItem label={t('siteTracker.legendAvailable')} mesh />
         <LegendItem label={t('siteTracker.legendFocused')} fill="var(--color-teal)" opacity={0.24} stroke="var(--color-teal)" />
-        <LegendItem label={t('siteTracker.legendRecentOther', { days: RECENT_USE_DAYS })} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
+        <LegendItem label={t('siteTracker.legendRecentOther', { days: restWindowDays })} fill="var(--color-caution)" opacity={0.2} stroke="var(--color-caution)" />
         <LegendItem label={t('siteTracker.legendSuggested')} fill="var(--color-success)" opacity={0.2} stroke="var(--color-success)" />
+      </div>
+
+      {/* Rest window — how long a site must rest before it reads "ready" again.
+          Per-device preference so a user can match their own clinician's guidance. */}
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="flex items-center gap-2">
+          <label htmlFor="rest-window" className="text-sm font-medium text-muted">
+            {t('siteTracker.restWindowLabel')}
+          </label>
+          <select
+            id="rest-window"
+            value={restWindowDays}
+            onChange={(e) => {
+              const days = Number(e.target.value)
+              setRestWindowDays(days)
+              setSiteRestWindowDays(days)
+            }}
+            className="min-h-[44px] rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+          >
+            {REST_WINDOW_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {t('siteTracker.restWindowOption', { days: opt })}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="max-w-xs text-center text-xs text-faint">{t('siteTracker.restWindowHelp')}</p>
       </div>
 
       {/* How to rotate — expert-based education, one tap away */}
@@ -537,6 +585,7 @@ export default function SiteTrackerPage() {
         <ReuseWarningModal
           zone={pendingZone}
           elapsedLabel={elapsedLabel(views.get(pendingZone.id)!.elapsed)}
+          recentUseDays={restWindowDays}
           onCancel={() => setPendingZone(null)}
           onLogAnyway={() => {
             const z = pendingZone

@@ -63,6 +63,12 @@ create table if not exists public.supplies (
   user_id         uuid not null references auth.users(id) on delete cascade,
   name            text not null,
   category_id     uuid references public.supply_categories(id) on delete set null,
+  -- Denormalized catalog category text (e.g. 'glucagon', 'ketone_supply',
+  -- 'hypo_treatment', 'cgm_sensor'), copied from the catalog product on add.
+  -- Distinct from category_id (the 6-row supply_categories taxonomy): this
+  -- carries the finer product category the rescue-item logic keys on
+  -- (src/lib/rescueItems.ts). NULL for older rows → name/brand fallback covers them.
+  category        text,
   brand           text,
   model           text,
   quantity        numeric not null default 1,
@@ -84,8 +90,11 @@ create table if not exists public.supplies (
   refill_rule_kind     text check (refill_rule_kind in ('percent','days_before')),
   refill_threshold_pct numeric,
   refill_days_before   integer,
-  -- Barcode/GS1 scan capture (src/lib/gs1.ts):
+  -- Barcode scan capture (src/lib/supplyCode.ts): barcode holds a GS1 GTIN;
+  -- pzn holds a German Pharmazentralnummer for EU medicine codes with no GTIN.
+  -- Either can match this supply back to the catalog and the personal catalog.
   barcode         text,
+  pzn             text,
   lot_number      text,
   -- Insulin in-use clock (src/lib/depletion.ts). opened_date = when the current
   -- vial/pen was first used; in_use_days = the discard window (28 for most
@@ -104,12 +113,18 @@ create table if not exists public.supplies (
   -- to soften proactive nags (banner/push) for a short grace window, never to
   -- hide a true stockout. NULL = no order in flight.
   last_ordered_date timestamptz,
+  -- Vendor-aware reorder timing (src/lib/depletion.ts effectiveLeadTimeDays): how
+  -- many days THIS item takes to arrive once ordered. NULL = inherit the account
+  -- default (client-side setting). Folded into the reorder trigger so a slow-
+  -- shipping item flags "reorder soon" earlier. Lead time only ever adds reserve.
+  lead_time_days  integer,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
 
 -- For older projects that created `supplies` before these columns existed:
 alter table public.supplies
+  add column if not exists category              text,
   add column if not exists model                text,
   add column if not exists usage_rate_per_day    numeric,
   add column if not exists copay                 numeric,
@@ -119,11 +134,13 @@ alter table public.supplies
   add column if not exists refill_threshold_pct  numeric,
   add column if not exists refill_days_before    integer,
   add column if not exists barcode               text,
+  add column if not exists pzn                   text,
   add column if not exists lot_number            text,
   add column if not exists opened_date           date,
   add column if not exists in_use_days           integer,
   add column if not exists auto_depleted_through timestamptz,
-  add column if not exists last_ordered_date     timestamptz;
+  add column if not exists last_ordered_date     timestamptz,
+  add column if not exists lead_time_days        integer;
 
 create index if not exists supplies_user_id_idx on public.supplies(user_id);
 
@@ -527,6 +544,10 @@ create table if not exists public.products (
   product_name                 text not null,
   common_names                 text,
   gtin                         text unique,
+  -- German Pharmazentralnummer, the national join key for EU-FMD / securPharm
+  -- medicine barcodes (PPN or NTIN) that carry no plain GTIN. Lets the SAME
+  -- product match regardless of which country's code is on the box.
+  pzn                          text,
   unit                         text,
   units_per_box                integer,
   typical_usage_per_day        numeric,
@@ -545,14 +566,52 @@ create table if not exists public.products (
 -- For catalogs imported before in_use_days existed:
 alter table public.products add column if not exists in_use_days integer;
 
--- Partial index: only rows with a real GTIN need to be looked up by GTIN.
+-- For catalogs imported before pzn existed:
+alter table public.products add column if not exists pzn text;
+
+-- Partial indexes: only rows with a real code need to be looked up by it.
 create index if not exists products_gtin_idx on public.products(gtin) where gtin is not null;
+create index if not exists products_pzn_idx on public.products(pzn) where pzn is not null;
 
 alter table public.products enable row level security;
 
 -- Reference data only — no PHI. Any authenticated user may read; no user writes.
 drop policy if exists "products public read" on public.products;
 create policy "products public read" on public.products
+  for select using (true);
+
+
+-- ============================================================================
+-- 10b. PRODUCT_CODES  (one product ↔ many barcodes, for multi-country / multi-pack)
+--     A single product legitimately carries several codes: regional GTIN variants,
+--     a GTIN per packaging level (a 40-count carton vs a 10-count box), a German
+--     PZN, a US NDC, a French CIP. The single `products.gtin`/`products.pzn`
+--     columns can't hold more than one, so this join table is the real key.
+--     Powers /api/scan/lookup (checked before the legacy single-code columns).
+-- ============================================================================
+create table if not exists public.product_codes (
+  id            uuid primary key default gen_random_uuid(),
+  product_id    uuid not null references public.products(id) on delete cascade,
+  code_type     text not null check (code_type in ('gtin','pzn','ndc','cip')),
+  code          text not null,
+  -- Pack size for THIS specific code, when it differs from the product default
+  -- (e.g. the scanned Reservoir carton is 2x20 = 40). NULL = use products.units_per_box.
+  units_per_box integer,
+  source        text,   -- e.g. 'scanned from box', 'GUDID', 'IFA'
+  last_verified date,
+  created_at    timestamptz not null default now(),
+  -- The same physical code can't map to two products.
+  unique (code_type, code)
+);
+
+create index if not exists product_codes_product_id_idx on public.product_codes(product_id);
+create index if not exists product_codes_lookup_idx on public.product_codes(code_type, code);
+
+alter table public.product_codes enable row level security;
+
+-- Reference data only — no PHI. Any authenticated user may read; no user writes.
+drop policy if exists "product_codes public read" on public.product_codes;
+create policy "product_codes public read" on public.product_codes
   for select using (true);
 
 
