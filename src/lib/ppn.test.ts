@@ -131,6 +131,29 @@ describe('parseSupplyCode — one entry point, any country', () => {
     expect(raw.expirationDate).toBe('2028-06-30')
   })
 
+  it('parses a GS1 Digital Link (QR-as-URL), path form', () => {
+    const c = parseSupplyCode('https://id.gs1.org/01/04150072424917/17/280630/10/D934903A/21/300979928536')
+    expect(c.codeType).toBe('gs1')
+    expect(c.gtin).toBe('04150072424917')
+    expect(c.pzn).toBe('07242491') // derived from the NTIN in the URL
+    expect(c.expirationDate).toBe('2028-06-30')
+    expect(c.lot).toBe('D934903A')
+    expect(c.serial).toBe('300979928536')
+  })
+
+  it('parses a GS1 Digital Link with data in the query string', () => {
+    const c = parseSupplyCode('https://brand.example/01/00386270002839?17=261130&10=LOT9')
+    expect(c.gtin).toBe('00386270002839')
+    expect(c.expirationDate).toBe('2026-11-30')
+    expect(c.lot).toBe('LOT9')
+  })
+
+  it('ignores a non-GS1 URL (no product data)', () => {
+    const c = parseSupplyCode('https://example.com/about-us')
+    expect(c.gtin).toBeUndefined()
+    expect(c.expirationDate).toBeUndefined()
+  })
+
   it('does NOT mistake a bare numeric UPC/EAN for a PZN', () => {
     // No Code-39 hint → a bare 8-digit code stays a GTIN, not a PZN.
     const c = parseSupplyCode('07242491')

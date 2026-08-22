@@ -118,13 +118,74 @@ function parseBracketed(value: string): Gs1Parsed {
   return result
 }
 
+/** Assign one AI/value pair (from a GS1 Digital Link URL) to the result. */
+function assignDlAi(result: Gs1Parsed, ai: string, rawData: string) {
+  const data = safeDecode(rawData)
+  if (ai === '01' || ai === '02') {
+    if (/^\d{8,14}$/.test(data)) result.gtin = data.padStart(14, '0')
+  } else if (ai === '17') {
+    const iso = gs1DateToIso(data)
+    if (iso) result.expirationDate = iso
+  } else if (ai === '10') {
+    result.lot = data
+  } else if (ai === '21') {
+    result.serial = data
+  } else if (ai === '710') {
+    result.pzn = data
+  } else if (ai === '711') {
+    result.cip = data
+  }
+}
+
+function safeDecode(v: string): string {
+  try {
+    return decodeURIComponent(v)
+  } catch {
+    return v
+  }
+}
+
 /**
- * Parse a decoded barcode value. Works for the bracketed GS1 form, FNC1-separated
- * GS1 element strings, and falls back to treating a plain 8–14 digit numeric code
- * as a bare GTIN/UPC/EAN.
+ * Parse a GS1 Digital Link — a QR code that encodes a URL, e.g.
+ * "https://id.gs1.org/01/04150072424917/17/280630/10/D934903A/21/300979928536"
+ * or "https://brand.example/01/00386270002839?17=261130&10=LOT9". GS1 is pushing
+ * these onto packs, so newer boxes may present one. AI/value pairs live in the
+ * path (after the primary key "01") and/or the query string.
+ */
+function parseDigitalLink(value: string): Gs1Parsed {
+  const result: Gs1Parsed = { raw: value }
+  let url: URL
+  try {
+    url = new URL(value.trim())
+  } catch {
+    return result
+  }
+  const segs = url.pathname.split('/').filter(Boolean)
+  const start = segs.indexOf('01')
+  if (start >= 0) {
+    for (let i = start; i + 1 < segs.length; i += 2) {
+      if (!/^\d{2,4}$/.test(segs[i])) break
+      assignDlAi(result, segs[i], segs[i + 1])
+    }
+  }
+  url.searchParams.forEach((v, k) => {
+    if (/^\d{2,4}$/.test(k)) assignDlAi(result, k, v)
+  })
+  return result
+}
+
+/**
+ * Parse a decoded barcode value. Works for GS1 Digital Link URLs, the bracketed
+ * GS1 form, FNC1-separated GS1 element strings, and falls back to treating a plain
+ * 8–14 digit numeric code as a bare GTIN/UPC/EAN.
  */
 export function parseGs1(value: string): Gs1Parsed {
   const raw = value
+
+  // GS1 Digital Link (QR-as-URL): "https://…/01/{gtin}/…".
+  if (/^https?:\/\//i.test(value.trim())) {
+    return parseDigitalLink(value)
+  }
 
   // Bracketed human-readable form "(01)…(17)…" — parse it directly. A plain UPC
   // or an FNC1-separated element string never contains literal "(NN)" markers.
