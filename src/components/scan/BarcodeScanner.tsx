@@ -177,15 +177,20 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
 
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      // Cycle the center-square crop each frame so codes held at different
+      // distances all get a turn: 0.8 (near), 0.55 (very close / tiny code),
+      // 1.0 (whole frame / code held far). One ROI per tick keeps cost flat.
+      const roiFactors = [0.8, 0.55, 1]
       let busy = false
+      let tick = 0
       matrixIntervalRef.current = window.setInterval(async () => {
         if (cancelled || detectedRef.current || busy || !ctx) return
         const vw = video.videoWidth
         const vh = video.videoHeight
         if (!vw || !vh) return
-        // Center square ROI (~80%): crops out clutter and preserves the code's
-        // native pixels, which is what lets a tiny DataMatrix decode.
-        const side = Math.floor(Math.min(vw, vh) * 0.8)
+        // Center square ROI: cropping preserves the code's native pixels, which is
+        // what lets a tiny DataMatrix decode; cycling the size covers more distances.
+        const side = Math.floor(Math.min(vw, vh) * roiFactors[tick++ % roiFactors.length])
         canvas.width = side
         canvas.height = side
         ctx.drawImage(video, Math.floor((vw - side) / 2), Math.floor((vh - side) / 2), side, side, 0, 0, side, side)

@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest'
-import { parseGs1, gs1DateToIso } from './gs1'
+import { parseGs1, gs1DateToIso, isValidGtin } from './gs1'
+
+describe('isValidGtin', () => {
+  it('accepts real GTINs with a correct check digit', () => {
+    expect(isValidGtin('00386270002839')).toBe(true) // Dexcom G7
+    expect(isValidGtin('04150072424917')).toBe(true) // Humalog NTIN
+    expect(isValidGtin('05705244018877')).toBe(true) // Mio Advance (real)
+    expect(isValidGtin('5705244018877')).toBe(true) // same, unpadded EAN-13
+  })
+  it('rejects a misread GTIN with a wrong check digit', () => {
+    expect(isValidGtin('05705277018877')).toBe(false) // the real Mio misread
+    expect(isValidGtin('00386270002830')).toBe(false)
+  })
+  it('rejects non-numeric or wrong-length input', () => {
+    expect(isValidGtin('abc')).toBe(false)
+    expect(isValidGtin('123')).toBe(false)
+  })
+})
 
 describe('gs1DateToIso', () => {
   it('converts YYMMDD to ISO', () => {

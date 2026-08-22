@@ -76,11 +76,11 @@ describe('parseSupplyCode — one entry point, any country', () => {
   })
 
   it('recovers the PZN from a German NTIN (a GTIN that embeds the PZN)', () => {
-    // NTIN GTIN-14: 0 + 4150 + PZN(07242491) + check(8).
-    expect(pznFromNtinGtin('04150072424918')).toBe('07242491')
-    const c = parseSupplyCode('0104150072424918')
+    // NTIN GTIN-14: 0 + 4150 + PZN(07242491) + check(7). Real, valid check digit.
+    expect(pznFromNtinGtin('04150072424917')).toBe('07242491')
+    const c = parseSupplyCode('0104150072424917')
     expect(c.codeType).toBe('gs1')
-    expect(c.gtin).toBe('04150072424918')
+    expect(c.gtin).toBe('04150072424917')
     expect(c.pzn).toBe('07242491')
   })
 
@@ -131,6 +131,14 @@ describe('parseSupplyCode — one entry point, any country', () => {
     expect(raw.expirationDate).toBe('2028-06-30')
   })
 
+  it('drops a GTIN whose check digit fails (a misread) but keeps a valid one', () => {
+    // 05705277018877 is the real misread Mio scan; 05705244018877 is the true code.
+    expect(parseSupplyCode('(01)05705277018877(17)261130').gtin).toBeUndefined()
+    expect(parseSupplyCode('(01)05705244018877(17)261130').gtin).toBe('05705244018877')
+    // A misread still surfaces the raw value + any expiry, so it's never a dead end.
+    expect(parseSupplyCode('(01)05705277018877(17)261130').expirationDate).toBe('2026-11-30')
+  })
+
   it('parses a GS1 Digital Link (QR-as-URL), path form', () => {
     const c = parseSupplyCode('https://id.gs1.org/01/04150072424917/17/280630/10/D934903A/21/300979928536')
     expect(c.codeType).toBe('gs1')
@@ -155,10 +163,10 @@ describe('parseSupplyCode — one entry point, any country', () => {
   })
 
   it('does NOT mistake a bare numeric UPC/EAN for a PZN', () => {
-    // No Code-39 hint → a bare 8-digit code stays a GTIN, not a PZN.
-    const c = parseSupplyCode('07242491')
+    // No Code-39 hint → a bare (valid) GTIN-8 stays a GTIN, not a PZN.
+    const c = parseSupplyCode('07242496') // valid GTIN-8 check digit
     expect(c.codeType).toBe('plain')
-    expect(c.gtin).toBe('00000007242491')
+    expect(c.gtin).toBe('00000007242496')
     expect(c.pzn).toBeUndefined()
     // A 13-digit EAN is never a PZN even from a Code 39 misreport.
     expect(parseSupplyCode('5705244018877', 'CODE_39').pzn).toBeUndefined()

@@ -56,6 +56,23 @@ const FIXED_LENGTH_AI: Record<string, number> = {
 const GS = '\x1d'
 
 /**
+ * Validate a GTIN's mod-10 check digit (GS1 standard). A real GS1 GTIN always has
+ * a correct check digit, so a failure means a misread or corrupt code — which we
+ * then refuse to trust as a match key rather than store/look up garbage. Accepts
+ * 8–14 digit forms (padded to GTIN-14 internally).
+ */
+export function isValidGtin(gtin: string): boolean {
+  if (!/^\d{8,14}$/.test(gtin)) return false
+  const digits = gtin.padStart(14, '0').split('').map(Number)
+  let sum = 0
+  for (let i = 0; i < 13; i++) {
+    // Weight the rightmost of the first 13 digits by 3, then alternate 1,3,1,3…
+    sum += digits[i] * ((13 - i) % 2 === 1 ? 3 : 1)
+  }
+  return (10 - (sum % 10)) % 10 === digits[13]
+}
+
+/**
  * Convert a GS1 YYMMDD string to an ISO YYYY-MM-DD date.
  * Per GS1: a year 00–50 maps to 2000–2050, 51–99 to 1951–1999. A day of "00"
  * means "end of the month", so we resolve it to that month's last day.

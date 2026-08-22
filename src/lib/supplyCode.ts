@@ -15,7 +15,7 @@
  * every field is decoded, never inferred.
  */
 
-import { parseGs1 } from './gs1'
+import { parseGs1, isValidGtin } from './gs1'
 import { looksLikePpn, parsePpn } from './ppn'
 
 export type SupplyCodeType = 'gs1' | 'ppn' | 'plain'
@@ -113,13 +113,17 @@ export function parseSupplyCode(value: string, format?: string): SupplyCode {
   }
 
   const g = parseGs1(value)
+  // Trust the GTIN only if its check digit is valid — a failed check means the
+  // symbol was misread, so we drop it (→ "name once") rather than store a corrupt
+  // code or mis-look-up. Derived national codes hang off the validated GTIN.
+  const gtin = g.gtin && isValidGtin(g.gtin) ? g.gtin : undefined
   return {
     codeType: isPlainNumericCode(value.trim()) ? 'plain' : 'gs1',
     raw: value,
-    gtin: g.gtin,
+    gtin,
     // Prefer a code the box stated outright (NHRN AI); else derive from the GTIN.
-    pzn: g.pzn ?? pznFromNtinGtin(g.gtin),
-    cip: g.cip ?? cipFromGtin(g.gtin),
+    pzn: g.pzn ?? pznFromNtinGtin(gtin),
+    cip: g.cip ?? cipFromGtin(gtin),
     expirationDate: g.expirationDate,
     lot: g.lot,
     serial: g.serial,
