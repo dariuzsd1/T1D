@@ -107,6 +107,29 @@ describe('parseSupplyCode — one entry point, any country', () => {
     expect(c.serial).toBe('300979928536')
   })
 
+  it('derives a US NDC from a US drug GTIN (003 + NDC + check)', () => {
+    const c = parseSupplyCode('(01)00312345678901(17)270131(10)LOT9')
+    expect(c.codeType).toBe('gs1')
+    expect(c.ndc).toBe('1234567890')
+    expect(c.expirationDate).toBe('2027-01-31')
+  })
+
+  it('derives a French CIP from a CIP13-based GTIN (3400…)', () => {
+    const c = parseSupplyCode('(01)03400123456789(17)261031')
+    expect(c.cip).toBe('3400123456789')
+    expect(c.gtin).toBe('03400123456789')
+  })
+
+  it('reads NHRN AIs when the box states them outright — 710 (PZN), 711 (CIP)', () => {
+    // Bracketed form
+    expect(parseSupplyCode('(01)09999999999993(710)07242491(17)280630').pzn).toBe('07242491')
+    expect(parseSupplyCode('(01)09999999999993(711)3400999888777').cip).toBe('3400999888777')
+    // Raw FNC1-separated form: (01)09999999999993 (710)07242491 <GS> (17)280630
+    const raw = parseSupplyCode(`010999999999999371007242491${GS}17280630`)
+    expect(raw.pzn).toBe('07242491')
+    expect(raw.expirationDate).toBe('2028-06-30')
+  })
+
   it('does NOT mistake a bare numeric UPC/EAN for a PZN', () => {
     // No Code-39 hint → a bare 8-digit code stays a GTIN, not a PZN.
     const c = parseSupplyCode('07242491')

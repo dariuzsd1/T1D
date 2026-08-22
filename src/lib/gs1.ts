@@ -26,6 +26,10 @@ export interface Gs1Parsed {
   lot?: string
   /** Serial number, AI (21). */
   serial?: string
+  /** German Pharmazentralnummer, from the NHRN AI (710). */
+  pzn?: string
+  /** French CIP, from the NHRN AI (711). */
+  cip?: string
   /** The original decoded value, always preserved for reference/storage. */
   raw: string
 }
@@ -105,6 +109,10 @@ function parseBracketed(value: string): Gs1Parsed {
       result.lot = data
     } else if (ai === '21') {
       result.serial = data
+    } else if (ai === '710') {
+      result.pzn = data // NHRN Germany (PZN)
+    } else if (ai === '711') {
+      result.cip = data // NHRN France (CIP)
     }
   }
   return result
@@ -144,6 +152,18 @@ export function parseGs1(value: string): Gs1Parsed {
       const data = s.slice(2, 2 + len)
       assignFixed(result, ai2, data)
       s = s.slice(2 + len)
+      continue
+    }
+
+    // NHRN (national healthcare reimbursement number) AIs are 3 digits, variable
+    // length: 710 = PZN (Germany), 711 = CIP (France). Read until GS or end.
+    if (ai3 === '710' || ai3 === '711') {
+      const rest = s.slice(3)
+      const end = rest.indexOf(GS)
+      const data = end === -1 ? rest : rest.slice(0, end)
+      if (ai3 === '710') result.pzn = data
+      else result.cip = data
+      s = end === -1 ? '' : rest.slice(end + 1)
       continue
     }
 

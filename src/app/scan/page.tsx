@@ -349,6 +349,8 @@ export default function ScanPage() {
     const lookupQueries: string[] = []
     if (parsed.gtin) lookupQueries.push(`gtin=${encodeURIComponent(parsed.gtin)}`)
     if (parsed.pzn) lookupQueries.push(`pzn=${encodeURIComponent(parsed.pzn)}`)
+    if (parsed.ndc) lookupQueries.push(`ndc=${encodeURIComponent(parsed.ndc)}`)
+    if (parsed.cip) lookupQueries.push(`cip=${encodeURIComponent(parsed.cip)}`)
     let matched = false
     for (const query of lookupQueries) {
       if (matched) break

@@ -25,8 +25,12 @@ export interface SupplyCode {
   codeType: SupplyCodeType
   /** GS1 GTIN, when the code carried one (devices, US/EU drugs). */
   gtin?: string
-  /** 8-digit German Pharmazentralnummer, from a PPN or an NTIN GTIN. */
+  /** 8-digit German Pharmazentralnummer, from a PPN, NHRN AI (710), or NTIN GTIN. */
   pzn?: string
+  /** French CIP, from the NHRN AI (711) or a CIP13-based GTIN (3400…). */
+  cip?: string
+  /** US National Drug Code (10-digit), derived from a US drug GTIN (003 + NDC). */
+  ndc?: string
   /** Full IFA product code, when the box used a PPN. */
   ppn?: string
   /** Expiration date as YYYY-MM-DD (GS1 AI 17 or PPN data identifier D). */
@@ -47,6 +51,27 @@ export interface SupplyCode {
 export function pznFromNtinGtin(gtin?: string): string | undefined {
   if (!gtin) return undefined
   const m = /^04150(\d{8})\d$/.exec(gtin)
+  return m ? m[1] : undefined
+}
+
+/**
+ * A US drug's NDC is embedded in its GTIN: GTIN-14 = "003" + 10-digit NDC + check
+ * (the UPC-A drug number-system "3"). Recover the 10-digit NDC when that shape
+ * matches; return undefined otherwise. Best-effort — never guessed.
+ */
+export function ndcFromGtin(gtin?: string): string | undefined {
+  if (!gtin) return undefined
+  const m = /^003(\d{10})\d$/.exec(gtin)
+  return m ? m[1] : undefined
+}
+
+/**
+ * A French CIP13 *is* a GTIN-13 beginning "3400"; as a GTIN-14 it's "0" + CIP13.
+ * Recover the 13-digit CIP when that shape matches; return undefined otherwise.
+ */
+export function cipFromGtin(gtin?: string): string | undefined {
+  if (!gtin) return undefined
+  const m = /^0(3400\d{9})$/.exec(gtin)
   return m ? m[1] : undefined
 }
 
@@ -96,7 +121,10 @@ export function parseSupplyCode(value: string, format?: string): SupplyCode {
     codeType: isPlainNumericCode(value.trim()) ? 'plain' : 'gs1',
     raw: value,
     gtin: g.gtin,
-    pzn: pznFromNtinGtin(g.gtin),
+    // Prefer a code the box stated outright (NHRN AI); else derive from the GTIN.
+    pzn: g.pzn ?? pznFromNtinGtin(g.gtin),
+    cip: g.cip ?? cipFromGtin(g.gtin),
+    ndc: ndcFromGtin(g.gtin),
     expirationDate: g.expirationDate,
     lot: g.lot,
     serial: g.serial,

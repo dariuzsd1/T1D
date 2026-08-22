@@ -4,7 +4,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
 
 import { createClient } from '@/lib/supabase/server'
 import { createSupabaseServerMock } from '@/lib/testUtils/supabaseServerMock'
-import { lookupProductByGtin, lookupProductByPzn } from './catalog'
+import { lookupProductByGtin, lookupProductByPzn, lookupProductByNdc } from './catalog'
 
 function mockTables(tables: Record<string, { data?: unknown; error?: { message: string } | null }>) {
   vi.mocked(createClient).mockResolvedValue(
@@ -79,5 +79,19 @@ describe('lookupProductByPzn — product_codes first, legacy fallback', () => {
     mockTables({ product_codes: { data: null }, products: { data: reservoir } })
     const p = await lookupProductByPzn('07242491')
     expect(p?.product_name).toBe('MiniMed Reservoir')
+  })
+})
+
+describe('lookupProductByNdc — national code via product_codes', () => {
+  it('resolves a US NDC through the code table', async () => {
+    const insulin = { ...reservoir, product_name: 'Humalog 100 (US vial)', unit: 'vials' }
+    mockTables({ product_codes: { data: { units_per_box: null, products: insulin } } })
+    const p = await lookupProductByNdc('1234567890')
+    expect(p?.product_name).toBe('Humalog 100 (US vial)')
+  })
+
+  it('returns null when the NDC is not in the catalog', async () => {
+    mockTables({ product_codes: { data: null } })
+    expect(await lookupProductByNdc('0000000000')).toBeNull()
   })
 })
