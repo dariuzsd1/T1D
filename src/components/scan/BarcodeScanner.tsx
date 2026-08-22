@@ -6,6 +6,7 @@ import { X, ScanBarcode, CameraOff, Loader2 } from 'lucide-react'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat } from '@zxing/library'
 import { barcodeHints, type ScanMode } from '@/lib/barcode'
+import { decodeMatrixFromImageData } from '@/lib/zxingWasm'
 import { cn } from '@/lib/utils'
 import { useDialog } from '@/lib/useDialog'
 import { useI18n } from '@/lib/i18n'
@@ -34,6 +35,10 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
   const { t } = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
+  // The 'matrix' (2D) path runs its own getUserMedia stream + decode interval
+  // (zxing-wasm), separate from ZXing-js's controls used by the 'all' path.
+  const matrixStreamRef = useRef<MediaStream | null>(null)
+  const matrixIntervalRef = useRef<number | null>(null)
   const detectedRef = useRef(false)
   const [phase, setPhase] = useState<Phase>('checking')
   // Store a translation KEY, not a resolved string, so a mid-error language
@@ -45,8 +50,20 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
   const [mode, setMode] = useState<ScanMode>('all')
 
   const stopCamera = useCallback(() => {
+    // ZXing-js path
     controlsRef.current?.stop()
     controlsRef.current = null
+    // zxing-wasm (2D) path: stop the decode loop and release the camera.
+    if (matrixIntervalRef.current != null) {
+      clearInterval(matrixIntervalRef.current)
+      matrixIntervalRef.current = null
+    }
+    if (matrixStreamRef.current) {
+      matrixStreamRef.current.getTracks().forEach((track) => track.stop())
+      matrixStreamRef.current = null
+    }
+    const video = videoRef.current
+    if (video && video.srcObject) video.srcObject = null
   }, [])
 
   const handleClose = useCallback(() => {
@@ -60,22 +77,38 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
   useEffect(() => {
     let cancelled = false
 
-    async function start() {
-      // getUserMedia needs a secure context (https or localhost) and a camera.
-      // If it's missing, scanning truly can't run here — hand back to manual entry.
-      if (
-        typeof navigator === 'undefined' ||
-        !navigator.mediaDevices?.getUserMedia
-      ) {
-        if (cancelled) return
-        setPhase('unsupported')
-        onUnsupported?.()
-        return
+    function handleCamError(err: unknown) {
+      if (cancelled) return
+      const name = (err as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        setPhase('denied')
+        setMessageKey('barcodeScanner.denied')
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setPhase('error')
+        setMessageKey('barcodeScanner.noCamera')
+      } else {
+        setPhase('error')
+        setMessageKey('barcodeScanner.error')
       }
+    }
 
-      const video = videoRef.current
-      if (!video) return
+    // Best-effort optical zoom so a small, dense code fills more of the sensor.
+    async function applyZoom(stream: MediaStream) {
+      const track = stream.getVideoTracks()[0]
+      const caps = track?.getCapabilities?.() as { zoom?: { min: number; max: number } } | undefined
+      if (track && caps?.zoom) {
+        try {
+          await track.applyConstraints({
+            advanced: [{ zoom: Math.min(caps.zoom.max, Math.max(caps.zoom.min, 2)) }],
+          } as unknown as MediaTrackConstraints)
+        } catch {
+          // Zoom is a nice-to-have; a failure must never break scanning.
+        }
+      }
+    }
 
+    // 1D / 'all' mode: ZXing-js continuous decode (reliable for striped barcodes).
+    async function startLinear(video: HTMLVideoElement) {
       detectedRef.current = false
       setPhase('starting')
       // delayBetweenScanAttempts: analyse a frame roughly every 120ms — frequent
@@ -83,18 +116,10 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
       const reader = new BrowserMultiFormatReader(barcodeHints(mode), {
         delayBetweenScanAttempts: 120,
       })
-
       try {
-        // Request the highest practical resolution: dense GS1 barcodes need enough
-        // pixels per bar, and a default low-res stream is the usual reason a code
-        // that looks fine to the eye won't decode.
         const controls = await reader.decodeFromConstraints(
           {
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
+            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
             audio: false,
           },
           video,
@@ -112,44 +137,93 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         }
         controlsRef.current = controls
         setPhase('scanning')
-
-        // Best-effort optical zoom in 2D mode: a small, dense square then fills
-        // more of the sensor, which markedly helps decoding. Silently ignored
-        // where the camera doesn't expose zoom (e.g. iOS Safari, most laptops).
-        if (mode === 'matrix') {
-          const track = (video.srcObject as MediaStream | null)?.getVideoTracks?.()[0]
-          const caps = track?.getCapabilities?.() as { zoom?: { min: number; max: number } } | undefined
-          if (track && caps?.zoom) {
-            const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 2))
-            try {
-              await track.applyConstraints({ advanced: [{ zoom: z }] } as unknown as MediaTrackConstraints)
-            } catch {
-              // Zoom is a nice-to-have; a failure must never break scanning.
-            }
-          }
-        }
-      } catch (err: unknown) {
-        if (cancelled) return
-        const name = (err as { name?: string })?.name
-        if (name === 'NotAllowedError' || name === 'SecurityError') {
-          setPhase('denied')
-          setMessageKey('barcodeScanner.denied')
-        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-          setPhase('error')
-          setMessageKey('barcodeScanner.noCamera')
-        } else {
-          setPhase('error')
-          setMessageKey('barcodeScanner.error')
-        }
+      } catch (err) {
+        handleCamError(err)
       }
     }
 
-    start()
+    // 2D / 'matrix' mode: zxing-wasm (C++ engine) on a center-cropped frame — far
+    // better at the small, dense pharmacy DataMatrix than ZXing-js.
+    async function startMatrix(video: HTMLVideoElement) {
+      detectedRef.current = false
+      setPhase('starting')
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        })
+      } catch (err) {
+        handleCamError(err)
+        return
+      }
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+      matrixStreamRef.current = stream
+      video.srcObject = stream
+      try {
+        await video.play()
+      } catch {
+        // Autoplay can reject; the <video> is muted + playsInline so it recovers.
+      }
+      if (cancelled) {
+        stopCamera()
+        return
+      }
+      setPhase('scanning')
+      await applyZoom(stream)
+
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      let busy = false
+      matrixIntervalRef.current = window.setInterval(async () => {
+        if (cancelled || detectedRef.current || busy || !ctx) return
+        const vw = video.videoWidth
+        const vh = video.videoHeight
+        if (!vw || !vh) return
+        // Center square ROI (~80%): crops out clutter and preserves the code's
+        // native pixels, which is what lets a tiny DataMatrix decode.
+        const side = Math.floor(Math.min(vw, vh) * 0.8)
+        canvas.width = side
+        canvas.height = side
+        ctx.drawImage(video, Math.floor((vw - side) / 2), Math.floor((vh - side) / 2), side, side, 0, 0, side, side)
+        let image: ImageData
+        try {
+          image = ctx.getImageData(0, 0, side, side)
+        } catch {
+          return
+        }
+        busy = true
+        const res = await decodeMatrixFromImageData(image)
+        busy = false
+        if (res && !detectedRef.current && !cancelled) {
+          detectedRef.current = true
+          stopCamera()
+          onDetected(res.text, res.format)
+        }
+      }, 180)
+    }
+
+    // getUserMedia needs a secure context (https or localhost) and a camera. If
+    // it's missing, scanning truly can't run here — hand back to manual entry.
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setPhase('unsupported')
+      onUnsupported?.()
+    } else {
+      const video = videoRef.current
+      if (video) {
+        if (mode === 'matrix') startMatrix(video)
+        else startLinear(video)
+      }
+    }
+
     return () => {
       cancelled = true
       stopCamera()
     }
-    // Re-run (restart the camera with new decoder hints) when the mode changes.
+    // Re-run (restart the camera with the mode-appropriate decoder) on mode change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
