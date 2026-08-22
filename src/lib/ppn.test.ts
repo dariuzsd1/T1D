@@ -95,6 +95,18 @@ describe('parseSupplyCode — one entry point, any country', () => {
     expect(fromScanner.pzn).toBe('07242491')
   })
 
+  it('parses a bracketed GS1 DataMatrix (NTIN medicine) and derives the PZN', () => {
+    // The exact string a 2D decoder returned for a German Humalog box: the
+    // human-readable "(AI)" form, with an NTIN GTIN that embeds PZN 07242491.
+    const c = parseSupplyCode('(01)04150072424917(21)300979928536(17)280630(10)D934903A')
+    expect(c.codeType).toBe('gs1')
+    expect(c.gtin).toBe('04150072424917')
+    expect(c.pzn).toBe('07242491')
+    expect(c.expirationDate).toBe('2028-06-30')
+    expect(c.lot).toBe('D934903A')
+    expect(c.serial).toBe('300979928536')
+  })
+
   it('does NOT mistake a bare numeric UPC/EAN for a PZN', () => {
     // No Code-39 hint → a bare 8-digit code stays a GTIN, not a PZN.
     const c = parseSupplyCode('07242491')

@@ -341,18 +341,19 @@ export default function ScanPage() {
     setCatalogMatch(false)
     setPersonalMatch(false)
 
-    // Look up the code in the shared products catalog — by GTIN when the box had
-    // one, otherwise by the German PZN (EU medicines). Pre-fill name/brand/
-    // quantity/wear rate if found — every field stays editable. A miss isn't an error.
-    const lookupQuery = parsed.gtin
-      ? `gtin=${encodeURIComponent(parsed.gtin)}`
-      : parsed.pzn
-        ? `pzn=${encodeURIComponent(parsed.pzn)}`
-        : null
+    // Look up the code in the shared products catalog. Try the GTIN first, then the
+    // German PZN — an NTIN medicine carries BOTH (a GTIN that embeds the PZN), and
+    // the catalog may be keyed by either, so we must try both, not just one. Pre-fill
+    // name/brand/quantity/wear rate on a hit — every field stays editable. A miss
+    // isn't an error.
+    const lookupQueries: string[] = []
+    if (parsed.gtin) lookupQueries.push(`gtin=${encodeURIComponent(parsed.gtin)}`)
+    if (parsed.pzn) lookupQueries.push(`pzn=${encodeURIComponent(parsed.pzn)}`)
     let matched = false
-    if (lookupQuery) {
+    for (const query of lookupQueries) {
+      if (matched) break
       try {
-        const res = await fetch(`/api/scan/lookup?${lookupQuery}`)
+        const res = await fetch(`/api/scan/lookup?${query}`)
         if (res.ok) {
           const product = await res.json()
           if (product) {
@@ -376,26 +377,31 @@ export default function ScanPage() {
     // reuse it; this is how your catalog grows as you scan, with no maintainer step.
     // (The barcode/pzn columns may be pre-migration; a miss is fine.)
     if (!matched && (parsed.gtin || parsed.pzn)) {
-      try {
-        const priorQuery = supabase
-          .from('supplies')
-          .select('name, brand, usage_rate_per_day')
-          .not('name', 'is', null)
-        const { data: prior } = await (parsed.gtin
-          ? priorQuery.eq('barcode', parsed.gtin)
-          : priorQuery.eq('pzn', parsed.pzn as string))
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (prior?.name) {
-          setBcName(prior.name)
-          if (prior.brand) setBcBrand(prior.brand)
-          const rate = Number(prior.usage_rate_per_day)
-          if (rate > 0) setAutoRate(rate)
-          setPersonalMatch(true)
+      const priorLookups: [column: string, value: string][] = []
+      if (parsed.gtin) priorLookups.push(['barcode', parsed.gtin])
+      if (parsed.pzn) priorLookups.push(['pzn', parsed.pzn])
+      for (const [column, value] of priorLookups) {
+        if (matched) break
+        try {
+          const { data: prior } = await supabase
+            .from('supplies')
+            .select('name, brand, usage_rate_per_day')
+            .not('name', 'is', null)
+            .eq(column, value)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (prior?.name) {
+            setBcName(prior.name)
+            if (prior.brand) setBcBrand(prior.brand)
+            const rate = Number(prior.usage_rate_per_day)
+            if (rate > 0) setAutoRate(rate)
+            setPersonalMatch(true)
+            matched = true
+          }
+        } catch {
+          // Best-effort: an un-migrated barcode/pzn column must never block the scan.
         }
-      } catch {
-        // Best-effort: an un-migrated barcode column must never block the scan.
       }
     }
 

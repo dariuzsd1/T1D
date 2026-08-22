@@ -84,11 +84,46 @@ function stripPrefix(value: string): string {
 }
 
 /**
- * Parse a decoded barcode value. Works for GS1 element strings and falls back to
- * treating a plain 8–14 digit numeric code as a bare GTIN/UPC/EAN.
+ * Parse the human-readable bracketed GS1 form, e.g.
+ * "(01)04150072424917(17)280630(10)D934903A(21)300979928536".
+ * Some 2D decoders (notably zxing-wasm for GS1 DataMatrix) return this instead of
+ * the FNC1-separated element string, so we detect the "(AI)" markers and read the
+ * fields straight out — parentheses delimit each field unambiguously.
+ */
+function parseBracketed(value: string): Gs1Parsed {
+  const result: Gs1Parsed = { raw: value }
+  const re = /\((\d{2,4})\)([^(]*)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(value)) !== null) {
+    const [, ai, data] = m
+    if ((ai === '01' || ai === '02') && /^\d{14}$/.test(data)) {
+      result.gtin = data
+    } else if (ai === '17') {
+      const iso = gs1DateToIso(data)
+      if (iso) result.expirationDate = iso
+    } else if (ai === '10') {
+      result.lot = data
+    } else if (ai === '21') {
+      result.serial = data
+    }
+  }
+  return result
+}
+
+/**
+ * Parse a decoded barcode value. Works for the bracketed GS1 form, FNC1-separated
+ * GS1 element strings, and falls back to treating a plain 8–14 digit numeric code
+ * as a bare GTIN/UPC/EAN.
  */
 export function parseGs1(value: string): Gs1Parsed {
   const raw = value
+
+  // Bracketed human-readable form "(01)…(17)…" — parse it directly. A plain UPC
+  // or an FNC1-separated element string never contains literal "(NN)" markers.
+  if (/\(\d{2,4}\)/.test(value)) {
+    return parseBracketed(value)
+  }
+
   const result: Gs1Parsed = { raw }
   let s = stripPrefix(value).replace(/^\x1d/, '')
 
