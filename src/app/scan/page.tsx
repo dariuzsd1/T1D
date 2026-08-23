@@ -30,7 +30,7 @@ import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
-import { errorMessage } from '@/lib/utils'
+import { cn, errorMessage } from '@/lib/utils'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -55,6 +55,16 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
       </p>
     </div>
   )
+}
+
+/**
+ * The earlier of two ISO (YYYY-MM-DD) dates, ignoring unknowns. ISO dates sort
+ * lexicographically, so a string compare is correct and timezone-free.
+ */
+function earliestDate(a: string | null, b: string | null): string | null {
+  if (!a) return b
+  if (!b) return a
+  return a < b ? a : b
 }
 
 export default function ScanPage() {
@@ -105,7 +115,13 @@ export default function ScanPage() {
   const [personalMatch, setPersonalMatch] = useState(false)
   // Duplicate guard: an inventory row the user ALREADY has for this exact code, so
   // a re-scan can restock it instead of silently creating a second row.
-  const [duplicate, setDuplicate] = useState<{ id: string; name: string; quantity: number } | null>(null)
+  const [duplicate, setDuplicate] = useState<{
+    id: string
+    name: string
+    quantity: number
+    expirationDate: string | null
+    lotNumber: string | null
+  } | null>(null)
 
   const { addProduct, updateProduct } = useStore()
   const router = useRouter()
@@ -354,28 +370,44 @@ export default function ScanPage() {
     setPersonalMatch(false)
     setDuplicate(null)
 
-    // Duplicate guard: does this exact code already exist in YOUR inventory? RLS
-    // scopes this to the signed-in user. If so we offer a restock instead of
-    // quietly creating a second row for the same box.
-    for (const [column, value] of [
-      ['barcode', parsed.gtin],
-      ['pzn', parsed.pzn],
-    ] as const) {
-      if (!value) continue
-      try {
-        const { data: existing } = await supabase
-          .from('supplies')
-          .select('id, name, quantity')
-          .eq(column, value)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (existing?.id) {
-          setDuplicate({ id: existing.id, name: existing.name, quantity: Number(existing.quantity) || 0 })
-          break
+    // Whose supplies may these queries touch? RLS alone is NOT enough: an accepted
+    // caregiver can read AND update the person they care for, so an unscoped match
+    // could surface (and restock) the wrong account's row. Always scope by user_id.
+    const { data: { user: scanUser } } = await supabase.auth.getUser()
+    const ownerId = scanUser?.id ?? null
+
+    // Duplicate guard: does this exact code already exist in YOUR inventory? If so
+    // we offer a restock instead of quietly creating a second row for the same box.
+    // Expiry and lot come along so we can tell a re-scan of the SAME box apart from
+    // a genuinely different one (see mixedBox below).
+    if (ownerId) {
+      for (const [column, value] of [
+        ['barcode', parsed.gtin],
+        ['pzn', parsed.pzn],
+      ] as const) {
+        if (!value) continue
+        try {
+          const { data: existing } = await supabase
+            .from('supplies')
+            .select('id, name, quantity, expiration_date, lot_number')
+            .eq('user_id', ownerId)
+            .eq(column, value)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (existing?.id) {
+            setDuplicate({
+              id: existing.id,
+              name: existing.name,
+              quantity: Number(existing.quantity) || 0,
+              expirationDate: existing.expiration_date ?? null,
+              lotNumber: existing.lot_number ?? null,
+            })
+            break
+          }
+        } catch {
+          // Best-effort: a pre-migration column must never block the scan.
         }
-      } catch {
-        // Best-effort: a pre-migration column must never block the scan.
       }
     }
 
@@ -415,7 +447,7 @@ export default function ScanPage() {
     // whichever the box carried. Your own confirmed product is reliable, so we
     // reuse it; this is how your catalog grows as you scan, with no maintainer step.
     // (The barcode/pzn columns may be pre-migration; a miss is fine.)
-    if (!matched && (parsed.gtin || parsed.pzn)) {
+    if (!matched && ownerId && (parsed.gtin || parsed.pzn)) {
       const priorLookups: [column: string, value: string][] = []
       if (parsed.gtin) priorLookups.push(['barcode', parsed.gtin])
       if (parsed.pzn) priorLookups.push(['pzn', parsed.pzn])
@@ -426,6 +458,7 @@ export default function ScanPage() {
             .from('supplies')
             .select('name, brand, usage_rate_per_day')
             .not('name', 'is', null)
+            .eq('user_id', ownerId)
             .eq(column, value)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -447,14 +480,33 @@ export default function ScanPage() {
     setStep('BARCODE_CONFIRM')
   }
 
-  /** Restock the existing inventory row instead of adding a duplicate one. */
+  /**
+   * Restock the existing inventory row instead of adding a duplicate one.
+   *
+   * A merged row physically holds BOTH boxes, so it must describe the worse case:
+   * it carries the EARLIEST expiry (claiming the later one would over-promise on
+   * the older stock, breaking the depletion engine's "never more optimistic than
+   * reality" rule), and it stops claiming a single lot once two lots are mixed
+   * (a recall check must never read a lot the row may not actually contain).
+   */
   const handleRestockDuplicate = async () => {
     if (!duplicate) return
     const added = typeof quantity === 'number' && quantity > 0 ? quantity : 1
     setSaving(true)
     setError(null)
     try {
-      await updateProduct(duplicate.id, { quantity: duplicate.quantity + added })
+      const mergedExpiry = earliestDate(duplicate.expirationDate, expirationDate || null)
+      await updateProduct(duplicate.id, {
+        quantity: duplicate.quantity + added,
+        ...(mergedExpiry !== duplicate.expirationDate ? { expirationDate: mergedExpiry } : {}),
+      })
+      if (mixedLot) {
+        try {
+          await supabase.from('supplies').update({ lot_number: null }).eq('id', duplicate.id)
+        } catch {
+          // Best-effort: an un-migrated lot column must never fail the restock.
+        }
+      }
       void logActivity('supply_added', duplicate.name)
       router.push('/dashboard')
     } catch (err) {
@@ -489,6 +541,16 @@ export default function ScanPage() {
       setSaving(false)
     }
   }
+
+  // Is the scanned box actually the SAME physical box as the stored one? A
+  // different expiry or lot means it is not: merging them into one row destroys
+  // per-box expiry (FEFO rotation) and lot traceability (recall checks), so we
+  // steer the user to a separate entry instead of blending them silently.
+  const mixedExpiry = !!(
+    duplicate && expirationDate && duplicate.expirationDate && expirationDate !== duplicate.expirationDate
+  )
+  const mixedLot = !!(duplicate && scanned?.lot && duplicate.lotNumber && scanned.lot !== duplicate.lotNumber)
+  const mixedBox = mixedExpiry || mixedLot
 
   const scannedCodeLabel = scanned?.gtin || (scanned?.pzn ? `PZN ${scanned.pzn}` : '') || scanned?.raw || ''
 
@@ -904,18 +966,27 @@ export default function ScanPage() {
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="w-4 h-4 text-caution shrink-0 mt-0.5" aria-hidden="true" />
                     <p className="text-sm text-ink">
-                      {t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
+                      {mixedBox
+                        ? t('scan.duplicateMixedBody', { name: duplicate.name, count: duplicate.quantity })
+                        : t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
                     </p>
                   </div>
                   <button
                     onClick={handleRestockDuplicate}
                     disabled={saving}
-                    className="w-full rounded-xl bg-caution py-3 font-semibold text-white transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-caution"
+                    className={cn(
+                      'w-full rounded-xl py-3 font-semibold transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-caution',
+                      mixedBox
+                        ? 'border border-line bg-surface text-muted hover:text-ink'
+                        : 'bg-caution text-white'
+                    )}
                   >
-                    {t('scan.duplicateRestock', {
-                      count: typeof quantity === 'number' ? quantity : 1,
-                      total: duplicate.quantity + (typeof quantity === 'number' ? quantity : 1),
-                    })}
+                    {mixedBox
+                      ? t('scan.duplicateMergeAnyway')
+                      : t('scan.duplicateRestock', {
+                          count: typeof quantity === 'number' ? quantity : 1,
+                          total: duplicate.quantity + (typeof quantity === 'number' ? quantity : 1),
+                        })}
                   </button>
                 </div>
               )}
