@@ -90,6 +90,21 @@ function withRunway(product: Product): Product {
   return { ...product, remainingDays: effectiveRunwayDays(product) }
 }
 
+/**
+ * Thrown by `updateProduct` when an `ifQuantityIs` precondition no longer holds,
+ * i.e. the row changed under us and the caller's arithmetic is stale. Callers
+ * should re-read and recompute rather than retrying the same numbers.
+ */
+export const STALE_QUANTITY_ERROR = 'stale-quantity'
+
+export interface UpdateProductOptions {
+  /**
+   * Only apply the write if the row's quantity is still this value. Pass the
+   * number the update was computed from to make a read-modify-write safe.
+   */
+  ifQuantityIs?: number
+}
+
 interface T1DStore {
   inventory: Product[];
   /** The EFFECTIVE buffer every runway/alert surface reads: the steady base, plus
@@ -108,7 +123,11 @@ interface T1DStore {
   // Actions
   setInventory: (products: Product[]) => void;
   addProduct: (product: Product) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  updateProduct: (
+    id: string,
+    updates: Partial<Product>,
+    opts?: UpdateProductOptions,
+  ) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
   /** Sets the steady BASE buffer (persisted); the effective value re-derives. */
   setSafetyBufferDays: (days: number) => void;
@@ -136,7 +155,7 @@ export const useStore = create<T1DStore>()((set) => ({
     inventory: [...state.inventory, withRunway(product)]
   })),
 
-  updateProduct: async (id, updates) => {
+  updateProduct: async (id, updates, opts) => {
     const supabase = createClient()
 
     // Only send the columns that actually changed so an expiration edit
@@ -148,14 +167,31 @@ export const useStore = create<T1DStore>()((set) => ({
     if (updates.expirationDate !== undefined)
       payload.expiration_date = updates.expirationDate
 
-    const { error } = await supabase
-      .from('supplies')
-      .update(payload)
-      .eq('id', id)
+    // Optimistic concurrency (compare-and-swap). When the caller passes the
+    // quantity its arithmetic was based on, the write only lands if the row STILL
+    // holds that value. Without this a read-modify-write ("old + 40") silently
+    // clobbers anything that changed in between — another device, a caregiver, or
+    // the auto-depletion sync — which for a supply count means the app can end up
+    // confidently reporting stock the user does not have.
+    if (opts?.ifQuantityIs !== undefined) {
+      const { data: written, error: casError } = await supabase
+        .from('supplies')
+        .update(payload)
+        .eq('id', id)
+        .eq('quantity', opts.ifQuantityIs)
+        .select('id')
+      if (casError) throw new Error(casError.message)
+      if (!written || written.length === 0) throw new Error(STALE_QUANTITY_ERROR)
+    } else {
+      const { error } = await supabase
+        .from('supplies')
+        .update(payload)
+        .eq('id', id)
 
-    // A failed core write must reach the caller — the UI may never report
-    // success (or update local state) for a save that didn't happen.
-    if (error) throw new Error(error.message)
+      // A failed core write must reach the caller — the UI may never report
+      // success (or update local state) for a save that didn't happen.
+      if (error) throw new Error(error.message)
+    }
 
     // Optional columns (usage rate + refill cycle) are added by supabase/setup.sql.
     // Write them separately and best-effort so a "column does not exist" error

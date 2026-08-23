@@ -4,6 +4,9 @@ import {
   duplicateLookupKeys,
   compareBox,
   planRestock,
+  findByNameAndBrand,
+  normalizeSupplyName,
+  hidesInUseClock,
   type StoredSupply,
 } from './duplicateSupply'
 
@@ -112,5 +115,58 @@ describe('planRestock', () => {
     expect(planRestock(stored, {}, 0).quantity).toBe(11)
     expect(planRestock(stored, {}, -5).quantity).toBe(11)
     expect(planRestock(stored, {}, Number.NaN).quantity).toBe(11)
+  })
+})
+
+describe('findByNameAndBrand (items with no barcode)', () => {
+  const rows = [
+    { id: 'a', name: 'Omnipod 5 Pods', brand: 'Insulet' },
+    { id: 'b', name: 'Humalog 100', brand: 'Eli Lilly' },
+    { id: 'c', name: 'Test Strips', brand: null },
+  ]
+
+  it('matches regardless of case, spacing and punctuation', () => {
+    expect(findByNameAndBrand(rows, 'omnipod-5  PODS', 'insulet')?.id).toBe('a')
+    expect(normalizeSupplyName('Omnipod 5 Pods')).toBe('omnipod5pods')
+  })
+
+  it('treats a missing brand on either side as unknown, not a mismatch', () => {
+    expect(findByNameAndBrand(rows, 'Omnipod 5 Pods')?.id).toBe('a')
+    expect(findByNameAndBrand(rows, 'Test Strips', 'Roche')?.id).toBe('c')
+  })
+
+  it('refuses a match when two KNOWN brands disagree', () => {
+    expect(findByNameAndBrand(rows, 'Humalog 100', 'Novo Nordisk')).toBeNull()
+  })
+
+  it('never guesses on a partial or empty name', () => {
+    expect(findByNameAndBrand(rows, 'Humalog')).toBeNull()
+    expect(findByNameAndBrand(rows, '')).toBeNull()
+    expect(findByNameAndBrand(rows, '   ')).toBeNull()
+  })
+})
+
+describe('hidesInUseClock', () => {
+  const openVial: StoredSupply = {
+    quantity: 1,
+    expirationDate: null,
+    lotNumber: null,
+    openedDate: '2026-08-01',
+    inUseDays: 28,
+  }
+
+  it('flags a restock that pushes an OPEN single vial past one unit', () => {
+    // depletion.ts stops applying the discard cap once quantity > 1.
+    expect(hidesInUseClock(openVial, 4)).toBe(true)
+  })
+
+  it('stays quiet when the clock keeps applying', () => {
+    expect(hidesInUseClock({ ...openVial, quantity: 3 }, 2)).toBe(false) // already > 1
+  })
+
+  it('stays quiet when the item runs no in-use clock', () => {
+    expect(hidesInUseClock({ ...openVial, openedDate: null }, 4)).toBe(false)
+    expect(hidesInUseClock({ ...openVial, inUseDays: null }, 4)).toBe(false)
+    expect(hidesInUseClock({ ...openVial, inUseDays: 0 }, 4)).toBe(false)
   })
 })

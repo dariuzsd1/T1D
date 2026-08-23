@@ -23,6 +23,10 @@ export interface StoredSupply {
   /** ISO YYYY-MM-DD, or null when the row has no expiry on file. */
   expirationDate: string | null
   lotNumber: string | null
+  /** When the current vial/pen was opened, if this item runs an in-use clock. */
+  openedDate?: string | null
+  /** The discard window once opened (28 days for most insulins). */
+  inUseDays?: number | null
 }
 
 /** What was just read off the box being scanned. */
@@ -107,4 +111,54 @@ export function planRestock(
   // `merged` can only differ from the stored value by being a real, earlier date.
   if (merged !== stored.expirationDate && merged) plan.expirationDate = merged
   return plan
+}
+
+/** Lowercase and strip everything but letters and digits, so "Omnipod 5",
+ *  "omnipod5" and "OMNIPOD-5" collapse to one key. Mirrors the catalog's rule. */
+export function normalizeSupplyName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+export interface NamedSupply {
+  name: string
+  brand?: string | null
+}
+
+/**
+ * Find an existing row for the same product by name, for items that carry no
+ * barcode (added by hand or from the catalog browser). This is weaker evidence
+ * than a code match, so it stays deliberately strict: names must be EXACTLY equal
+ * once normalized, and two known-but-different brands disqualify the match. A
+ * missing brand on either side is treated as "unknown", never as a mismatch.
+ */
+export function findByNameAndBrand<T extends NamedSupply>(
+  rows: T[],
+  name: string,
+  brand?: string | null
+): T | null {
+  const target = normalizeSupplyName(name)
+  if (!target) return null
+  const wantBrand = normalizeSupplyName(brand ?? '')
+  for (const row of rows) {
+    if (normalizeSupplyName(row.name ?? '') !== target) continue
+    const rowBrand = normalizeSupplyName(row.brand ?? '')
+    if (wantBrand && rowBrand && wantBrand !== rowBrand) continue
+    return row
+  }
+  return null
+}
+
+/**
+ * Would merging this box silently switch OFF the opened-vial discard clock?
+ *
+ * `depletion.effectiveRunwayDays` only lets the in-use clock cap the runway while
+ * `quantity <= 1` (with sealed spares on hand the discard date is not the runway,
+ * so folding it in would fire a false "reorder now"). That is the right rule, but
+ * it means a restock that pushes an OPEN single vial past 1 quietly removes the
+ * discard date from the headline number. The user should be told, not surprised.
+ */
+export function hidesInUseClock(stored: StoredSupply, addQuantity: number): boolean {
+  if (!stored.openedDate || !stored.inUseDays || stored.inUseDays <= 0) return false
+  const added = Number.isFinite(addQuantity) && addQuantity > 0 ? Math.floor(addQuantity) : 1
+  return stored.quantity <= 1 && stored.quantity + added > 1
 }

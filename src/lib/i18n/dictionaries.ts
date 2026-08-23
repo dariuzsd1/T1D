@@ -1007,6 +1007,8 @@ export const en = {
   'scan.duplicateRestock': 'Add {count} to what I have ({total} total)',
   'scan.duplicateMixedBody': "You already have {name} ({count} in stock), but this box has a different expiration date or lot number. Adding it as a separate entry keeps each box's own expiry and lot, which is safer for rotation and recall checks.",
   'scan.duplicateMergeAnyway': 'Combine anyway (uses the earliest expiry)',
+  'scan.duplicateNameBody': 'This looks like {name}, which you already have ({count} in stock). It was matched by name rather than by a barcode, so check it is the same product before restocking.',
+  'scan.duplicateInUseNote': 'Heads up: one of these is already open and on its discard clock. Once you hold more than one, that discard date stops setting the runway and is shown separately on the item instead.',
   'scan.quantity': 'Quantity',
   'scan.expirationOptional': 'Expiration (optional)',
   'scan.checkingDuration': 'Checking how long this lasts…',
@@ -1029,6 +1031,7 @@ export const en = {
   'scan.errSaveFailed': 'Failed to save: {error}',
   'scan.errEnterName': 'Please enter the product name.',
   'scan.errGenericSave': 'Failed to save supply',
+  'scan.errChangedTryAgain': 'Your supplies changed a moment ago. Check the new count and try again.',
   'scan.photoNoBarcode': "We couldn't find a barcode in that photo. Try a closer, sharper shot of the barcode itself, or enter the details below.",
 
   // ── starter kit modal (Quick start, reachable from scan) ──
@@ -2175,6 +2178,8 @@ export const fr: Record<TKey, string> = {
   'scan.duplicateRestock': "Ajouter {count} à ce que j'ai ({total} au total)",
   'scan.duplicateMixedBody': "Vous avez déjà {name} ({count} en stock), mais cette boîte a une date de péremption ou un numéro de lot différent. L'ajouter comme entrée distincte conserve la péremption et le lot de chaque boîte, ce qui est plus sûr pour la rotation et les rappels de lots.",
   'scan.duplicateMergeAnyway': 'Regrouper quand même (utilise la péremption la plus proche)',
+  'scan.duplicateNameBody': "Cela ressemble à {name}, que vous avez déjà ({count} en stock). La correspondance se fait par le nom et non par un code-barres, alors vérifiez qu'il s'agit bien du même produit avant de réapprovisionner.",
+  'scan.duplicateInUseNote': "À noter : l'un d'eux est déjà ouvert et suit son délai d'utilisation. Dès que vous en avez plus d'un, cette date limite ne détermine plus l'autonomie et s'affiche séparément sur l'article.",
   'scan.quantity': 'Quantité',
   'scan.expirationOptional': 'Péremption (facultatif)',
   'scan.checkingDuration': 'Vérification de la durée…',
@@ -2197,6 +2202,7 @@ export const fr: Record<TKey, string> = {
   'scan.errSaveFailed': "Échec de l'enregistrement : {error}",
   'scan.errEnterName': 'Veuillez saisir le nom du produit.',
   'scan.errGenericSave': "Échec de l'enregistrement de la fourniture",
+  'scan.errChangedTryAgain': 'Vos fournitures ont changé il y a un instant. Vérifiez le nouveau total et réessayez.',
   'scan.photoNoBarcode': "Nous n'avons pas trouvé de code-barres dans cette photo. Essayez une photo plus rapprochée et plus nette du code-barres, ou saisissez les informations ci-dessous.",
 
   // ── starter kit modal (Quick start, reachable from scan) ──
@@ -3364,6 +3370,8 @@ export const es: Record<TKey, string> = {
   'scan.duplicateRestock': 'Añadir {count} a lo que tengo ({total} en total)',
   'scan.duplicateMixedBody': 'Ya tienes {name} ({count} en stock), pero esta caja tiene una fecha de caducidad o un número de lote diferente. Añadirla como entrada separada conserva la caducidad y el lote de cada caja, lo cual es más seguro para la rotación y los avisos de retirada.',
   'scan.duplicateMergeAnyway': 'Combinar de todos modos (usa la caducidad más próxima)',
+  'scan.duplicateNameBody': 'Esto parece {name}, que ya tienes ({count} en stock). La coincidencia es por nombre y no por código de barras, así que comprueba que sea el mismo producto antes de reabastecer.',
+  'scan.duplicateInUseNote': 'Ten en cuenta: uno de estos ya está abierto y en su plazo de descarte. Cuando tengas más de uno, esa fecha de descarte deja de definir la autonomía y se muestra por separado en el artículo.',
   'scan.quantity': 'Cantidad',
   'scan.expirationOptional': 'Vencimiento (opcional)',
   'scan.checkingDuration': 'Calculando cuánto dura esto…',
@@ -3387,6 +3395,7 @@ export const es: Record<TKey, string> = {
   'scan.errSaveFailed': 'Error al guardar: {error}',
   'scan.errEnterName': 'Ingresa el nombre del producto.',
   'scan.errGenericSave': 'Error al guardar el suministro',
+  'scan.errChangedTryAgain': 'Tus suministros cambiaron hace un momento. Revisa el nuevo total e inténtalo de nuevo.',
   'scan.photoNoBarcode':
     "No pudimos encontrar un código de barras en esa foto. Prueba con una toma más cercana y nítida del código, o ingresa los datos abajo.",
 

@@ -18,7 +18,7 @@ import {
   Sparkles,
   AlertCircle,
 } from 'lucide-react'
-import { useStore } from '@/lib/store'
+import { STALE_QUANTITY_ERROR, useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
 import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
@@ -31,7 +31,13 @@ import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
 import { cn, errorMessage } from '@/lib/utils'
-import { compareBox, duplicateLookupKeys, planRestock } from '@/lib/duplicateSupply'
+import {
+  compareBox,
+  duplicateLookupKeys,
+  findByNameAndBrand,
+  hidesInUseClock,
+  planRestock,
+} from '@/lib/duplicateSupply'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -112,6 +118,10 @@ export default function ScanPage() {
     quantity: number
     expirationDate: string | null
     lotNumber: string | null
+    openedDate?: string | null
+    inUseDays?: number | null
+    /** A code match is proof; a name match is only a strong suggestion. */
+    matchedBy: 'code' | 'name'
   } | null>(null)
 
   const { addProduct, updateProduct } = useStore()
@@ -369,6 +379,7 @@ export default function ScanPage() {
 
     // Duplicate guard: does this exact code already exist in YOUR inventory? If so
     // we offer a restock instead of quietly creating a second row for the same box.
+    let foundDuplicate = false
     // Expiry and lot come along so we can tell a re-scan of the SAME box apart from
     // a genuinely different one (see mixedBox below).
     if (ownerId) {
@@ -376,7 +387,7 @@ export default function ScanPage() {
         try {
           const { data: existing } = await supabase
             .from('supplies')
-            .select('id, name, quantity, expiration_date, lot_number')
+            .select('id, name, quantity, expiration_date, lot_number, opened_date, in_use_days')
             .eq('user_id', ownerId)
             .eq(column, value)
             .order('updated_at', { ascending: false })
@@ -389,7 +400,11 @@ export default function ScanPage() {
               quantity: Number(existing.quantity) || 0,
               expirationDate: existing.expiration_date ?? null,
               lotNumber: existing.lot_number ?? null,
+              openedDate: existing.opened_date ?? null,
+              inUseDays: existing.in_use_days ?? null,
+              matchedBy: 'code',
             })
+            foundDuplicate = true
             break
           }
         } catch {
@@ -403,6 +418,8 @@ export default function ScanPage() {
     // the catalog may be keyed by either, so we must try both, not just one. Pre-fill
     // name/brand/quantity/wear rate on a hit — every field stays editable. A miss
     // isn't an error.
+    let resolvedName = ''
+    let resolvedBrand = ''
     const lookupQueries: string[] = []
     if (parsed.gtin) lookupQueries.push(`gtin=${encodeURIComponent(parsed.gtin)}`)
     if (parsed.pzn) lookupQueries.push(`pzn=${encodeURIComponent(parsed.pzn)}`)
@@ -415,6 +432,8 @@ export default function ScanPage() {
         if (res.ok) {
           const product = await res.json()
           if (product) {
+            resolvedName = product.product_name
+            resolvedBrand = product.brand ?? ''
             setBcName(product.product_name)
             if (product.brand) setBcBrand(product.brand)
             if (product.units_per_box) setQuantity(product.units_per_box)
@@ -448,6 +467,8 @@ export default function ScanPage() {
             .limit(1)
             .maybeSingle()
           if (prior?.name) {
+            resolvedName = prior.name
+            resolvedBrand = prior.brand ?? ''
             setBcName(prior.name)
             if (prior.brand) setBcBrand(prior.brand)
             const rate = Number(prior.usage_rate_per_day)
@@ -461,6 +482,37 @@ export default function ScanPage() {
       }
     }
 
+    // P5 name fallback: a supply added by hand or from the catalog browser has no
+    // code stored, so the probe above cannot see it. Match those code-less rows on
+    // an exact normalized name (and brand, when both are known). Rows that DO carry
+    // a code are deliberately excluded: a different code means a different box, so
+    // matching those by name would merge things that are not the same.
+    if (!foundDuplicate && ownerId && resolvedName) {
+      try {
+        const { data: rows } = await supabase
+          .from('supplies')
+          .select('id, name, brand, quantity, expiration_date, lot_number, opened_date, in_use_days, barcode, pzn')
+          .eq('user_id', ownerId)
+          .not('name', 'is', null)
+        const codeless = (rows ?? []).filter((r) => !r.barcode && !r.pzn)
+        const hit = findByNameAndBrand(codeless, resolvedName, resolvedBrand)
+        if (hit) {
+          setDuplicate({
+            id: hit.id,
+            name: hit.name,
+            quantity: Number(hit.quantity) || 0,
+            expirationDate: hit.expiration_date ?? null,
+            lotNumber: hit.lot_number ?? null,
+            openedDate: hit.opened_date ?? null,
+            inUseDays: hit.in_use_days ?? null,
+            matchedBy: 'name',
+          })
+        }
+      } catch {
+        // Best-effort: the name fallback must never block a scan.
+      }
+    }
+
     setStep('BARCODE_CONFIRM')
   }
 
@@ -471,26 +523,75 @@ export default function ScanPage() {
    * Restock the existing inventory row instead of adding a duplicate one. The
    * merge rules (earliest expiry wins, a mixed lot is dropped) live in
    * `src/lib/duplicateSupply.ts`, where they are unit-tested.
+   *
+   * The row is re-read immediately before writing and the write carries an
+   * `ifQuantityIs` precondition, so the "+N" arithmetic is always based on the
+   * current count and can never silently overwrite a change made in between (a
+   * second device, a caregiver, or the auto-depletion sync). If the row does
+   * shift under us we recompute once, then hand the user an honest message
+   * rather than guessing at a total.
    */
   const handleRestockDuplicate = async () => {
     if (!duplicate) return
     setSaving(true)
     setError(null)
     try {
-      const plan = planRestock(duplicate, scannedBox, typeof quantity === 'number' ? quantity : 1)
-      await updateProduct(duplicate.id, {
-        quantity: plan.quantity,
-        ...(plan.expirationDate ? { expirationDate: plan.expirationDate } : {}),
-      })
-      if (plan.clearLot) {
-        try {
-          await supabase.from('supplies').update({ lot_number: null }).eq('id', duplicate.id)
-        } catch {
-          // Best-effort: an un-migrated lot column must never fail the restock.
-        }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.id) {
+        setError(t('scan.errNotAuthenticated'))
+        return
       }
-      void logActivity('supply_added', duplicate.name)
-      router.push('/dashboard')
+      const add = typeof quantity === 'number' ? quantity : 1
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data: fresh } = await supabase
+          .from('supplies')
+          .select('quantity, expiration_date, lot_number')
+          .eq('id', duplicate.id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (!fresh) throw new Error(t('scan.errGenericSave'))
+
+        const current = {
+          quantity: Number(fresh.quantity) || 0,
+          expirationDate: fresh.expiration_date ?? null,
+          lotNumber: fresh.lot_number ?? null,
+        }
+        const plan = planRestock(current, scannedBox, add)
+
+        try {
+          await updateProduct(
+            duplicate.id,
+            {
+              quantity: plan.quantity,
+              ...(plan.expirationDate ? { expirationDate: plan.expirationDate } : {}),
+            },
+            { ifQuantityIs: current.quantity },
+          )
+        } catch (err) {
+          if (err instanceof Error && err.message === STALE_QUANTITY_ERROR && attempt === 0) {
+            continue // the count moved; re-read and recompute from the new truth
+          }
+          if (err instanceof Error && err.message === STALE_QUANTITY_ERROR) {
+            // Still moving. Show the user the real number instead of a guess.
+            setDuplicate({ ...duplicate, ...current })
+            setError(t('scan.errChangedTryAgain'))
+            return
+          }
+          throw err
+        }
+
+        if (plan.clearLot) {
+          try {
+            await supabase.from('supplies').update({ lot_number: null }).eq('id', duplicate.id)
+          } catch {
+            // Best-effort: an un-migrated lot column must never fail the restock.
+          }
+        }
+        void logActivity('supply_added', duplicate.name)
+        router.push('/dashboard')
+        return
+      }
     } catch (err) {
       setError(errorMessage(err, t('scan.errGenericSave')))
     } finally {
@@ -529,6 +630,13 @@ export default function ScanPage() {
   // per-box expiry (FEFO rotation) and lot traceability (recall checks), so we
   // steer the user to a separate entry instead of blending them silently.
   const mixedBox = duplicate ? compareBox(duplicate, scannedBox).differentBox : false
+  // A name match is a suggestion, not proof, so it gets the same restrained
+  // treatment as a box whose expiry or lot disagrees.
+  const cautiousMerge = mixedBox || duplicate?.matchedBy === 'name'
+  // P6: would this restock quietly stop the opened-vial discard clock capping the runway?
+  const inUseWarning = duplicate
+    ? hidesInUseClock(duplicate, typeof quantity === 'number' ? quantity : 1)
+    : false
 
   const scannedCodeLabel = scanned?.gtin || (scanned?.pzn ? `PZN ${scanned.pzn}` : '') || scanned?.raw || ''
 
@@ -944,17 +1052,22 @@ export default function ScanPage() {
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="w-4 h-4 text-caution shrink-0 mt-0.5" aria-hidden="true" />
                     <p className="text-sm text-ink">
-                      {mixedBox
-                        ? t('scan.duplicateMixedBody', { name: duplicate.name, count: duplicate.quantity })
-                        : t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
+                      {duplicate.matchedBy === 'name'
+                        ? t('scan.duplicateNameBody', { name: duplicate.name, count: duplicate.quantity })
+                        : mixedBox
+                          ? t('scan.duplicateMixedBody', { name: duplicate.name, count: duplicate.quantity })
+                          : t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
                     </p>
                   </div>
+                  {inUseWarning && (
+                    <p className="text-xs leading-relaxed text-muted">{t('scan.duplicateInUseNote')}</p>
+                  )}
                   <button
                     onClick={handleRestockDuplicate}
                     disabled={saving}
                     className={cn(
                       'w-full rounded-xl py-3 font-semibold transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-caution',
-                      mixedBox
+                      cautiousMerge
                         ? 'border border-line bg-surface text-muted hover:text-ink'
                         : 'bg-caution text-white'
                     )}
