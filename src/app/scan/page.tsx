@@ -31,6 +31,7 @@ import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
 import { cn, errorMessage } from '@/lib/utils'
+import { compareBox, duplicateLookupKeys, planRestock } from '@/lib/duplicateSupply'
 
 // Three honest intake paths: scan a barcode, browse the catalog, or type manually.
 // We never auto-"recognize" a photo and fabricate a product/confidence (CLAUDE.md §9).
@@ -55,16 +56,6 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
       </p>
     </div>
   )
-}
-
-/**
- * The earlier of two ISO (YYYY-MM-DD) dates, ignoring unknowns. ISO dates sort
- * lexicographically, so a string compare is correct and timezone-free.
- */
-function earliestDate(a: string | null, b: string | null): string | null {
-  if (!a) return b
-  if (!b) return a
-  return a < b ? a : b
 }
 
 export default function ScanPage() {
@@ -381,11 +372,7 @@ export default function ScanPage() {
     // Expiry and lot come along so we can tell a re-scan of the SAME box apart from
     // a genuinely different one (see mixedBox below).
     if (ownerId) {
-      for (const [column, value] of [
-        ['barcode', parsed.gtin],
-        ['pzn', parsed.pzn],
-      ] as const) {
-        if (!value) continue
+      for (const [column, value] of duplicateLookupKeys(parsed)) {
         try {
           const { data: existing } = await supabase
             .from('supplies')
@@ -448,10 +435,7 @@ export default function ScanPage() {
     // reuse it; this is how your catalog grows as you scan, with no maintainer step.
     // (The barcode/pzn columns may be pre-migration; a miss is fine.)
     if (!matched && ownerId && (parsed.gtin || parsed.pzn)) {
-      const priorLookups: [column: string, value: string][] = []
-      if (parsed.gtin) priorLookups.push(['barcode', parsed.gtin])
-      if (parsed.pzn) priorLookups.push(['pzn', parsed.pzn])
-      for (const [column, value] of priorLookups) {
+      for (const [column, value] of duplicateLookupKeys(parsed)) {
         if (matched) break
         try {
           const { data: prior } = await supabase
@@ -480,27 +464,25 @@ export default function ScanPage() {
     setStep('BARCODE_CONFIRM')
   }
 
+  /** What the scanner (and any edit the user made) says about the box in hand. */
+  const scannedBox = { expirationDate: expirationDate || null, lot: scanned?.lot ?? null }
+
   /**
-   * Restock the existing inventory row instead of adding a duplicate one.
-   *
-   * A merged row physically holds BOTH boxes, so it must describe the worse case:
-   * it carries the EARLIEST expiry (claiming the later one would over-promise on
-   * the older stock, breaking the depletion engine's "never more optimistic than
-   * reality" rule), and it stops claiming a single lot once two lots are mixed
-   * (a recall check must never read a lot the row may not actually contain).
+   * Restock the existing inventory row instead of adding a duplicate one. The
+   * merge rules (earliest expiry wins, a mixed lot is dropped) live in
+   * `src/lib/duplicateSupply.ts`, where they are unit-tested.
    */
   const handleRestockDuplicate = async () => {
     if (!duplicate) return
-    const added = typeof quantity === 'number' && quantity > 0 ? quantity : 1
     setSaving(true)
     setError(null)
     try {
-      const mergedExpiry = earliestDate(duplicate.expirationDate, expirationDate || null)
+      const plan = planRestock(duplicate, scannedBox, typeof quantity === 'number' ? quantity : 1)
       await updateProduct(duplicate.id, {
-        quantity: duplicate.quantity + added,
-        ...(mergedExpiry !== duplicate.expirationDate ? { expirationDate: mergedExpiry } : {}),
+        quantity: plan.quantity,
+        ...(plan.expirationDate ? { expirationDate: plan.expirationDate } : {}),
       })
-      if (mixedLot) {
+      if (plan.clearLot) {
         try {
           await supabase.from('supplies').update({ lot_number: null }).eq('id', duplicate.id)
         } catch {
@@ -546,11 +528,7 @@ export default function ScanPage() {
   // different expiry or lot means it is not: merging them into one row destroys
   // per-box expiry (FEFO rotation) and lot traceability (recall checks), so we
   // steer the user to a separate entry instead of blending them silently.
-  const mixedExpiry = !!(
-    duplicate && expirationDate && duplicate.expirationDate && expirationDate !== duplicate.expirationDate
-  )
-  const mixedLot = !!(duplicate && scanned?.lot && duplicate.lotNumber && scanned.lot !== duplicate.lotNumber)
-  const mixedBox = mixedExpiry || mixedLot
+  const mixedBox = duplicate ? compareBox(duplicate, scannedBox).differentBox : false
 
   const scannedCodeLabel = scanned?.gtin || (scanned?.pzn ? `PZN ${scanned.pzn}` : '') || scanned?.raw || ''
 
