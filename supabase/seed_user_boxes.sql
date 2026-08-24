@@ -193,6 +193,10 @@ update public.products set brand = 'Xeris Pharmaceuticals'
   where product_name = 'Gvoke HypoPen (glucagon)' and brand <> 'Xeris Pharmaceuticals';
 update public.products set brand = 'Torbot'
   where product_name = 'Skin Tac Adhesive Wipes' and brand <> 'Torbot';
+update public.products set brand = 'Solventum'
+  where product_name = 'Tegaderm Transparent Dressing' and brand <> 'Solventum';
+update public.products set brand = 'ConvaTec'
+  where product_name = 'Comfort Infusion Set' and brand <> 'ConvaTec';
 
 -- Medtronic spun its diabetes business out as MiniMed, listed on Nasdaq
 -- 2026-03-06. Rebrand those rows, but keep "medtronic" searchable: boxes already
