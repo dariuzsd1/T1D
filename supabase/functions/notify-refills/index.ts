@@ -98,9 +98,9 @@ function reorderThresholdDays(
   return bufferDays + Math.max(0, leadTimeDays)
 }
 
-/** The per-supply delivery time, else the shared default. 0 is honoured. */
-function effectiveLeadTimeDays(leadTimeDays: number | null): number {
-  const v = leadTimeDays ?? DEFAULT_SHIPPING_LEAD_TIME_DAYS
+/** The per-supply delivery time, else the account default. 0 is honoured. */
+function effectiveLeadTimeDays(leadTimeDays: number | null, accountDefaultDays: number): number {
+  const v = leadTimeDays ?? accountDefaultDays
   return Number.isFinite(v) && v > 0 ? v : 0
 }
 
@@ -340,6 +340,7 @@ interface ProfileRow {
   id: string
   timezone: string | null
   safety_buffer_days: number | null
+  shipping_lead_time_days: number | null
 }
 interface TokenRow {
   id: string
@@ -404,7 +405,7 @@ Deno.serve(async (req) => {
       'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days, last_ordered_date, lead_time_days'
     ),
     supabase.from('notification_prefs').select('*'),
-    supabase.from('profiles').select('id, timezone, safety_buffer_days'),
+    supabase.from('profiles').select('id, timezone, safety_buffer_days, shipping_lead_time_days'),
     supabase.from('notification_log').select('user_id, supply_id, kind').gte('sent_at', since),
   ])
   for (const r of [tokensRes, suppliesRes, prefsRes, profilesRes] as const) {
@@ -447,6 +448,9 @@ Deno.serve(async (req) => {
     // stored safety buffer, else the app default. The per-supply delivery time is
     // added on top of this per item, below, exactly as the UI does.
     const lead = prefs?.lead_time_days ?? profile?.safety_buffer_days ?? DEFAULT_SAFETY_BUFFER_DAYS
+    // The user's account-wide delivery default, now stored on the profile so the
+    // server sees the same number the app does. Per-supply values still win.
+    const accountLead = profile?.shipping_lead_time_days ?? DEFAULT_SHIPPING_LEAD_TIME_DAYS
 
     for (const s of supplies.filter((x) => x.user_id === userId)) {
       const input: RunwayInput = {
@@ -456,7 +460,7 @@ Deno.serve(async (req) => {
         openedDate: s.opened_date,
         inUseDays: s.in_use_days,
       }
-      const status = displayStatus(input, lead, effectiveLeadTimeDays(s.lead_time_days))
+      const status = displayStatus(input, lead, effectiveLeadTimeDays(s.lead_time_days, accountLead))
       const runway = effectiveRunwayDays(input)
       const rateKnown = !isRateEstimated(s.usage_rate_per_day)
 

@@ -644,6 +644,10 @@ alter table public.profiles add column if not exists timezone       text;
 alter table public.profiles add column if not exists theme          text default 'system';
 alter table public.profiles add column if not exists locale         text;
 alter table public.profiles add column if not exists safety_buffer_days integer;
+-- The account-wide default delivery time. It previously lived only in the
+-- client's local store, so the push Edge Function could never see a user's
+-- changed value and warned on the wrong threshold (src/lib/depletion.ts).
+alter table public.profiles add column if not exists shipping_lead_time_days integer;
 -- Usage analytics consent (Phase E). Default FALSE — opt-in only for a health app.
 alter table public.profiles add column if not exists analytics_opt_in boolean not null default false;
 -- First-run onboarding gate. NULL = not done; set to now() when the user finishes

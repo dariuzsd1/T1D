@@ -9,6 +9,8 @@ export interface Profile {
   theme: string | null
   locale: string | null
   safetyBufferDays: number | null
+  /** Account-wide default delivery time; per-supply values still override it. */
+  shippingLeadTimeDays: number | null
   analyticsOptIn: boolean
   avatarPath: string | null
   /** First-run onboarding gate. null = not completed (or column pre-migration). */
@@ -25,6 +27,7 @@ export interface ProfileRow {
   theme: string | null
   locale: string | null
   safety_buffer_days: number | null
+  shipping_lead_time_days: number | null
   analytics_opt_in: boolean | null
   avatar_path: string | null
   onboarding_completed_at: string | null
@@ -42,6 +45,7 @@ export function rowToProfile(r: ProfileRow): Profile {
     theme: r.theme ?? null,
     locale: r.locale ?? null,
     safetyBufferDays: r.safety_buffer_days ?? null,
+    shippingLeadTimeDays: r.shipping_lead_time_days ?? null,
     analyticsOptIn: r.analytics_opt_in ?? false,
     avatarPath: r.avatar_path ?? null,
     onboardingCompletedAt: r.onboarding_completed_at ?? null,

@@ -37,6 +37,14 @@ describe('notify-refills keeps parity with src/lib/depletion.ts', () => {
     expect(edge).toMatch(/exp <= reorderThresholdDays\(/)
   })
 
+  it('reads the account-wide delivery default from the profile row', () => {
+    // It used to assume the shared default, because the account-wide setting
+    // lived only in the client's local store and the server could not see it.
+    const select = edge.match(/'id, timezone[^']*'/)?.[0] ?? ''
+    expect(select).toContain('shipping_lead_time_days')
+    expect(edge).toContain('profile?.shipping_lead_time_days')
+  })
+
   it('shares the safety-buffer and lead-time defaults with the client', () => {
     expect(edge).toContain('DEFAULT_SAFETY_BUFFER_DAYS = 14')
     expect(edge).toContain('DEFAULT_SHIPPING_LEAD_TIME_DAYS = 5')

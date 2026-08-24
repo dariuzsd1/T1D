@@ -28,6 +28,11 @@ export function PreferenceSync() {
   // preference (src/lib/surgeBuffer.ts).
   const baseSafetyBufferDays = useStore((s) => s.baseSafetyBufferDays)
   const setSafetyBufferDays = useStore((s) => s.setSafetyBufferDays)
+  // Account-wide delivery default. Synced for the same reason as the buffer: the
+  // push Edge Function reads the profile row, so a device-local value would make
+  // the server alarm on a different threshold than the app.
+  const shippingLeadTimeDays = useStore((s) => s.shippingLeadTimeDays)
+  const setShippingLeadTimeDays = useStore((s) => s.setShippingLeadTimeDays)
   const seeded = useRef(false)
 
   // 1. Seed once from the profile (profile wins on a fresh device).
@@ -41,6 +46,10 @@ export function PreferenceSync() {
     }
     if (typeof profile.safetyBufferDays === 'number' && profile.safetyBufferDays > 0) {
       if (profile.safetyBufferDays !== baseSafetyBufferDays) setSafetyBufferDays(profile.safetyBufferDays)
+    }
+    // 0 is a real choice (same-day pickup), so only null/undefined is "unset".
+    if (typeof profile.shippingLeadTimeDays === 'number' && profile.shippingLeadTimeDays >= 0) {
+      if (profile.shippingLeadTimeDays !== shippingLeadTimeDays) setShippingLeadTimeDays(profile.shippingLeadTimeDays)
     }
     seeded.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,6 +75,13 @@ export function PreferenceSync() {
     supabase.from('profiles').update({ safety_buffer_days: baseSafetyBufferDays }).eq('id', profile.id).then(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseSafetyBufferDays])
+
+  // 5. Persist delivery-time changes back to the profile.
+  useEffect(() => {
+    if (!seeded.current || !profile || shippingLeadTimeDays === profile.shippingLeadTimeDays) return
+    supabase.from('profiles').update({ shipping_lead_time_days: shippingLeadTimeDays }).eq('id', profile.id).then(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingLeadTimeDays])
 
   return null
 }
