@@ -34,6 +34,7 @@ import {
 } from '@/lib/supplyLookup'
 import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
+import { needsUsageRate, parseUsagePerDay } from '@/lib/usageRate'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
 import { cn, errorMessage } from '@/lib/utils'
@@ -70,6 +71,36 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
   )
 }
 
+/**
+ * Asked only for supplies whose usage is genuinely per-person (strips, lancets,
+ * needles, hypo treatments). The catalog leaves those blank on purpose, and the
+ * old one-a-day fallback was wrong in both directions, so this is the only way
+ * the app can ever say when they will run out. Optional: skipping it leaves the
+ * item honestly untracked rather than blocking the add.
+ */
+function UsagePrompt({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 space-y-2">
+      <label htmlFor={id} className="block text-xs font-semibold text-ink">
+        {t('scan.usagePromptLabel')}
+      </label>
+      <input
+        id={id}
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="0.5"
+        placeholder={t('scan.usagePromptPlaceholder')}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-line bg-surface p-3 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
+      />
+      <p className="text-[11px] leading-relaxed text-muted">{t('scan.usagePromptHelp')}</p>
+    </div>
+  )
+}
+
 /** Shown once a matched product is known to be out of production. */
 function DiscontinuedNotice() {
   const { t } = useI18n()
@@ -98,6 +129,9 @@ export default function ScanPage() {
   // entry. 0 = not identified → the runway stays a labelled estimate. The user is
   // never asked for this; it fills itself in when we recognize the product.
   const [autoRate, setAutoRate] = useState(0)
+  // What the user typed when asked how many they use a day. Held as text so a
+  // half-typed "0." survives the keystroke; only a valid answer becomes a rate.
+  const [usageInput, setUsageInput] = useState('')
   const [detectingWear, setDetectingWear] = useState(false)
 
   // Manual entry (the photo doubles as a barcode source and an on-screen reference).
@@ -163,6 +197,13 @@ export default function ScanPage() {
     setQuantity(v === '' ? '' : Math.max(1, parseInt(v, 10) || 1))
   }
   const handleQuantityBlur = () => setQuantity((q) => (q === '' ? 1 : q))
+
+  /** A rate only lands when the answer parses; anything else leaves it unset. */
+  const handleUsageInput = (v: string) => {
+    setUsageInput(v)
+    setAutoRate(parseUsagePerDay(v) ?? 0)
+  }
+  const askUsage = needsUsageRate(catalogCategory, autoRate) || (usageInput !== '' && autoRate === 0)
 
   // Shared by both photo sources (file upload and live camera capture): try to
   // read a barcode straight out of the image. A sharp, close still is often easier
@@ -320,6 +361,7 @@ export default function ScanPage() {
     setManualCode('')
     setQuantity(1)
     setAutoRate(0)
+    setUsageInput('')
     setExpirationDate('')
     setStep('MANUAL')
   }
@@ -391,6 +433,7 @@ export default function ScanPage() {
     }
     setQuantity(1)
     setAutoRate(0)
+    setUsageInput('')
     setBcName('')
     setBcBrand('')
     setCatalogCategory(null)
@@ -879,7 +922,10 @@ export default function ScanPage() {
                 ) : (
                   <>
                     {discontinued && <DiscontinuedNotice />}
-                    <WearReadout rate={autoRate} quantity={quantity || 0} />
+                    {askUsage && (
+                  <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
+                )}
+                <WearReadout rate={autoRate} quantity={quantity || 0} />
                   </>
                 )}
               </div>
@@ -980,6 +1026,9 @@ export default function ScanPage() {
                   </div>
                 </div>
                 {discontinued && <DiscontinuedNotice />}
+                {askUsage && (
+                  <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
+                )}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 
@@ -1152,6 +1201,9 @@ export default function ScanPage() {
                   </div>
                 </div>
                 {discontinued && <DiscontinuedNotice />}
+                {askUsage && (
+                  <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
+                )}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 
