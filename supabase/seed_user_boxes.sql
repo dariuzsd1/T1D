@@ -157,6 +157,10 @@ update public.products set product_name = 'Accu-Chek Aviva Plus Test Strips'
   where product_name = 'Accu-Chek Aviva Test Strips';
 update public.products set product_name = 'FreeStyle Precision Blood Ketone Test Strips'
   where product_name = 'Precision/FreeStyle Blood Ketone Strips';
+update public.products set product_name = 'mylife YpsoPump Reservoir'
+  where product_name = 'mylife YpsoPump Cartridge';
+update public.products set product_name = 'mylife YpsoPump Orbit Infusion Set'
+  where product_name = 'mylife Orbit Infusion Set';
 
 -- Brand corrections (ownership or company naming changed since first written).
 update public.products set brand = 'Amphastar'
