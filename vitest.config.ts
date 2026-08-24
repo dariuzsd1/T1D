@@ -5,8 +5,12 @@ import { fileURLToPath } from 'node:url'
 // handler tests also run here (node environment suits them fine, no DOM either).
 export default defineConfig({
   test: {
+    // Node by default: the depletion/refill engines and route handlers need no
+    // DOM. Component tests opt in per file with `// @vitest-environment jsdom`,
+    // which keeps the fast majority fast instead of booting jsdom for everything.
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    setupFiles: ['./vitest.setup.ts'],
   },
   resolve: {
     // Mirrors tsconfig's "@/*" -> "./src/*" — needed so route-handler tests can
