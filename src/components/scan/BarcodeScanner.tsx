@@ -24,6 +24,25 @@ interface BarcodeScannerProps {
 type Phase = 'checking' | 'starting' | 'scanning' | 'unsupported' | 'denied' | 'error'
 
 /**
+ * Camera constraints to try in order. A laptop has no rear camera, and some
+ * setups (external webcams, virtual cameras, locked-down machines) reject a
+ * facingMode or a 1080p request outright. Degrading to "any camera at a usable
+ * resolution", then to "whatever the browser will give us", means a desktop opens
+ * its webcam instead of reporting that no camera exists.
+ */
+const VIDEO_CONSTRAINTS: MediaTrackConstraints[] = [
+  { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  { width: { ideal: 1280 }, height: { ideal: 720 } },
+  {},
+]
+
+/** A refused permission is never fixed by loosening the video constraints. */
+function isPermissionError(err: unknown): boolean {
+  const name = (err as { name?: string })?.name
+  return name === 'NotAllowedError' || name === 'SecurityError'
+}
+
+/**
  * Camera barcode scanner built on ZXing (`@zxing/browser`), which decodes in pure
  * JavaScript and therefore works wherever `getUserMedia` does — iOS Safari and
  * iOS Chrome, desktop Chrome/Edge/Firefox on any OS, and Android. We deliberately
@@ -150,27 +169,34 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         delayBetweenScanAttempts: 120,
       })
       try {
-        const controls = await reader.decodeFromConstraints(
-          {
-            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false,
-          },
-          video,
-          (result) => {
-            if (result && !detectedRef.current) {
-              detectedRef.current = true
-              stopCamera()
-              onDetected(result.getText(), BarcodeFormat[result.getBarcodeFormat()])
+        let lastError: unknown = null
+        for (const videoConstraints of VIDEO_CONSTRAINTS) {
+          try {
+            const controls = await reader.decodeFromConstraints(
+              { video: videoConstraints, audio: false },
+              video,
+              (result) => {
+                if (result && !detectedRef.current) {
+                  detectedRef.current = true
+                  stopCamera()
+                  onDetected(result.getText(), BarcodeFormat[result.getBarcodeFormat()])
+                }
+              }
+            )
+            if (cancelled) {
+              controls.stop()
+              return
             }
+            controlsRef.current = controls
+            setPhase('scanning')
+            detectTorch(video.srcObject as MediaStream | null)
+            return
+          } catch (err) {
+            lastError = err
+            if (isPermissionError(err)) break
           }
-        )
-        if (cancelled) {
-          controls.stop()
-          return
         }
-        controlsRef.current = controls
-        setPhase('scanning')
-        detectTorch(video.srcObject as MediaStream | null)
+        throw lastError
       } catch (err) {
         handleCamError(err)
       }
@@ -181,14 +207,19 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
     async function startMatrix(video: HTMLVideoElement) {
       detectedRef.current = false
       setPhase('starting')
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        })
-      } catch (err) {
-        handleCamError(err)
+      let stream: MediaStream | null = null
+      let lastError: unknown = null
+      for (const videoConstraints of VIDEO_CONSTRAINTS) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false })
+          break
+        } catch (err) {
+          lastError = err
+          if (isPermissionError(err)) break
+        }
+      }
+      if (!stream) {
+        handleCamError(lastError)
         return
       }
       if (cancelled) {

@@ -191,9 +191,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-title"
-        className="relative w-full max-w-md bg-surface border border-line rounded-3xl p-7 shadow-lg"
+        className="relative flex w-full max-w-md max-h-[calc(100dvh-2rem)] flex-col overflow-hidden bg-surface border border-line rounded-3xl shadow-lg"
       >
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-7 pt-7 pb-5">
           <div>
             <h2 id="edit-title" className="text-xl font-bold text-ink">{product.name}</h2>
             <p className="text-sm text-muted">{product.brand}</p>
@@ -207,6 +207,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
           </button>
         </div>
 
+        <div className="flex-1 overflow-y-auto px-7 py-6">
         <div className="space-y-5">
           <div>
             <label htmlFor="edit-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('editModal.quantityLabel')}</label>
@@ -539,8 +540,9 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
             {saveError}
           </div>
         )}
+        </div>
 
-        <div className="mt-8 flex gap-3">
+        <div className="flex shrink-0 gap-3 border-t border-line px-7 py-5">
           <button
             onClick={handleSave}
             disabled={saving}
