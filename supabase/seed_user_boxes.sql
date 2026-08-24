@@ -22,15 +22,35 @@ insert into public.product_codes (product_id, code_type, code, source, last_veri
 update public.products set gtin = '20763000413396'
   where product_name = 'Guardian 4 Sensor' and gtin is null;
 
--- 2. MiniMed Reservoir (REF MMT-1031) — GS1 UDI. The scanned box is a special
---    carton of 2x20 = 40 reservoirs, so this code pins units_per_box = 40 even
---    though the generic product row defaults to 10.
+-- 2. MiniMed Reservoir - Kit (REF MMT-1031). The name and the 2x20 = 40 count are
+--    read off the user's own box, so the Kit is its OWN catalog product, distinct
+--    from the generic 10-count reservoir entry. An earlier version of this file
+--    pinned the Kit's GTIN onto the generic row, which made a Kit scan report the
+--    wrong product name and box count; the first statement undoes that.
+update public.products set gtin = null
+  where product_name = 'MiniMed Reservoir' and gtin = '00763000532222';
+
+insert into public.products
+  (category, brand, product_name, common_names, gtin, unit, units_per_box,
+   typical_usage_per_day, default_refill_interval_days, rx_required, notes)
+  select 'infusion_set', 'Medtronic', 'MiniMed Reservoir - Kit',
+         'minimed reservoir kit|reservoir kit|mmt-1031', '00763000532222', 'reservoirs', 40,
+         0.33, 90, true,
+         'REF MMT-1031. Carton of 2x20 = 40. Name and count read off the box'
+  where not exists (select 1 from public.products where product_name = 'MiniMed Reservoir - Kit');
+
 insert into public.product_codes (product_id, code_type, code, units_per_box, source, last_verified)
-  select id, 'gtin', '00763000532222', 40, 'scanned from box (2x20 carton)', '2026-08-22'
-  from public.products where product_name = 'MiniMed Reservoir'
+  select id, 'gtin', '00763000532222', 40, 'scanned from box (2x20 carton)', '2026-08-23'
+  from public.products where product_name = 'MiniMed Reservoir - Kit'
   and not exists (select 1 from public.product_codes where code_type = 'gtin' and code = '00763000532222');
-update public.products set gtin = '00763000532222'
-  where product_name = 'MiniMed Reservoir' and gtin is null;
+
+-- Re-point a code row created by the earlier version of this file at the Kit.
+update public.product_codes pc
+  set product_id = k.id, units_per_box = 40
+  from public.products k
+  where k.product_name = 'MiniMed Reservoir - Kit'
+    and pc.code_type = 'gtin' and pc.code = '00763000532222'
+    and pc.product_id <> k.id;
 
 -- 3. Mio Advance Infusion Set — the multi-GTIN case product_codes was built for.
 --    BOTH the catalog's original GTIN and the code scanned from this box map to
