@@ -52,7 +52,7 @@ insulin,Sanofi,Lantus (insulin glargine U-100),lantus|glargine,,vials,1,,30,yes,
 insulin,Eli Lilly,Basaglar (insulin glargine),basaglar,,pens,5,,30,yes,Long-acting basal (glargine biosimilar). Per-person dosing,,,28
 insulin,Viatris/Biocon,Semglee (insulin glargine),semglee,,pens,5,,30,yes,Interchangeable glargine biosimilar. Per-person dosing,,,28
 insulin,Sanofi,Toujeo (insulin glargine U-300),toujeo|glargine u300,,pens,3,,30,yes,Concentrated long-acting basal U-300. Per-person dosing,,,28
-insulin,Novo Nordisk,Levemir (insulin detemir),levemir|detemir,,vials,1,,30,yes,Long-acting basal. Per-person dosing. Note: being discontinued in some markets,,,28
+insulin,Novo Nordisk,Levemir (insulin detemir),levemir|detemir,,vials,1,,30,yes,"DISCONTINUED by Novo Nordisk: FlexPen from 2024-04-01, vials after 2024-12-31. Kept so existing stock still scans. Per-person dosing",https://diatribe.org/diabetes-medications/levemir-long-acting-insulin-be-discontinued-novo-nordisk,2026-08-23,28
 insulin,Novo Nordisk,Tresiba (insulin degludec),tresiba|degludec,,pens,5,,30,yes,Ultra-long-acting basal. In-use up to 56 days. Per-person dosing,,,56
 insulin,Eli Lilly,Humulin R (regular insulin),humulin r|regular insulin,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,,28
 insulin,Novo Nordisk,Novolin R (regular insulin),novolin r,,vials,1,,30,no,Short-acting regular. Per-person dosing. OTC in some US states,,,28
@@ -88,9 +88,9 @@ ketone_supply,Abbott,FreeStyle Precision Neo Meter,precision neo|freestyle neo,,
 ketone_supply,Abbott,Precision/FreeStyle Blood Ketone Strips,ketone strips|blood ketone strips|precision ketone,,strips,10,,,yes,Blood beta-hydroxybutyrate strips. Use during illness/high BG. Track expiration,,,
 ketone_supply,Keto-Mojo,Keto-Mojo Blood Ketone Strips,keto-mojo strips|ketomojo,00858538007004,strips,50,,,no,Blood ketone strips. Per-person usage,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Keto-Mojo%22&limit=10,2026-06-18,
 ketone_supply,Bayer/Ascensia,Ketostix Urine Ketone Strips,ketostix|urine ketone strips,10301932880508,strips,50,,,no,Urine ketone test strips. Track expiration,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Ketostix%22&limit=10,2026-06-18,
-glucagon,Eli Lilly,Baqsimi (nasal glucagon),baqsimi|nasal glucagon,,devices,1,,365,yes,Emergency rescue (nasal). Track EXPIRATION not daily use,,,
+glucagon,Amphastar,Baqsimi (nasal glucagon),baqsimi|nasal glucagon,,devices,1,,365,yes,"Nasal glucagon, no injection. Track EXPIRATION. Divested by Eli Lilly to Amphastar in 2023",https://investor.lilly.com/news-releases/news-release-details/lilly-divest-baqsimi-amphastar,2026-08-23,
 glucagon,Xeris,Gvoke HypoPen (glucagon),gvoke|gvoke hypopen|glucagon pen,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,,
-glucagon,Zealand,Zegalogue (dasiglucagon),zegalogue|dasiglucagon,,devices,1,,365,yes,Emergency rescue (auto-injector/prefilled). Track EXPIRATION,,,
+glucagon,Zealand Pharma,Zegalogue (dasiglucagon),zegalogue|dasiglucagon,,devices,1,,365,yes,Ready-to-use liquid glucagon autoinjector/syringe. Novo Nordisk returned the rights to Zealand Pharma in 2026-01. Track EXPIRATION,https://www.biospace.com/global-roundup-zealand-pharma-and-novo-nordisk-tie-up-on-zegalogue-partnership,2026-08-23,
 glucagon,Novo Nordisk,GlucaGen HypoKit (glucagon),glucagen|glucagen hypokit|glucagon kit,,devices,1,,365,yes,Emergency rescue (reconstituted injection). Track EXPIRATION,,,
 hypo_treatment,Dex4,Dex4 Glucose Tablets,glucose tablets|dex4|glucose tabs,,tablets,50,,,no,Fast-acting carbs for lows (~4g/tab). Track expiration,,,
 hypo_treatment,ReliOn,ReliOn Glucose Tablets,relion glucose tablets|relion tabs,,tablets,50,,,no,Fast-acting carbs for lows. Low-cost,,,
@@ -117,7 +117,7 @@ infusion_set,Unomedical,Comfort Infusion Set,comfort|contact detach|unomedical c
 insulin,MannKind,Afrezza (inhaled insulin),afrezza|inhaled insulin,,cartridges,90,,30,yes,Ultra-rapid INHALED insulin. Per-person dosing. Cartridge cards (4/8/12u),,,28
 insulin,Eli Lilly,Rezvoglar (insulin glargine),rezvoglar,,pens,5,,30,yes,"Long-acting basal (glargine biosimilar, interchangeable with Lantus). Per-person dosing",,,28
 insulin,Sanofi,Merilog (insulin aspart),merilog,,vials,1,,30,yes,Rapid-acting aspart biosimilar (approved 2025). Per-person dosing,,,28
-insulin,AstraZeneca,Symlin (pramlintide),symlin|pramlintide|symlinpen,,pens,1,,30,yes,Amylin analog ADJUNCT (not insulin); a mealtime injection some T1Ds add. Per-person dosing,,,28
+insulin,AstraZeneca,Symlin (pramlintide),symlin|pramlintide|symlinpen,,pens,1,,30,yes,"DISCONTINUED 2025-10-27 (all SymlinPen formulations). Amylin analog ADJUNCT, not insulin. Kept so existing stock still scans",https://www.drugs.com/availability/generic-symlin.html,2026-08-23,28
 bg_supply,ReliOn,ReliOn Premier Test Strips,relion premier strips|relion strips|walmart strips,,strips,50,,90,no,Low-cost OTC strips (Walmart). Per-person usage,,,
 bg_supply,ReliOn,ReliOn Premier BLU Meter,relion premier|relion blu|relion meter,,devices,1,,,no,Low-cost OTC Bluetooth BG meter (Walmart),,,
 bg_supply,Ascensia,Contour Next Link 2.4 Meter,contour next link|next link 2.4,,devices,1,,,no,BG meter that links to Medtronic pumps for upload/calibration,,,
