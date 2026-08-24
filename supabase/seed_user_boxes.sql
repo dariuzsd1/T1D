@@ -153,6 +153,10 @@ update public.products set product_name = 'Stelo Glucose Biosensor'
   where product_name = 'Dexcom Stelo Sensor';
 update public.products set product_name = 'FreeStyle Libre 2 Reader'
   where product_name = 'FreeStyle Libre Reader';
+update public.products set product_name = 'Accu-Chek Aviva Plus Test Strips'
+  where product_name = 'Accu-Chek Aviva Test Strips';
+update public.products set product_name = 'FreeStyle Precision Blood Ketone Test Strips'
+  where product_name = 'Precision/FreeStyle Blood Ketone Strips';
 
 -- Brand corrections (ownership or company naming changed since first written).
 update public.products set brand = 'Amphastar'
@@ -161,6 +165,17 @@ update public.products set brand = 'Zealand Pharma'
   where product_name = 'Zegalogue (dasiglucagon)' and brand <> 'Zealand Pharma';
 update public.products set brand = 'Sequel Med Tech'
   where product_name = 'twiist Insulin Pump' and brand <> 'Sequel Med Tech';
+update public.products set brand = 'Xeris Pharmaceuticals'
+  where product_name = 'Gvoke HypoPen (glucagon)' and brand <> 'Xeris Pharmaceuticals';
+
+-- Roche's meter that pairs with the MiniMed 770G/780G pumps was missing from the
+-- catalog; it is the current replacement for the legacy Contour Next Link 2.4.
+insert into public.products
+  (category, brand, product_name, common_names, unit, units_per_box, rx_required, notes)
+  select 'bg_supply', 'Roche', 'Accu-Chek Guide Link Meter',
+         'guide link|accu-chek guide link|accuchek guide link', 'devices', 1, false,
+         'BG meter that pairs with the Medtronic MiniMed 770G and 780G pumps for upload/calibration'
+  where not exists (select 1 from public.products where product_name = 'Accu-Chek Guide Link Meter');
 
 -- ----------------------------------------------------------------------------
 -- Still open (not blocking): US NDC / French CIP extraction from a scan, and a
