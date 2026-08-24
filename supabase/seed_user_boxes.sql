@@ -168,14 +168,33 @@ update public.products set brand = 'Sequel Med Tech'
 update public.products set brand = 'Xeris Pharmaceuticals'
   where product_name = 'Gvoke HypoPen (glucagon)' and brand <> 'Xeris Pharmaceuticals';
 
--- Roche's meter that pairs with the MiniMed 770G/780G pumps was missing from the
--- catalog; it is the current replacement for the legacy Contour Next Link 2.4.
+-- Medtronic spun its diabetes business out as MiniMed, listed on Nasdaq
+-- 2026-03-06. Rebrand those rows, but keep "medtronic" searchable: boxes already
+-- in a cupboard still say Medtronic, and users will type it.
+update public.products set brand = 'MiniMed' where brand = 'Medtronic';
+update public.products
+  set common_names = case when coalesce(common_names, '') = '' then 'medtronic'
+                          else common_names || '|medtronic' end
+  where brand = 'MiniMed' and coalesce(common_names, '') not like '%medtronic%';
+
+-- Products the catalog was missing entirely.
 insert into public.products
-  (category, brand, product_name, common_names, unit, units_per_box, rx_required, notes)
-  select 'bg_supply', 'Roche', 'Accu-Chek Guide Link Meter',
-         'guide link|accu-chek guide link|accuchek guide link', 'devices', 1, false,
-         'BG meter that pairs with the Medtronic MiniMed 770G and 780G pumps for upload/calibration'
+  (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day, rx_required, notes)
+  select 'bg_supply', 'Roche', 'Accu-Chek Guide Link Meter', 'guide link|accu-chek guide link|accuchek guide link', 'devices', 1, null, false,
+         'BG meter that pairs with the MiniMed 770G and 780G pumps for upload/calibration'
   where not exists (select 1 from public.products where product_name = 'Accu-Chek Guide Link Meter');
+
+insert into public.products
+  (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day, rx_required, notes)
+  select 'patch_pump', 'MiniMed', 'MiniMed Flex System', 'minimed flex|flex system|medtronic flex', 'devices', 1, null, true,
+         'MiniMed's smallest and only app-controlled AID pump. Ships in the US paired with the Instinct sensor'
+  where not exists (select 1 from public.products where product_name = 'MiniMed Flex System');
+
+insert into public.products
+  (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day, rx_required, notes)
+  select 'cgm_sensor', 'Abbott', 'Instinct Sensor', 'instinct|instinct sensor|minimed instinct', 'sensors', 1, 0.067, true,
+         'Up to 15-day wear = ~0.067/day. Made by Abbott for the MiniMed 780G and Flex systems'
+  where not exists (select 1 from public.products where product_name = 'Instinct Sensor');
 
 -- ----------------------------------------------------------------------------
 -- Still open (not blocking): US NDC / French CIP extraction from a scan, and a
