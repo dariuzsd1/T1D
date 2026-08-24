@@ -19,6 +19,9 @@ export interface Product {
   // conservative ESTIMATE (see isRateEstimated in depletion.ts), labelled as such.
   usageRatePerDay: number;
   expirationDate?: string | null;
+  /** Copied from the catalog when the supply was added: the manufacturer has
+   *  stopped making it, so the app must never present it as reorderable. */
+  discontinued?: boolean;
   // Insurance refill cycle (powers the refill-window engine, src/lib/refill.ts).
   // refillIntervalDays = dispensed days-supply; the rule kind + its one param
   // (threshold % for 'percent', days-before for 'days_before') model how the
@@ -76,6 +79,7 @@ export interface SupplyRow {
   in_use_days: number | null;
   last_ordered_date: string | null;
   lead_time_days: number | null;
+  discontinued: boolean | null;
 }
 
 /** localStorage key for the only thing we cache locally: the non-PHI safety buffer. */

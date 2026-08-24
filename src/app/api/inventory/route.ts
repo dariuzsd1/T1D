@@ -88,6 +88,9 @@ export async function GET() {
         lastOrderedDate: supply.last_ordered_date ?? null,
         // Per-item shipping lead time (null = inherit the account default).
         leadTimeDays: supply.lead_time_days ?? null,
+        // Set when the catalog product was discontinued; the refill list uses it
+        // so we never tell someone to reorder something nobody makes any more.
+        discontinued: supply.discontinued ?? false,
       }
     })
 

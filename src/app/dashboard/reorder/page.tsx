@@ -122,6 +122,8 @@ export default function ReorderPage() {
       // Lead with the stock word so a plain-text reader (or the pharmacy) still
       // learns which items are already out vs merely low — color can't carry it.
       const bits: string[] = [t(pl.status === 'out' ? 'reorder.stOut' : 'reorder.stLow')]
+      // Flag it in the printed/shared list too: this is the copy a prescriber sees.
+      if (pl.product.discontinued) bits.push(t('catalog.discontinued'))
       if (pl.rx?.rxNumber) bits.push(t('reorder.rxNumber', { rx: pl.rx.rxNumber }))
       if (pl.rx?.pharmacy) bits.push(pl.rx.pharmacy)
       if (pl.channel === 'refill' && pl.rx?.refillsRemaining != null) {
@@ -191,6 +193,10 @@ export default function ReorderPage() {
   }
 
   const channelLabel = (pl: RefillPlan): string => {
+    // A discontinued product overrides every channel: there is nothing to refill
+    // and no new script to chase, so the only honest action is to ask for a
+    // replacement. Never suggest reordering something nobody makes any more.
+    if (pl.product.discontinued) return t('reorder.actionDiscontinued')
     if (pl.channel === 'refill') {
       return pl.rx?.pharmacy ? t('reorder.actionRefillAt', { pharmacy: pl.rx.pharmacy }) : t('reorder.actionRefillGeneric')
     }
@@ -305,6 +311,11 @@ export default function ReorderPage() {
                             <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${pl.status === 'out' ? 'text-urgent' : 'text-caution'}`}>
                               {pl.status === 'out' ? t('reorder.stOut') : t('reorder.stLow')}
                             </span>
+                            {p.discontinued && (
+                              <span className="shrink-0 rounded-full bg-caution-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-caution">
+                                {t('catalog.discontinued')}
+                              </span>
+                            )}
                           </span>
                           <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                             <Pill className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
