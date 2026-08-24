@@ -26,6 +26,26 @@ alter table public.supplies add column if not exists pzn          text;
 alter table public.supplies add column if not exists lot_number   text;
 alter table public.supplies add column if not exists discontinued boolean not null default false;
 
+-- `products` is shared reference data, not PHI: it must have Row Level Security
+-- ON with a read-only policy, so signed-in clients can look products up but
+-- nobody can write to it. Stated explicitly here so that turning RLS on (by this
+-- file, or by the Supabase editor's own prompt) can never leave the catalog
+-- unreadable and silently break product lookup. An existing policy is left
+-- untouched rather than dropped and recreated, in case it has been customised.
+alter table public.products enable row level security;
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'products'
+      and policyname = 'products public read'
+  ) then
+    create policy "products public read" on public.products
+      for select using (true);
+  end if;
+end $$;
+
+
 -- One product can carry many codes (regional GTIN variants, a pack-level GTIN, a
 -- German PZN, a US NDC, a French CIP), which a single column cannot hold.
 create table if not exists public.product_codes (
