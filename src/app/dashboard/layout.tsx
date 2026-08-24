@@ -1,5 +1,6 @@
 import { AppNav } from "@/components/layout/AppNav";
 import { RiskAlertBanner } from "@/components/layout/RiskAlertBanner";
+import { UpdateBanner } from "@/components/layout/UpdateBanner";
 import { QuickActionHub } from "@/components/dashboard/QuickActionHub";
 import { PreferencesHydrator } from "@/components/PreferencesHydrator";
 import { ProfileProvider } from "@/components/profile/ProfileProvider";
@@ -21,6 +22,7 @@ export default function DashboardLayout({
       <AutoDepleteSync />
       <BiometricLockGate>
         <div className="flex flex-col min-h-screen bg-canvas text-ink">
+          <UpdateBanner />
           <RiskAlertBanner />
           <div className="flex flex-1">
             <AppNav />

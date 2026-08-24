@@ -18,6 +18,9 @@ export const en = {
   'common.back': 'Back',
   'common.email': 'Email',
   'common.reload': "I've run it, reload",
+  'update.available': 'A new version of the app is available.',
+  'update.reload': 'Reload',
+  'update.dismissAria': 'Dismiss the update notice',
 
   // ── nav ──
   'nav.home': 'Home',
@@ -1188,6 +1191,9 @@ export const fr: Record<TKey, string> = {
   'common.back': 'Retour',
   'common.email': 'E-mail',
   'common.reload': "C'est fait, actualiser",
+  'update.available': "Une nouvelle version de l'application est disponible.",
+  'update.reload': 'Actualiser',
+  'update.dismissAria': "Masquer l'avis de mise à jour",
 
   // ── nav ──
   'nav.home': 'Accueil',
@@ -2361,6 +2367,9 @@ export const es: Record<TKey, string> = {
   'common.back': 'Atrás',
   'common.email': 'Correo electrónico',
   'common.reload': 'Ya lo ejecuté, recargar',
+  'update.available': 'Hay una nueva versión de la app disponible.',
+  'update.reload': 'Recargar',
+  'update.dismissAria': 'Descartar el aviso de actualización',
 
   // ── nav ──
   'nav.home': 'Inicio',
