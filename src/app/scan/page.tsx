@@ -26,6 +26,12 @@ import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrows
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import { CameraCapture } from '@/components/scan/CameraCapture'
 import { createClient } from '@/lib/supabase/client'
+import {
+  findCodelessSupplies,
+  findPriorSupplyByCode,
+  findSupplyByCode,
+  readSupplyForRestock,
+} from '@/lib/supplyLookup'
 import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
@@ -232,6 +238,9 @@ export default function ScanPage() {
         .from('supplies')
         .update(idPayload)
         .eq('id', data.id)
+        // Scoped for the same reason every read here is: caregiver policies make
+        // an id-only write reachable across accounts.
+        .eq('user_id', user.id)
       if (idError) {
         console.warn('Optional fields not saved — run supabase/setup.sql:', idError.message)
       }
@@ -404,25 +413,9 @@ export default function ScanPage() {
     if (ownerId) {
       for (const [column, value] of duplicateLookupKeys(parsed)) {
         try {
-          const { data: existing } = await supabase
-            .from('supplies')
-            .select('id, name, quantity, expiration_date, lot_number, opened_date, in_use_days')
-            .eq('user_id', ownerId)
-            .eq(column, value)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (existing?.id) {
-            setDuplicate({
-              id: existing.id,
-              name: existing.name,
-              quantity: Number(existing.quantity) || 0,
-              expirationDate: existing.expiration_date ?? null,
-              lotNumber: existing.lot_number ?? null,
-              openedDate: existing.opened_date ?? null,
-              inUseDays: existing.in_use_days ?? null,
-              matchedBy: 'code',
-            })
+          const existing = await findSupplyByCode(supabase, ownerId, column, value)
+          if (existing) {
+            setDuplicate({ ...existing, matchedBy: 'code' })
             foundDuplicate = true
             break
           }
@@ -477,22 +470,13 @@ export default function ScanPage() {
       for (const [column, value] of duplicateLookupKeys(parsed)) {
         if (matched) break
         try {
-          const { data: prior } = await supabase
-            .from('supplies')
-            .select('name, brand, usage_rate_per_day')
-            .not('name', 'is', null)
-            .eq('user_id', ownerId)
-            .eq(column, value)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (prior?.name) {
+          const prior = await findPriorSupplyByCode(supabase, ownerId, column, value)
+          if (prior) {
             resolvedName = prior.name
             resolvedBrand = prior.brand ?? ''
             setBcName(prior.name)
             if (prior.brand) setBcBrand(prior.brand)
-            const rate = Number(prior.usage_rate_per_day)
-            if (rate > 0) setAutoRate(rate)
+            if (prior.usageRatePerDay > 0) setAutoRate(prior.usageRatePerDay)
             setPersonalMatch(true)
             matched = true
           }
@@ -509,24 +493,10 @@ export default function ScanPage() {
     // matching those by name would merge things that are not the same.
     if (!foundDuplicate && ownerId && resolvedName) {
       try {
-        const { data: rows } = await supabase
-          .from('supplies')
-          .select('id, name, brand, quantity, expiration_date, lot_number, opened_date, in_use_days, barcode, pzn')
-          .eq('user_id', ownerId)
-          .not('name', 'is', null)
-        const codeless = (rows ?? []).filter((r) => !r.barcode && !r.pzn)
+        const codeless = await findCodelessSupplies(supabase, ownerId)
         const hit = findByNameAndBrand(codeless, resolvedName, resolvedBrand)
         if (hit) {
-          setDuplicate({
-            id: hit.id,
-            name: hit.name,
-            quantity: Number(hit.quantity) || 0,
-            expirationDate: hit.expiration_date ?? null,
-            lotNumber: hit.lot_number ?? null,
-            openedDate: hit.opened_date ?? null,
-            inUseDays: hit.in_use_days ?? null,
-            matchedBy: 'name',
-          })
+          setDuplicate({ ...hit, matchedBy: 'name' })
         }
       } catch {
         // Best-effort: the name fallback must never block a scan.
@@ -564,19 +534,8 @@ export default function ScanPage() {
       const add = typeof quantity === 'number' ? quantity : 1
 
       for (let attempt = 0; attempt < 2; attempt++) {
-        const { data: fresh } = await supabase
-          .from('supplies')
-          .select('quantity, expiration_date, lot_number')
-          .eq('id', duplicate.id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-        if (!fresh) throw new Error(t('scan.errGenericSave'))
-
-        const current = {
-          quantity: Number(fresh.quantity) || 0,
-          expirationDate: fresh.expiration_date ?? null,
-          lotNumber: fresh.lot_number ?? null,
-        }
+        const current = await readSupplyForRestock(supabase, user.id, duplicate.id)
+        if (!current) throw new Error(t('scan.errGenericSave'))
         const plan = planRestock(current, scannedBox, add)
 
         try {
@@ -603,7 +562,11 @@ export default function ScanPage() {
 
         if (plan.clearLot) {
           try {
-            await supabase.from('supplies').update({ lot_number: null }).eq('id', duplicate.id)
+            await supabase
+              .from('supplies')
+              .update({ lot_number: null })
+              .eq('id', duplicate.id)
+              .eq('user_id', user.id)
           } catch {
             // Best-effort: an un-migrated lot column must never fail the restock.
           }
