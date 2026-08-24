@@ -25,111 +25,26 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-// ─── ported from src/lib/depletion.ts ────────────────────────────────────────
+// ─── shared with the app, NOT a copy ─────────────────────────────────────────
+//
+// This used to be a hand-ported duplicate of src/lib/depletion.ts, and the two
+// drifted: the app fired "reorder soon" at buffer plus an item's delivery time
+// while this fired at the bare buffer, so the push warned later than the app and
+// latest of all on the slowest-shipping items. Both now read one file.
+//
+// MS_PER_DAY stays local: it is used by the refill port below, not imported here.
+import {
+  DEFAULT_SAFETY_BUFFER_DAYS,
+  DEFAULT_SHIPPING_LEAD_TIME_DAYS,
+  displayStatus,
+  effectiveLeadTimeDays,
+  effectiveRunwayDays,
+  isRateEstimated,
+  type RunwayInput,
+} from '../_shared/depletion.ts'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
-const DEFAULT_SAFETY_BUFFER_DAYS = 14
-// Mirrors src/lib/depletion.ts. The account-wide override lives only in the
-// client's local store, so the server can apply the per-supply value and this
-// default, but not a user's changed account default.
-const DEFAULT_SHIPPING_LEAD_TIME_DAYS = 5
-const DEFAULT_USAGE_RATE_PER_DAY = 1
 
-interface RunwayInput {
-  quantity: number
-  usageRatePerDay: number
-  expirationDate?: string | null
-  openedDate?: string | null
-  inUseDays?: number | null
-}
-
-function isRateEstimated(usageRatePerDay?: number | null): boolean {
-  return !(typeof usageRatePerDay === 'number' && usageRatePerDay > 0)
-}
-
-function daysOfStock(quantity: number, usageRatePerDay: number): number {
-  const usage = usageRatePerDay > 0 ? usageRatePerDay : DEFAULT_USAGE_RATE_PER_DAY
-  return Math.max(0, Math.floor(quantity / usage))
-}
-
-function daysUntilExpiration(expirationDate?: string | null): number | null {
-  if (!expirationDate) return null
-  const ms = new Date(expirationDate).getTime()
-  if (Number.isNaN(ms)) return null
-  return Math.floor((ms - Date.now()) / MS_PER_DAY)
-}
-
-function inUseDaysRemaining(
-  openedDate?: string | null,
-  inUseDays?: number | null
-): number | null {
-  if (!openedDate || !inUseDays || inUseDays <= 0) return null
-  const opened = new Date(openedDate).getTime()
-  if (Number.isNaN(opened)) return null
-  const discardAt = opened + inUseDays * MS_PER_DAY
-  return Math.floor((discardAt - Date.now()) / MS_PER_DAY)
-}
-
-function effectiveRunwayDays(p: RunwayInput): number {
-  // Soonest of "stock runs out", "stock expires", and — only when there's no
-  // sealed backup (quantity <= 1) — "the open vial must be discarded". Matches
-  // src/lib/depletion.ts exactly, including the quantity gate that keeps a spare
-  // sealed vial from firing a false "reorder now".
-  const caps = [daysOfStock(p.quantity, p.usageRatePerDay)]
-  const exp = daysUntilExpiration(p.expirationDate)
-  if (exp !== null) caps.push(exp)
-  const inUse = inUseDaysRemaining(p.openedDate, p.inUseDays)
-  if (inUse !== null && p.quantity <= 1) caps.push(inUse)
-  return Math.max(0, Math.min(...caps))
-}
-
-type StockStatus = 'out' | 'low' | 'ok'
-type DisplayStatus = StockStatus | 'unset'
-
-// Ordering when the runway hits buffer + delivery time means the new stock lands
-// while the reserve is still intact. Without the lead time the push fired at the
-// bare buffer, i.e. LATER than the app's own "reorder soon" and latest of all on
-// the slowest-shipping items, which is backwards for the one channel meant to
-// reach the user without them opening the app.
-function reorderThresholdDays(
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
-  leadTimeDays: number = 0,
-): number {
-  return bufferDays + Math.max(0, leadTimeDays)
-}
-
-/** The per-supply delivery time, else the account default. 0 is honoured. */
-function effectiveLeadTimeDays(leadTimeDays: number | null, accountDefaultDays: number): number {
-  const v = leadTimeDays ?? accountDefaultDays
-  return Number.isFinite(v) && v > 0 ? v : 0
-}
-
-function stockStatus(
-  runwayDays: number,
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
-  leadTimeDays: number = 0,
-): StockStatus {
-  if (runwayDays <= 0) return 'out'
-  if (runwayDays <= reorderThresholdDays(bufferDays, leadTimeDays)) return 'low'
-  return 'ok'
-}
-
-function displayStatus(
-  p: RunwayInput,
-  bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
-  leadTimeDays: number = 0,
-): DisplayStatus {
-  if (p.quantity <= 0) return 'out'
-  if (!isRateEstimated(p.usageRatePerDay)) {
-    return stockStatus(effectiveRunwayDays(p), bufferDays, leadTimeDays)
-  }
-  const exp = daysUntilExpiration(p.expirationDate)
-  if (exp !== null && exp <= 0) return 'out'
-  // Expiry is dated fact, so it may still flag an estimated-rate item, and the
-  // window includes delivery time exactly as it does for a known-rate item.
-  if (exp !== null && exp <= reorderThresholdDays(bufferDays, leadTimeDays)) return 'low'
-  return 'unset'
-}
 
 // ─── ported from src/lib/refill.ts ───────────────────────────────────────────
 
@@ -460,7 +375,7 @@ Deno.serve(async (req) => {
         openedDate: s.opened_date,
         inUseDays: s.in_use_days,
       }
-      const status = displayStatus(input, lead, effectiveLeadTimeDays(s.lead_time_days, accountLead))
+      const status = displayStatus(input, lead, effectiveLeadTimeDays({ leadTimeDays: s.lead_time_days }, accountLead))
       const runway = effectiveRunwayDays(input)
       const rateKnown = !isRateEstimated(s.usage_rate_per_day)
 

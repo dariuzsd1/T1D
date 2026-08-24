@@ -1,52 +1,62 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * The push Edge Function runs on Deno and cannot import from src/, so it keeps a
- * hand-ported copy of the depletion math. That copy silently drifted: the client
- * fired "reorder soon" at buffer + the item's delivery time, while the push fired
- * at the bare buffer, so the one channel meant to reach the user without them
- * opening the app was the last to warn, and latest of all on slow-shipping items.
+ * The app and the notify-refills Edge Function must run the SAME depletion math.
  *
- * A full behavioural comparison is not possible across runtimes, so this guards
- * the specific things that drifted, and fails loudly if the copy loses them.
+ * They used to keep hand-ported copies, because Deno cannot import from src/, and
+ * the copies drifted: the app fired "reorder soon" at buffer plus an item's
+ * delivery time while the push fired at the bare buffer, so the channel meant to
+ * reach a user without them opening the app warned latest, and latest of all on
+ * the slowest-shipping items.
+ *
+ * That is now one file that both import. These assertions defend the arrangement
+ * itself, because the tempting "quick fix" when Deno complains is to paste the
+ * function back in locally, which silently restores the old failure.
  */
-const edge = readFileSync(
-  join(process.cwd(), 'supabase/functions/notify-refills/index.ts'),
-  'utf8',
-)
+const SHARED = 'supabase/functions/_shared/depletion.ts'
+const EDGE = 'supabase/functions/notify-refills/index.ts'
 
-describe('notify-refills keeps parity with src/lib/depletion.ts', () => {
-  it('reads the per-supply delivery time out of the row', () => {
-    expect(edge).toContain('lead_time_days')
-    // It must actually be selected, not just typed.
-    const select = edge.match(/'id, user_id, name, quantity[^']*'/)?.[0] ?? ''
-    expect(select).toContain('lead_time_days')
+const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
+
+describe('one depletion engine, shared by the app and the push function', () => {
+  it('keeps the shared module where both runtimes can reach it', () => {
+    expect(existsSync(join(process.cwd(), SHARED))).toBe(true)
   })
 
-  it('adds delivery time to the buffer rather than alarming on the buffer alone', () => {
-    expect(edge).toContain('function reorderThresholdDays')
-    expect(edge).toMatch(/runwayDays <= reorderThresholdDays\(/)
-    // The pre-fix form compared straight against the buffer.
-    expect(edge).not.toMatch(/runwayDays <= bufferDays/)
+  it('stays importable by Deno: no imports of its own', () => {
+    // Deno resolves this file directly. An import of a bare npm/@ specifier here
+    // would break the function at deploy time, not at build time.
+    const shared = read(SHARED)
+    expect(shared).not.toMatch(/^\s*import\s/m)
   })
 
-  it('applies the same threshold to an expiry-driven alert', () => {
-    expect(edge).not.toMatch(/exp <= bufferDays/)
-    expect(edge).toMatch(/exp <= reorderThresholdDays\(/)
+  it('is what the app re-exports, rather than a second definition', () => {
+    const lib = read('src/lib/depletion.ts')
+    expect(lib).toContain("export * from '../../supabase/functions/_shared/depletion'")
+    expect(lib).not.toMatch(/export function (stockStatus|displayStatus|effectiveRunwayDays)/)
   })
 
-  it('reads the account-wide delivery default from the profile row', () => {
-    // It used to assume the shared default, because the account-wide setting
-    // lived only in the client's local store and the server could not see it.
-    const select = edge.match(/'id, timezone[^']*'/)?.[0] ?? ''
-    expect(select).toContain('shipping_lead_time_days')
-    expect(edge).toContain('profile?.shipping_lead_time_days')
+  it('is what the Edge Function imports, with the .ts extension Deno requires', () => {
+    expect(read(EDGE)).toMatch(/from '\.\.\/_shared\/depletion\.ts'/)
   })
 
-  it('shares the safety-buffer and lead-time defaults with the client', () => {
-    expect(edge).toContain('DEFAULT_SAFETY_BUFFER_DAYS = 14')
-    expect(edge).toContain('DEFAULT_SHIPPING_LEAD_TIME_DAYS = 5')
+  it('is never re-declared locally inside the Edge Function', () => {
+    // The regression that matters: pasting the helper back in to silence Deno.
+    const edge = read(EDGE)
+    for (const fn of [
+      'isRateEstimated', 'daysOfStock', 'daysUntilExpiration', 'inUseDaysRemaining',
+      'effectiveRunwayDays', 'reorderThresholdDays', 'effectiveLeadTimeDays',
+      'stockStatus', 'displayStatus',
+    ]) {
+      expect(edge).not.toMatch(new RegExp(`^\s*function ${fn}\b`, 'm'))
+    }
+  })
+
+  it('still applies a per-supply delivery time to the push threshold', () => {
+    const edge = read(EDGE)
+    expect(edge).toMatch(/lead_time_days/)
+    expect(edge).toMatch(/effectiveLeadTimeDays\(\{ leadTimeDays: s\.lead_time_days \}/)
   })
 })
