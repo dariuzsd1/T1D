@@ -213,7 +213,7 @@ insert into public.products
 insert into public.products
   (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day, rx_required, notes)
   select 'patch_pump', 'MiniMed', 'MiniMed Flex System', 'minimed flex|flex system|medtronic flex', 'devices', 1, null, true,
-         'MiniMed's smallest and only app-controlled AID pump. Ships in the US paired with the Instinct sensor'
+         'MiniMed''s smallest and only app-controlled AID pump. Ships in the US paired with the Instinct sensor'
   where not exists (select 1 from public.products where product_name = 'MiniMed Flex System');
 
 insert into public.products
