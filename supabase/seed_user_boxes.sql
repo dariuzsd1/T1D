@@ -82,15 +82,17 @@ insert into public.product_codes (product_id, code_type, code, units_per_box, so
   from public.products where product_name = 'Humalog 100 (5x10 ml vials, DE)'
   and not exists (select 1 from public.product_codes where code_type = 'pzn' and code = '07242491');
 
--- 5. Discontinued products, verified 2026-08-23 against manufacturer sources.
---    They stay in the catalog so stock a user still holds keeps scanning and
---    identifying; the flag is what stops the app suggesting a reorder.
+-- 5. Catalog accuracy pass, verified 2026-08-23 against manufacturer sources.
+--
+--    Discontinued products stay in the catalog so stock a user still holds keeps
+--    scanning and identifying; the flag is what stops the app suggesting a reorder.
 update public.products set discontinued = true
   where product_name in (
     'Dexcom G6 Sensor',
     'Dexcom G6 Transmitter',
     'FreeStyle Libre 2 Sensor',
     'FreeStyle Libre 3 Sensor',
+    'Glucagon Emergency Kit',
     'Guardian Link Transmitter',
     'Levemir (insulin detemir)',
     'MiniMed 770G Pump',
@@ -98,8 +100,17 @@ update public.products set discontinued = true
     'Symlin (pramlintide)'
   );
 
--- Brand corrections (ownership or company naming changed since the catalog was
--- first written). Each was checked against a primary source.
+-- Name corrections: use the name the manufacturer actually prints.
+update public.products set product_name = 'MiniMed Extended Infusion Set'
+  where product_name = 'Extended Infusion Set';
+update public.products set product_name = 'Tandem Mobi System'
+  where product_name = 'Tandem Mobi Pump';
+update public.products set product_name = 'Stelo Glucose Biosensor'
+  where product_name = 'Dexcom Stelo Sensor';
+update public.products set product_name = 'FreeStyle Libre 2 Reader'
+  where product_name = 'FreeStyle Libre Reader';
+
+-- Brand corrections (ownership or company naming changed since first written).
 update public.products set brand = 'Amphastar'
   where product_name = 'Baqsimi (nasal glucagon)' and brand <> 'Amphastar';
 update public.products set brand = 'Zealand Pharma'
