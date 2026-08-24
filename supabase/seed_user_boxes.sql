@@ -181,6 +181,10 @@ update public.products set product_name = 'mylife YpsoPump Reservoir'
   where product_name = 'mylife YpsoPump Cartridge';
 update public.products set product_name = 'mylife YpsoPump Orbit Infusion Set'
   where product_name = 'mylife Orbit Infusion Set';
+update public.products set product_name = 'Dex4 Glucose Gel Pouch'
+  where product_name = 'Glucose Gel';
+update public.products set product_name = 'OpSite Flexifix Transparent Film Roll'
+  where product_name = 'OpSite Flexifix Tape';
 
 -- Brand corrections (ownership or company naming changed since first written).
 update public.products set brand = 'Amphastar'
@@ -197,6 +201,8 @@ update public.products set brand = 'Solventum'
   where product_name = 'Tegaderm Transparent Dressing' and brand <> 'Solventum';
 update public.products set brand = 'ConvaTec'
   where product_name = 'Comfort Infusion Set' and brand <> 'ConvaTec';
+update public.products set brand = 'FRIO UK'
+  where product_name = 'Frio Insulin Cooling Wallet' and brand <> 'FRIO UK';
 
 -- Medtronic spun its diabetes business out as MiniMed, listed on Nasdaq
 -- 2026-03-06. Rebrand those rows, but keep "medtronic" searchable: boxes already
