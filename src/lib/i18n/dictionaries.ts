@@ -492,6 +492,7 @@ export const en = {
   'product.barLow': 'Running low',
   'product.barUnset': 'Set usage to track',
   'product.estDaysLeft': 'Est. days left',
+  'product.onHandLabel': 'On hand',
   'product.daysLeftLabel': 'Days left',
 
   // ── edit-supply modal ──
@@ -1666,6 +1667,7 @@ export const fr: Record<TKey, string> = {
   'product.barLow': 'Stock faible',
   'product.barUnset': "Renseigner l'usage pour suivre",
   'product.estDaysLeft': 'Jours restants (est.)',
+  'product.onHandLabel': 'En stock',
   'product.daysLeftLabel': 'Jours restants',
 
   // ── edit-supply modal ──
@@ -2833,6 +2835,7 @@ export const es: Record<TKey, string> = {
   'product.barLow': 'Escaseando',
   'product.barUnset': 'Definir uso para controlar',
   'product.estDaysLeft': 'Días restantes est.',
+  'product.onHandLabel': 'Disponible',
   'product.daysLeftLabel': 'Días restantes',
 
   // ── edit-supply modal ──

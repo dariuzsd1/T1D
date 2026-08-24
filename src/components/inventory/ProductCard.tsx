@@ -306,13 +306,30 @@ export function ProductCard({
                       <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">{t('product.rescueDaysToExpiry')}</div>
                     </>
                   )
+                ) : estimated ? (
+                  // No usage rate means no honest day count. The 1-unit/day
+                  // fallback is described as conservative, but it only is for
+                  // items used less than once a day: it read ~100 days for a box
+                  // of 100 test strips that really lasts about 16, and ~5 days
+                  // for 5 insulin vials that really last about 151. Wrong in both
+                  // directions, so show what we actually know (the count on hand)
+                  // and ask for the rate. The rest of the app already does this;
+                  // this card was the one place still printing the guess.
+                  <>
+                    <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
+                      {product.quantity}
+                    </div>
+                    <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
+                      {t('product.onHandLabel')}
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>
-                      {estimated ? '~' : ''}{product.remainingDays}
+                      {product.remainingDays}
                     </div>
                     <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
-                      {estimated ? t('product.estDaysLeft') : t('product.daysLeftLabel')}
+                      {t('product.daysLeftLabel')}
                     </div>
                   </>
                 )}
