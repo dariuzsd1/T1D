@@ -4,10 +4,54 @@
 -- Idempotent: every statement no-ops on re-run. Run in the Supabase SQL editor.
 -- Reference data only, not PHI.
 --
--- Requires the product_codes table (run supabase/setup.sql first). Codes are
--- inserted BOTH into product_codes (the real key: one product ↔ many codes, with
--- a per-code pack size) and, where the legacy single-code column is still empty,
--- into products.gtin/products.pzn so both lookup paths agree during migration.
+-- SELF-SUFFICIENT: section 0 creates every column and table this file needs, so
+-- you do NOT have to run setup.sql first. Codes are inserted BOTH into
+-- product_codes (the real key: one product ↔ many codes, with a per-code pack
+-- size) and, where the legacy single-code column is still empty, into
+-- products.gtin / products.pzn, so both lookup paths agree during migration.
+
+-- ---------------------------------------------------------------------------
+-- 0. PREREQUISITES. This file used to assume setup.sql had already been re-run,
+--    and failed with 'column "discontinued" does not exist' if it had not. It now
+--    creates everything it needs, so this file alone is enough. All of it is
+--    idempotent: nothing is dropped, nothing is overwritten.
+-- ---------------------------------------------------------------------------
+create extension if not exists pgcrypto;
+
+-- Columns the scanner and the accuracy pass rely on.
+alter table public.products add column if not exists pzn          text;
+alter table public.products add column if not exists discontinued boolean not null default false;
+alter table public.supplies add column if not exists barcode      text;
+alter table public.supplies add column if not exists pzn          text;
+alter table public.supplies add column if not exists lot_number   text;
+alter table public.supplies add column if not exists discontinued boolean not null default false;
+
+-- One product can carry many codes (regional GTIN variants, a pack-level GTIN, a
+-- German PZN, a US NDC, a French CIP), which a single column cannot hold.
+create table if not exists public.product_codes (
+  id            uuid primary key default gen_random_uuid(),
+  product_id    uuid not null references public.products(id) on delete cascade,
+  code_type     text not null check (code_type in ('gtin','pzn','ndc','cip')),
+  code          text not null,
+  -- Pack size for THIS code when it differs from the product default.
+  units_per_box integer,
+  source        text,
+  last_verified date,
+  created_at    timestamptz not null default now(),
+  unique (code_type, code)
+);
+
+create index if not exists product_codes_product_id_idx on public.product_codes(product_id);
+create index if not exists product_codes_lookup_idx     on public.product_codes(code_type, code);
+create index if not exists products_pzn_idx             on public.products(pzn) where pzn is not null;
+
+alter table public.product_codes enable row level security;
+
+-- Reference data only, no PHI: any signed-in user may read, nobody writes.
+drop policy if exists "product_codes public read" on public.product_codes;
+create policy "product_codes public read" on public.product_codes
+  for select using (true);
+
 
 -- Helper pattern below: link a code to a product by name via a subquery, skipping
 -- if that (code_type, code) already exists.
