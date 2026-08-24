@@ -64,6 +64,17 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
   )
 }
 
+/** Shown once a matched product is known to be out of production. */
+function DiscontinuedNotice() {
+  const { t } = useI18n()
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-caution/30 bg-caution-soft p-3.5" role="status">
+      <AlertCircle className="w-4 h-4 shrink-0 text-caution mt-0.5" aria-hidden="true" />
+      <p className="text-xs leading-relaxed text-ink">{t('scan.discontinuedNotice')}</p>
+    </div>
+  )
+}
+
 export default function ScanPage() {
   const { t } = useI18n()
   const [step, setStep] = useState<ScanStep>('UPLOAD')
@@ -107,6 +118,9 @@ export default function ScanPage() {
   const [bcBrand, setBcBrand] = useState('')
   const [catalogCategory, setCatalogCategory] = useState<string | null>(null)
   const [catalogMatch, setCatalogMatch] = useState(false)
+  // The matched catalog product is no longer manufactured. We still identify and
+  // track it (the user may hold stock), but we say so before they rely on it.
+  const [discontinued, setDiscontinued] = useState(false)
   // Recognized from the user's OWN prior scans (their personal catalog), when the
   // shared catalog doesn't have this barcode yet.
   const [personalMatch, setPersonalMatch] = useState(false)
@@ -210,6 +224,7 @@ export default function ScanPage() {
     const idPayload: Record<string, unknown> = {}
     if (opts?.gtin) idPayload.barcode = opts.gtin
     if (opts?.pzn) idPayload.pzn = opts.pzn
+    if (discontinued) idPayload.discontinued = true
     if (opts?.lot) idPayload.lot_number = opts.lot
     if (rate > 0) idPayload.usage_rate_per_day = rate
     if (Object.keys(idPayload).length > 0) {
@@ -247,6 +262,7 @@ export default function ScanPage() {
     // Apply the catalog's verified wear rate when it has one (sensors/pods/sets);
     // stays 0 for per-person items (insulin/strips), which remain an estimate.
     setAutoRate(item.typical_usage_per_day ?? 0)
+    setDiscontinued(!!item.discontinued)
     setCatalogMatch(true)
     setPersonalMatch(false)
     setShowCatalog(false)
@@ -289,6 +305,7 @@ export default function ScanPage() {
 
   const startManual = () => {
     setError(null)
+    setDiscontinued(false)
     setManualName('')
     setManualBrand('')
     setManualCode('')
@@ -310,6 +327,7 @@ export default function ScanPage() {
       if (res.ok) {
         const product = await res.json()
         setAutoRate(product?.typical_usage_per_day ?? 0)
+        setDiscontinued(!!product?.discontinued)
         if (product?.category) setCatalogCategory(product.category)
       }
     } catch {
@@ -369,6 +387,7 @@ export default function ScanPage() {
     setCatalogCategory(null)
     setCatalogMatch(false)
     setPersonalMatch(false)
+    setDiscontinued(false)
     setDuplicate(null)
 
     // Whose supplies may these queries touch? RLS alone is NOT enough: an accepted
@@ -439,6 +458,7 @@ export default function ScanPage() {
             if (product.units_per_box) setQuantity(product.units_per_box)
             setAutoRate(product.typical_usage_per_day ?? 0)
             setCatalogCategory(product.category ?? null)
+            setDiscontinued(!!product.discontinued)
             setCatalogMatch(true)
             matched = true
           }
@@ -894,7 +914,10 @@ export default function ScanPage() {
                     <Loader2 className="w-3 h-3 animate-spin" /> {t('scan.checkingDuration')}
                   </p>
                 ) : (
-                  <WearReadout rate={autoRate} quantity={quantity || 0} />
+                  <>
+                    {discontinued && <DiscontinuedNotice />}
+                    <WearReadout rate={autoRate} quantity={quantity || 0} />
+                  </>
                 )}
               </div>
 
@@ -993,6 +1016,7 @@ export default function ScanPage() {
                     />
                   </div>
                 </div>
+                {discontinued && <DiscontinuedNotice />}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 
@@ -1164,6 +1188,7 @@ export default function ScanPage() {
                     )}
                   </div>
                 </div>
+                {discontinued && <DiscontinuedNotice />}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
 

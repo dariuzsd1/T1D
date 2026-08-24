@@ -82,6 +82,18 @@ insert into public.product_codes (product_id, code_type, code, units_per_box, so
   from public.products where product_name = 'Humalog 100 (5x10 ml vials, DE)'
   and not exists (select 1 from public.product_codes where code_type = 'pzn' and code = '07242491');
 
+-- 5. Discontinued products. They stay in the catalog so stock a user still holds
+--    keeps scanning and identifying; the flag stops the app suggesting a reorder.
+--    Verified 2026-08-23 against manufacturer/industry sources.
+update public.products set discontinued = true
+  where product_name in ('Levemir (insulin detemir)', 'Symlin (pramlintide)');
+
+-- Brand corrections (ownership changed after the catalog was first written).
+update public.products set brand = 'Amphastar'
+  where product_name = 'Baqsimi (nasal glucagon)' and brand <> 'Amphastar';
+update public.products set brand = 'Zealand Pharma'
+  where product_name = 'Zegalogue (dasiglucagon)' and brand <> 'Zealand Pharma';
+
 -- ----------------------------------------------------------------------------
 -- Still open (not blocking): US NDC / French CIP extraction from a scan, and a
 -- GTIN-indicator-digit normalizer so a case vs. a single box match the same

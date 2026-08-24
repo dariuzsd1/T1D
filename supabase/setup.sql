@@ -96,6 +96,10 @@ create table if not exists public.supplies (
   barcode         text,
   pzn             text,
   lot_number      text,
+  -- Set when this supply was added from a catalog product the manufacturer has
+  -- discontinued. Denormalized on purpose: supplies has no FK to products, so this
+  -- is the only way the reorder list can avoid suggesting a dead product.
+  discontinued    boolean not null default false,
   -- Insulin in-use clock (src/lib/depletion.ts). opened_date = when the current
   -- vial/pen was first used; in_use_days = the discard window (28 for most
   -- insulins). Both NULL = not tracked → the clock simply doesn't apply.
@@ -135,6 +139,7 @@ alter table public.supplies
   add column if not exists refill_days_before    integer,
   add column if not exists barcode               text,
   add column if not exists pzn                   text,
+  add column if not exists discontinued          boolean not null default false,
   add column if not exists lot_number            text,
   add column if not exists opened_date           date,
   add column if not exists in_use_days           integer,
@@ -557,14 +562,19 @@ create table if not exists public.products (
   -- 28 for most insulins, 56 for Tresiba; blank for items with no in-use limit.
   -- A smart default the app can offer; the working value lives on supplies.
   in_use_days                  integer,
+  -- The manufacturer has stopped making this product. It stays in the catalog so
+  -- stock a user already holds still scans and identifies, but the app must never
+  -- suggest reordering it (src/app/dashboard/reorder).
+  discontinued                 boolean not null default false,
   notes                        text,
   source_url                   text,
   last_verified                date,
   created_at                   timestamptz not null default now()
 );
 
--- For catalogs imported before in_use_days existed:
-alter table public.products add column if not exists in_use_days integer;
+-- For catalogs imported before these columns existed:
+alter table public.products add column if not exists in_use_days  integer;
+alter table public.products add column if not exists discontinued boolean not null default false;
 
 -- For catalogs imported before pzn existed:
 alter table public.products add column if not exists pzn text;

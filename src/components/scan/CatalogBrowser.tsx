@@ -24,6 +24,9 @@ export interface CatalogItem {
   typical_usage_per_day: number | null
   default_refill_interval_days: number | null
   gtin: string | null
+  /** Manufacturer has stopped making it: still selectable to track existing stock,
+   *  but flagged so nobody picks it expecting to reorder. */
+  discontinued: boolean | null
 }
 
 /** Lowercase + strip non-alphanumerics so "OP 5", "op5", and "Omnipod 5" all match. */
@@ -117,7 +120,14 @@ export function CatalogBrowser({ onSelect, onClose }: Props) {
       className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-surface-2 active:bg-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
     >
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-ink text-sm leading-snug">{product.product_name}</p>
+        <p className="font-semibold text-ink text-sm leading-snug">
+          {product.product_name}
+          {product.discontinued && (
+            <span className="ml-2 align-middle rounded-full bg-caution-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-caution">
+              {t('catalog.discontinued')}
+            </span>
+          )}
+        </p>
         {product.brand && <p className="text-muted text-xs mt-0.5">{product.brand}</p>}
         {product.units_per_box != null && (
           <p className="text-faint text-xs">{t('catalog.perBox', { count: product.units_per_box })}</p>
