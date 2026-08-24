@@ -243,10 +243,18 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
 
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d', { willReadFrequently: true })
-      // Cycle the center-square crop each frame so codes held at different
-      // distances all get a turn: 0.8 (near), 0.55 (very close / tiny code),
-      // 1.0 (whole frame / code held far). One ROI per tick keeps cost flat.
-      const roiFactors = [0.8, 0.55, 1]
+      // Cycle what we hand the decoder each frame, one attempt per tick so cost
+      // stays flat. The crop size covers codes held at different distances (0.8
+      // near, 0.55 very close / tiny code, 1.0 held far). The mirrored attempts
+      // exist because many laptop webcams flip their image in the driver: it looks
+      // like a mirror on screen, and a mirrored code simply will not decode.
+      const attempts: { roi: number; mirrored: boolean }[] = [
+        { roi: 0.8, mirrored: false },
+        { roi: 0.55, mirrored: false },
+        { roi: 1, mirrored: false },
+        { roi: 0.8, mirrored: true },
+        { roi: 0.55, mirrored: true },
+      ]
       let busy = false
       let tick = 0
       matrixIntervalRef.current = window.setInterval(async () => {
@@ -256,10 +264,19 @@ export function BarcodeScanner({ onDetected, onClose, onUnsupported }: BarcodeSc
         if (!vw || !vh) return
         // Center square ROI: cropping preserves the code's native pixels, which is
         // what lets a tiny DataMatrix decode; cycling the size covers more distances.
-        const side = Math.floor(Math.min(vw, vh) * roiFactors[tick++ % roiFactors.length])
+        const { roi, mirrored } = attempts[tick++ % attempts.length]
+        const side = Math.floor(Math.min(vw, vh) * roi)
         canvas.width = side
         canvas.height = side
+        // Reset first: setting canvas.width already clears it, but the transform
+        // must be explicit so a mirrored attempt never leaks into the next tick.
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        if (mirrored) {
+          ctx.translate(side, 0)
+          ctx.scale(-1, 1)
+        }
         ctx.drawImage(video, Math.floor((vw - side) / 2), Math.floor((vh - side) / 2), side, side, 0, 0, side, side)
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
         let image: ImageData
         try {
           image = ctx.getImageData(0, 0, side, side)
