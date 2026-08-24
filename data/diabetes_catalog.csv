@@ -1,22 +1,22 @@
 category,brand,product_name,common_names,gtin,unit,units_per_box,typical_usage_per_day,default_refill_interval_days,rx_required,notes,source_url,last_verified,in_use_days,discontinued
 cgm_sensor,Dexcom,Dexcom G7 Sensor,g7|dexcom g7|dex g7,00386270002839,sensors,3,0.10,90,yes,10-day wear; 1 sensor / 10 days = 0.10/day. Transmitter integrated into sensor,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%22&limit=10,2026-06-18,,
-cgm_sensor,Dexcom,Dexcom G6 Sensor,g6|dexcom g6|dex g6,,sensors,3,0.10,90,yes,10-day wear = 0.10/day. Separate transmitter required,,,,
-cgm_sensor,Dexcom,Dexcom G6 Transmitter,g6 transmitter|dexcom transmitter,00386270001627,transmitters,1,0.011,90,yes,Transmitter lasts ~90 days. One per 90 days,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G6%22&limit=10,2026-06-18,,
+cgm_sensor,Dexcom,Dexcom G6 Sensor,g6|dexcom g6|dex g6,,sensors,3,0.10,90,yes,DISCONTINUED: Dexcom ended G6 production 2026-07-01 (remaining pharmacy stock only). 10-day wear = 0.10/day. Separate transmitter required,https://www.dexcom.com/faqs/dexcom-g6-discontinuation-and-g7-upgrading,2026-08-23,,yes
+cgm_sensor,Dexcom,Dexcom G6 Transmitter,g6 transmitter|dexcom transmitter,00386270001627,transmitters,1,0.011,90,yes,DISCONTINUED with the G6 line (production ended 2026-07-01). Transmitter lasts ~90 days,https://www.dexcom.com/faqs/dexcom-g6-discontinuation-and-g7-upgrading,2026-08-23,,yes
 cgm_sensor,Dexcom,Dexcom G7 15-Day Sensor,g7 15 day|g7 15-day|dexcom 15 day,00386270004765,sensors,2,0.067,90,yes,~15-day wear = 0.067/day. Verify box count,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Dexcom%20G7%2015-Day%22&limit=10,2026-06-18,,
 cgm_sensor,Dexcom,Dexcom ONE+ Sensor,dexcom one|dexcom one plus|one+,,sensors,3,0.10,90,yes,10-day wear. Available outside US,,,,
 cgm_sensor,Dexcom,Dexcom Stelo Sensor,stelo|dexcom stelo,,sensors,2,0.067,30,no,OTC glucose biosensor (non-insulin users). ~15-day wear,,,,
-cgm_sensor,Abbott,FreeStyle Libre 3 Sensor,libre 3|freestyle libre 3|fsl3,00357599818005,sensors,1,0.067,90,yes,~14-15 day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,,
+cgm_sensor,Abbott,FreeStyle Libre 3 Sensor,libre 3|freestyle libre 3|fsl3,00357599818005,sensors,1,0.067,90,yes,"DISCONTINUED 2025-09-30, replaced by FreeStyle Libre 3 Plus. ~14-15 day wear = ~0.067/day",https://www.freestyle.abbott/us-en/transition.html,2026-08-23,,yes
 cgm_sensor,Abbott,FreeStyle Libre 3 Plus Sensor,libre 3 plus|fsl3 plus|libre3plus,00357599844004,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,,
-cgm_sensor,Abbott,FreeStyle Libre 2 Plus Sensor,libre 2 plus|fsl2 plus|libre2plus,,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day,,,,
-cgm_sensor,Abbott,FreeStyle Libre 2 Sensor,libre 2|freestyle libre 2|fsl2,00357599801007,sensors,1,0.071,90,yes,14-day wear = 0.071/day,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%22&limit=10,2026-06-18,,
+cgm_sensor,Abbott,FreeStyle Libre 2 Plus Sensor,libre 2 plus|fsl2 plus|libre2plus,,sensors,1,0.067,90,yes,~15-day wear = ~0.067/day. Current replacement for the discontinued Libre 2,https://www.freestyle.abbott/us-en/transition.html,2026-08-23,,
+cgm_sensor,Abbott,FreeStyle Libre 2 Sensor,libre 2|freestyle libre 2|fsl2,00357599801007,sensors,1,0.071,90,yes,"DISCONTINUED 2025-09-30, replaced by FreeStyle Libre 2 Plus. 14-day wear = 0.071/day",https://www.support.freestyle.abbott/hc/en-us/articles/31744500285841-When-is-the-FreeStyle-Libre-2-sensor-being-discontinued,2026-08-23,,yes
 cgm_sensor,Abbott,FreeStyle Libre 14 Day Sensor,libre 14 day|freestyle libre 14,00357599001018,sensors,1,0.071,90,yes,14-day wear. Older generation,https://api.fda.gov/device/udi.json?search=brand_name%3A%22FreeStyle%20Libre%2014%22&limit=10,2026-06-18,,
 cgm_sensor,Abbott,FreeStyle Libre Rio,libre rio|rio,,sensors,1,0.067,30,no,OTC CGM (US). ~15-day wear,,,,
 cgm_sensor,Abbott,Lingo Sensor,lingo|abbott lingo,00357599853006,sensors,1,0.067,30,no,OTC wellness biosensor (non-medical). ~15-day wear,https://api.fda.gov/device/udi.json?search=brand_name%3A%22Lingo%22&limit=10,2026-06-18,,
 cgm_sensor,Medtronic,Guardian 4 Sensor,guardian 4|guardian sensor 4,20763000413396,sensors,5,0.143,90,yes,7-day wear = ~0.143/day. For MiniMed 780G. GTIN is a DE pack level (indicator 2),scanned from box,2026-08-22,,
-cgm_sensor,Medtronic,Guardian Sensor 3,guardian 3|guardian sensor 3,,sensors,5,0.143,90,yes,7-day wear = ~0.143/day,,,,
+cgm_sensor,Medtronic,Guardian Sensor 3,guardian 3|guardian sensor 3,,sensors,5,0.143,90,yes,"7-day wear = ~0.143/day. Still sold, but Medtronic ends sales and replacements 2026-12-31",https://www.minimed.com/en-us/products/guardian-sensor-3,2026-08-23,,
 cgm_sensor,Medtronic,Simplera Sensor,simplera|medtronic simplera,00763000565039,sensors,1,0.143,90,yes,"7-day wear, disposable all-in-one. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%22&limit=10,2026-06-18,,
 cgm_sensor,Medtronic,Simplera Sync Sensor,simplera sync,00763000956394,sensors,1,0.143,90,yes,"7-day wear, for MiniMed AID. Verify box count",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Simplera%20Sync%22&limit=10,2026-06-18,,
-cgm_sensor,Medtronic,Guardian Link Transmitter,guardian transmitter|guardian link,,transmitters,1,0.0027,365,yes,"Rechargeable transmitter, lasts ~1 year",,,,
+cgm_sensor,Medtronic,Guardian Link Transmitter,guardian transmitter|guardian link,,transmitters,1,0.0027,365,yes,"DISCONTINUED: last sale 2026-04-24, replacements end 2026-12-31. Rechargeable transmitter, lasts ~1 year",https://www.minimed.com/en-us/products/guardian-sensor-3,2026-08-23,,yes
 cgm_sensor,Senseonics,Eversense E3 Sensor,eversense e3|eversense,00817491022967,sensors,1,0.0055,180,yes,"Implantable, ~180-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20E3%22&limit=10,2026-06-18,,
 cgm_sensor,Senseonics,Eversense 365 Sensor,eversense 365,00817491024299,sensors,1,0.00274,365,yes,"Implantable, ~365-day wear. Inserted by clinician",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%20365%22&limit=10,2026-06-18,,
 cgm_sensor,Senseonics,Eversense Smart Transmitter,eversense transmitter,00817491024800,transmitters,1,0.00274,365,yes,"Removable external transmitter, reusable ~1 year",https://api.fda.gov/device/udi.json?search=brand_name%3A%22Eversense%22&limit=10,2026-06-18,,
@@ -47,10 +47,10 @@ insulin,Eli Lilly,Lyumjev (insulin lispro-aabc),lyumjev|lispro aabc,,vials,1,,30
 insulin,Sanofi,Admelog (insulin lispro),admelog,,vials,1,,30,yes,Rapid-acting biosimilar. 28-day in-use clock. Per-person dosing,,,28,
 insulin,Novo Nordisk,NovoLog (insulin aspart),novolog|aspart|novorapid,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,,28,
 insulin,Novo Nordisk,Fiasp (faster insulin aspart),fiasp|faster aspart,,vials,1,,30,yes,Ultra-rapid. 28-day in-use clock. Per-person dosing,,,28,
-insulin,Sanofi,Apidra (insulin glulisine),apidra|glulisine,,vials,1,,30,yes,Rapid-acting. 28-day in-use clock. Per-person dosing,,,28,
+insulin,Sanofi,Apidra (insulin glulisine),apidra|glulisine,,vials,1,,30,yes,"Rapid-acting glulisine. Confirmed still marketed, no shortage. Per-person dosing",https://www.drugs.com/apidra.html,2026-08-23,28,
 insulin,Sanofi,Lantus (insulin glargine U-100),lantus|glargine,,vials,1,,30,yes,Long-acting basal. 28-day in-use clock. Per-person dosing,,,28,
-insulin,Eli Lilly,Basaglar (insulin glargine),basaglar,,pens,5,,30,yes,Long-acting basal (glargine biosimilar). Per-person dosing,,,28,
-insulin,Viatris/Biocon,Semglee (insulin glargine),semglee,,pens,5,,30,yes,Interchangeable glargine biosimilar. Per-person dosing,,,28,
+insulin,Eli Lilly,Basaglar (insulin glargine),basaglar,,pens,5,,30,yes,Long-acting basal (glargine follow-on). Still available in KwikPen and vial; the Tempo Pen presentation ends 2026. Per-person dosing,https://www.medfinder.com/blog/basaglar-shortage-what-providers-prescribers-need-to-know-2026,2026-08-23,28,
+insulin,Viatris/Biocon,Semglee (insulin glargine),semglee,,pens,5,,30,yes,Interchangeable glargine biosimilar. BRANDED Semglee discontinued (2025-12-31); the unbranded insulin glargine-yfgn is the same product and remains available. Per-person dosing,https://www.drugs.com/semglee.html,2026-08-23,28,yes
 insulin,Sanofi,Toujeo (insulin glargine U-300),toujeo|glargine u300,,pens,3,,30,yes,Concentrated long-acting basal U-300. Per-person dosing,,,28,
 insulin,Novo Nordisk,Levemir (insulin detemir),levemir|detemir,,vials,1,,30,yes,"DISCONTINUED by Novo Nordisk: FlexPen from 2024-04-01, vials after 2024-12-31. Kept so existing stock still scans. Per-person dosing",https://diatribe.org/diabetes-medications/levemir-long-acting-insulin-be-discontinued-novo-nordisk,2026-08-23,28,yes
 insulin,Novo Nordisk,Tresiba (insulin degludec),tresiba|degludec,,pens,5,,30,yes,Ultra-long-acting basal. In-use up to 56 days. Per-person dosing,,,56,
@@ -106,10 +106,10 @@ other,Generic,Sharps Disposal Container,sharps container|sharps bin|needle dispo
 patch_pump,Tandem,t:slim X2 Insulin Pump,tslim x2|t slim x2|tandem x2|tslim,,devices,1,,,yes,Durable tubed AID pump (equipment). Uses t:slim cartridges + infusion sets,,,,
 patch_pump,Tandem,Tandem Mobi Pump,tandem mobi|mobi pump,,devices,1,,,yes,Durable miniature AID pump. Uses Mobi cartridges + infusion sets,,,,
 patch_pump,Medtronic,MiniMed 780G Pump,minimed 780g|780g|medtronic 780g,,devices,1,,,yes,Durable AID pump. Uses reservoirs + infusion sets + Guardian sensors,,,,
-patch_pump,Medtronic,MiniMed 770G Pump,minimed 770g|770g,,devices,1,,,yes,Durable AID pump (predecessor to the 780G),,,,
+patch_pump,Medtronic,MiniMed 770G Pump,minimed 770g|770g,,devices,1,,,yes,"DISCONTINUED 2025-07-31; replacement pumps supplied until 2026-12-31, then 780G is the replacement. Durable AID pump",https://www.minimed.com/en-us/products/minimed-770g-insulin-pump-system,2026-08-23,,yes
 patch_pump,Ypsomed,mylife YpsoPump,ypsopump|mylife pump,,devices,1,,,yes,Durable pump (EU/intl). Uses YpsoPump cartridges + Orbit sets,,,,
 patch_pump,Insulet,Omnipod 5 Controller,omnipod 5 pdm|op5 controller|omnipod controller,,devices,1,,,yes,Handheld controller for Omnipod 5 (or use the phone app),,,,
-patch_pump,Sequel,twiist Insulin Pump,twiist|sequel twiist,,devices,1,,,yes,Durable AID pump (2025). Works with FreeStyle Libre 3 Plus,,,,
+patch_pump,Sequel Med Tech,twiist Insulin Pump,twiist|sequel twiist,,devices,1,,,yes,"Durable AID pump, US launch 2025-07-07. Tidepool Loop algorithm. Works with FreeStyle Libre 3 Plus",https://www.sequelmedtech.com/,2026-08-23,,
 cgm_sensor,Abbott,FreeStyle Libre Reader,libre reader|freestyle reader,,devices,1,,,yes,Optional handheld reader for users who don't scan with a phone,,,,
 cgm_sensor,Dexcom,Dexcom Receiver,dexcom receiver|g6 receiver|g7 receiver,,devices,1,,,yes,Optional receiver for users who don't use a phone (G6/G7),,,,
 infusion_set,Medtronic,Mio 30 Infusion Set,mio 30|medtronic mio 30,,sets,10,0.33,90,yes,All-in-one angled soft cannula. ~3-day change,,,,

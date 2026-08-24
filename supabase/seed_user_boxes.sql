@@ -82,17 +82,30 @@ insert into public.product_codes (product_id, code_type, code, units_per_box, so
   from public.products where product_name = 'Humalog 100 (5x10 ml vials, DE)'
   and not exists (select 1 from public.product_codes where code_type = 'pzn' and code = '07242491');
 
--- 5. Discontinued products. They stay in the catalog so stock a user still holds
---    keeps scanning and identifying; the flag stops the app suggesting a reorder.
---    Verified 2026-08-23 against manufacturer/industry sources.
+-- 5. Discontinued products, verified 2026-08-23 against manufacturer sources.
+--    They stay in the catalog so stock a user still holds keeps scanning and
+--    identifying; the flag is what stops the app suggesting a reorder.
 update public.products set discontinued = true
-  where product_name in ('Levemir (insulin detemir)', 'Symlin (pramlintide)');
+  where product_name in (
+    'Dexcom G6 Sensor',
+    'Dexcom G6 Transmitter',
+    'FreeStyle Libre 2 Sensor',
+    'FreeStyle Libre 3 Sensor',
+    'Guardian Link Transmitter',
+    'Levemir (insulin detemir)',
+    'MiniMed 770G Pump',
+    'Semglee (insulin glargine)',
+    'Symlin (pramlintide)'
+  );
 
--- Brand corrections (ownership changed after the catalog was first written).
+-- Brand corrections (ownership or company naming changed since the catalog was
+-- first written). Each was checked against a primary source.
 update public.products set brand = 'Amphastar'
   where product_name = 'Baqsimi (nasal glucagon)' and brand <> 'Amphastar';
 update public.products set brand = 'Zealand Pharma'
   where product_name = 'Zegalogue (dasiglucagon)' and brand <> 'Zealand Pharma';
+update public.products set brand = 'Sequel Med Tech'
+  where product_name = 'twiist Insulin Pump' and brand <> 'Sequel Med Tech';
 
 -- ----------------------------------------------------------------------------
 -- Still open (not blocking): US NDC / French CIP extraction from a scan, and a
