@@ -503,7 +503,7 @@ export function ProductCard({
                       className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-semibold uppercase tracking-widest bg-surface-2 hover:bg-line border border-line text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />
-                      {t('row.reorder')}
+                      {t('row.whereToBuy')}
                     </a>
 
                     {/* Self-report a placed order — no supplier API exists to know

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Printer, Stethoscope, Package, Pill, Cpu, CalendarClock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useStore, type Product } from '@/lib/store'
@@ -96,6 +97,14 @@ export default function VisitPrepPage() {
           <p className="text-muted text-sm mt-2 max-w-prose">
             {t('visitPrep.intro')}
           </p>
+          {/* Cross-link to the refill list — this page is the handout, that page
+              is the action queue (see design-refill-list note). Hidden on print. */}
+          <Link
+            href="/dashboard/reorder"
+            className="print:hidden inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-primary hover:text-primary-deep transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-1 py-1"
+          >
+            {t('visitPrep.actNow')}
+          </Link>
         </div>
         <button
           onClick={() => window.print()}
