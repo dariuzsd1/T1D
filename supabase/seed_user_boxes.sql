@@ -171,6 +171,8 @@ update public.products set brand = 'Sequel Med Tech'
   where product_name = 'twiist Insulin Pump' and brand <> 'Sequel Med Tech';
 update public.products set brand = 'Xeris Pharmaceuticals'
   where product_name = 'Gvoke HypoPen (glucagon)' and brand <> 'Xeris Pharmaceuticals';
+update public.products set brand = 'Torbot'
+  where product_name = 'Skin Tac Adhesive Wipes' and brand <> 'Torbot';
 
 -- Medtronic spun its diabetes business out as MiniMed, listed on Nasdaq
 -- 2026-03-06. Rebrand those rows, but keep "medtronic" searchable: boxes already
@@ -199,6 +201,20 @@ insert into public.products
   select 'cgm_sensor', 'Abbott', 'Instinct Sensor', 'instinct|instinct sensor|minimed instinct', 'sensors', 1, 0.067, true,
          'Up to 15-day wear = ~0.067/day. Made by Abbott for the MiniMed 780G and Flex systems'
   where not exists (select 1 from public.products where product_name = 'Instinct Sensor');
+
+insert into public.products
+  (category, brand, product_name, common_names, unit, units_per_box, rx_required, notes)
+  select 'bg_supply', 'LifeScan', 'OneTouch Delica Plus Lancing Device',
+         'delica|delica plus|onetouch delica', 'devices', 1, false,
+         'Lancing device taking OneTouch Delica Plus lancets (30G and 33G)'
+  where not exists (select 1 from public.products where product_name = 'OneTouch Delica Plus Lancing Device');
+
+insert into public.products
+  (category, brand, product_name, common_names, unit, units_per_box, rx_required, notes)
+  select 'bg_supply', 'LifeScan', 'OneTouch Delica Plus Lancets',
+         'delica lancets|delica plus lancets|onetouch lancets', 'lancets', 100, false,
+         'Available in 30G and 33G. Per-person usage: one per fingerstick'
+  where not exists (select 1 from public.products where product_name = 'OneTouch Delica Plus Lancets');
 
 -- ----------------------------------------------------------------------------
 -- Still open (not blocking): US NDC / French CIP extraction from a scan, and a
