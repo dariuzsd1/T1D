@@ -16,7 +16,6 @@ import {
   LayoutGrid,
   Clock,
   Sparkles,
-  AlertCircle,
 } from 'lucide-react'
 import { STALE_QUANTITY_ERROR, useStore } from '@/lib/store'
 import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
@@ -24,6 +23,8 @@ import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { DuplicatePanel, type DuplicateMatch } from '@/components/scan/DuplicatePanel'
+import { DiscontinuedNotice } from '@/components/scan/DiscontinuedNotice'
+import { QuantityField, type QuantityValue } from '@/components/scan/QuantityField'
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import { CameraCapture } from '@/components/scan/CameraCapture'
 import { createClient } from '@/lib/supabase/client'
@@ -100,17 +101,6 @@ function UsagePrompt({ id, value, onChange }: { id: string; value: string; onCha
   )
 }
 
-/** Shown once a matched product is known to be out of production. */
-function DiscontinuedNotice() {
-  const { t } = useI18n()
-  return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-caution/30 bg-caution-soft p-3.5" role="status">
-      <AlertCircle className="w-4 h-4 shrink-0 text-caution mt-0.5" aria-hidden="true" />
-      <p className="text-xs leading-relaxed text-ink">{t('scan.discontinuedNotice')}</p>
-    </div>
-  )
-}
-
 export default function ScanPage() {
   const { t } = useI18n()
   const [step, setStep] = useState<ScanStep>('UPLOAD')
@@ -119,7 +109,7 @@ export default function ScanPage() {
   // number | '' so the field can be fully cleared while typing (empty snaps back
   // to 1 on blur). The old `parseInt(value) || 1` forced it to 1 the instant it
   // went empty, which trapped the leading digit — you couldn't change 10 to 40.
-  const [quantity, setQuantity] = useState<number | ''>(1)
+  const [quantity, setQuantity] = useState<QuantityValue>(1)
   const [expirationDate, setExpirationDate] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -181,11 +171,6 @@ export default function ScanPage() {
 
   // Fully-editable quantity input: allow an empty value mid-edit, clamp to >= 1,
   // and restore 1 only when the user leaves an empty field.
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value
-    setQuantity(v === '' ? '' : Math.max(1, parseInt(v, 10) || 1))
-  }
-  const handleQuantityBlur = () => setQuantity((q) => (q === '' ? 1 : q))
 
   /** A rate only lands when the answer parses; anything else leaves it unset. */
   const handleUsageInput = (v: string) => {
@@ -873,18 +858,7 @@ export default function ScanPage() {
                   <p className="mt-1.5 text-[11px] text-faint leading-relaxed">{t('scan.codeHelp')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="m-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
-                    <input
-                      id="m-quantity"
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      onBlur={handleQuantityBlur}
-                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
-                    />
-                  </div>
+                  <QuantityField id="m-quantity" value={quantity} onChange={setQuantity} />
                   <div>
                     <label htmlFor="m-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expirationOptional')}</label>
                     <input
@@ -983,18 +957,7 @@ export default function ScanPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="cat-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
-                    <input
-                      id="cat-quantity"
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      onBlur={handleQuantityBlur}
-                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
-                    />
-                  </div>
+                  <QuantityField id="cat-quantity" value={quantity} onChange={setQuantity} />
                   <div>
                     <label htmlFor="cat-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expirationOptional')}</label>
                     <input
@@ -1128,18 +1091,7 @@ export default function ScanPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="bc-quantity" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.quantity')}</label>
-                    <input
-                      id="bc-quantity"
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      onBlur={handleQuantityBlur}
-                      className="w-full bg-surface border border-line rounded-xl p-3.5 font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus:border-primary"
-                    />
-                  </div>
+                  <QuantityField id="bc-quantity" value={quantity} onChange={setQuantity} />
                   <div>
                     <label htmlFor="bc-expiration" className="block text-xs font-semibold uppercase tracking-widest text-muted mb-2">{t('scan.expiration')}</label>
                     <input
