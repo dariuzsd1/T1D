@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, AlertTriangle, ShoppingCart, Minus, Loader2,
-  Activity, ShieldCheck, Package,
+  Activity, ShieldCheck, Package, CalendarClock,
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
-import { displayStatus, DEFAULT_SAFETY_BUFFER_DAYS, isRateEstimated } from '@/lib/depletion'
+import { isRateEstimated } from '@/lib/depletion'
+import { runOutDate, summarizeForCaregiver } from '@/lib/caregiverSummary'
+import { format, isToday } from 'date-fns'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { BackButton } from '@/components/ui/BackButton'
 import { Badge } from '@/components/ui/badge'
@@ -51,24 +53,21 @@ export default function SafetyViewPage() {
   // Derive status from runway, recomputed against optimistic quantities.
   // displayStatus: unknown-rate items are neutral 'unset' here too — a caregiver
   // must not be alarmed (or reassured) by a number built on the fallback guess.
-  const withStatus = inventory.map(p => {
-    const qty = qtyMap[p.id] ?? p.quantity
-    const estimated = isRateEstimated(p.usageRatePerDay)
-    const runway = p.usageRatePerDay > 0 ? Math.round(qty / p.usageRatePerDay) : p.remainingDays
-    const status = displayStatus(
-      { quantity: qty, usageRatePerDay: p.usageRatePerDay, expirationDate: p.expirationDate },
-      DEFAULT_SAFETY_BUFFER_DAYS
-    )
-    return { product: p, qty, estimated, runway, status }
-  })
-  const outCount = withStatus.filter(s => s.status === 'out').length
-  const lowCount = withStatus.filter(s => s.status === 'low').length
-  const safety: Safety = outCount > 0 ? 'act' : lowCount > 0 ? 'watch' : 'good'
-
-  // Most urgent item name (fewest days left among real alarms), else None.
-  const urgent = [...withStatus]
-    .filter(s => s.status === 'out' || s.status === 'low')
-    .sort((a, b) => a.runway - b.runway)[0]
+  // Everything here comes from the shared engine, so a parent never sees a
+  // rosier number than the patient does (src/lib/caregiverSummary.ts).
+  const summary = summarizeForCaregiver(inventory, qtyMap)
+  const withStatus = summary.items.map((i) => ({
+    product: i.product,
+    qty: i.quantity,
+    estimated: isRateEstimated(i.product.usageRatePerDay),
+    runway: i.runwayDays,
+    status: i.status,
+  }))
+  const { outCount, lowCount, actingSoon } = summary
+  const safety: Safety = summary.overall
+  const urgent = summary.mostUrgent
+    ? { product: summary.mostUrgent.product, runway: summary.mostUrgent.runwayDays }
+    : undefined
 
   const handleUseOne = async (product: Product) => {
     const current = qtyMap[product.id] ?? product.quantity
@@ -162,6 +161,41 @@ export default function SafetyViewPage() {
 
           {/* ── Right column ── */}
           <div className="space-y-6">
+            {/* The one question a parent came here to answer: is there anything
+                I have to do about supplies this week, and by when? A day count
+                makes them do arithmetic before they can tell whether it lands on
+                a weekend, so this leads with a date. */}
+            <section className="bg-surface border border-line rounded-3xl p-6">
+              <h3 className="font-semibold text-ink flex items-center gap-2 mb-4">
+                <CalendarClock className="w-5 h-5 text-muted" /> {t('safetyview.actTitle')}
+              </h3>
+              {actingSoon.length === 0 ? (
+                <p className="text-sm text-muted">{t('safetyview.actNone')}</p>
+              ) : (
+                <ul className="space-y-3">
+                  {actingSoon.map((item) => {
+                    const date = runOutDate(item.runwayDays)
+                    const isOut = item.status === 'out'
+                    return (
+                      <li key={item.product.id} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-ink text-sm truncate">{item.product.name}</p>
+                          <p className={`text-xs mt-0.5 ${isOut ? 'text-urgent font-semibold' : 'text-muted'}`}>
+                            {isOut || isToday(date)
+                              ? t('safetyview.actOutNow')
+                              : t('safetyview.actRunsOut', { date: format(date, 'EEEE d MMMM') })}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-semibold tabular-nums text-muted">
+                          {item.quantity}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+
             {/* Honest live-monitoring panel */}
             <section className="bg-surface border border-line rounded-3xl p-6">
               <div className="flex items-center justify-between mb-2">
