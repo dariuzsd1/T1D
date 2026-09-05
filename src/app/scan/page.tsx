@@ -23,6 +23,7 @@ import { BarcodeScanner } from '@/components/scan/BarcodeScanner'
 import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
+import { DuplicatePanel, type DuplicateMatch } from '@/components/scan/DuplicatePanel'
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
 import { CameraCapture } from '@/components/scan/CameraCapture'
 import { createClient } from '@/lib/supabase/client'
@@ -37,12 +38,10 @@ import { daysPerUnitFromRate } from '@/lib/depletion'
 import { needsUsageRate, parseUsagePerDay } from '@/lib/usageRate'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
-import { cn, errorMessage } from '@/lib/utils'
+import { errorMessage } from '@/lib/utils'
 import {
-  compareBox,
   duplicateLookupKeys,
   findByNameAndBrand,
-  hidesInUseClock,
   planRestock,
 } from '@/lib/duplicateSupply'
 
@@ -166,17 +165,7 @@ export default function ScanPage() {
   const [personalMatch, setPersonalMatch] = useState(false)
   // Duplicate guard: an inventory row the user ALREADY has for this exact code, so
   // a re-scan can restock it instead of silently creating a second row.
-  const [duplicate, setDuplicate] = useState<{
-    id: string
-    name: string
-    quantity: number
-    expirationDate: string | null
-    lotNumber: string | null
-    openedDate?: string | null
-    inUseDays?: number | null
-    /** A code match is proof; a name match is only a strong suggestion. */
-    matchedBy: 'code' | 'name'
-  } | null>(null)
+  const [duplicate, setDuplicate] = useState<DuplicateMatch | null>(null)
 
   const { addProduct, updateProduct } = useStore()
   const router = useRouter()
@@ -655,14 +644,6 @@ export default function ScanPage() {
   // different expiry or lot means it is not: merging them into one row destroys
   // per-box expiry (FEFO rotation) and lot traceability (recall checks), so we
   // steer the user to a separate entry instead of blending them silently.
-  const mixedBox = duplicate ? compareBox(duplicate, scannedBox).differentBox : false
-  // A name match is a suggestion, not proof, so it gets the same restrained
-  // treatment as a box whose expiry or lot disagrees.
-  const cautiousMerge = mixedBox || duplicate?.matchedBy === 'name'
-  // P6: would this restock quietly stop the opened-vial discard clock capping the runway?
-  const inUseWarning = duplicate
-    ? hidesInUseClock(duplicate, typeof quantity === 'number' ? quantity : 1)
-    : false
 
   const scannedCodeLabel = scanned?.gtin || (scanned?.pzn ? `PZN ${scanned.pzn}` : '') || scanned?.raw || ''
 
@@ -1084,38 +1065,13 @@ export default function ScanPage() {
               {/* Duplicate guard: this code is already in the user's inventory.
                   Offer a restock; adding a separate row stays available below. */}
               {duplicate && (
-                <div className="rounded-xl border border-caution/30 bg-caution-soft p-4 space-y-3" role="status">
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 text-caution shrink-0 mt-0.5" aria-hidden="true" />
-                    <p className="text-sm text-ink">
-                      {duplicate.matchedBy === 'name'
-                        ? t('scan.duplicateNameBody', { name: duplicate.name, count: duplicate.quantity })
-                        : mixedBox
-                          ? t('scan.duplicateMixedBody', { name: duplicate.name, count: duplicate.quantity })
-                          : t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
-                    </p>
-                  </div>
-                  {inUseWarning && (
-                    <p className="text-xs leading-relaxed text-muted">{t('scan.duplicateInUseNote')}</p>
-                  )}
-                  <button
-                    onClick={handleRestockDuplicate}
-                    disabled={saving}
-                    className={cn(
-                      'w-full rounded-xl py-3 font-semibold transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-caution',
-                      cautiousMerge
-                        ? 'border border-line bg-surface text-muted hover:text-ink'
-                        : 'bg-caution text-white'
-                    )}
-                  >
-                    {mixedBox
-                      ? t('scan.duplicateMergeAnyway')
-                      : t('scan.duplicateRestock', {
-                          count: typeof quantity === 'number' ? quantity : 1,
-                          total: duplicate.quantity + (typeof quantity === 'number' ? quantity : 1),
-                        })}
-                  </button>
-                </div>
+                <DuplicatePanel
+                  duplicate={duplicate}
+                  scannedBox={scannedBox}
+                  addQuantity={typeof quantity === 'number' ? quantity : 1}
+                  saving={saving}
+                  onRestock={handleRestockDuplicate}
+                />
               )}
 
               {catalogMatch ? (
