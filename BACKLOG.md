@@ -31,10 +31,15 @@ Two things to know before adding more, both learned the hard way:
   vitest runs with `globals: true` and this project does not set it. Without that, one test's DOM
   survives into the next and assertions quietly pass or fail against a stale render.
 
-- **Remaining scope, highest value first:** the scan page's duplicate-restock panel and discontinued
-  notice (the flagship flow, still entirely uncovered); `EditProductModal` (its scroll/close bug was
-  user-reported and is currently guarded by nothing); the refill list's channel grouping; then a
-  `/dashboard` smoke render against a mocked backend.
+The scan page's duplicate-restock panel is now covered (`DuplicatePanel.test.tsx`, 12 tests). Extracting
+it from the 1,238-line page first was the right move and is the pattern to repeat: mounting the whole
+page exercises camera, router and network plumbing instead of the decision under test. The extracted
+component derives its own flags from the unit-tested rules rather than taking booleans as props, so a
+test cannot pass while the panel and the underlying merge disagree.
+
+- **Remaining scope, highest value first:** the scan page's discontinued notice and quantity field;
+  `EditProductModal` (its scroll/close bug was user-reported and is currently guarded by nothing); the
+  refill list's channel grouping; then a `/dashboard` smoke render against a mocked backend.
 - **Acceptance:** CI fails on a broken route, a broken caregiver-access rule, or a broken render of any
   covered component. The first two are already true. Prove each new test by reintroducing the bug it
   guards and watching it fail — that is how the ProductCard and SQL-lint tests were validated.
