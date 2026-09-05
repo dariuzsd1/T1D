@@ -37,8 +37,11 @@ page exercises camera, router and network plumbing instead of the decision under
 component derives its own flags from the unit-tested rules rather than taking booleans as props, so a
 test cannot pass while the panel and the underlying merge disagree.
 
-- **Remaining scope, highest value first:** the scan page's discontinued notice and quantity field;
-  `EditProductModal` (its scroll/close bug was user-reported and is currently guarded by nothing); the
+`EditProductModal` is now covered too (14 tests), including four that pin the LAYOUT — a capped height,
+fields inside a scroll region, close and Save/Cancel outside it. Worth copying that idea: when the bug
+was structural, assert the structure, not just the copy.
+
+- **Remaining scope, highest value first:** the scan page's discontinued notice and quantity field; the
   refill list's channel grouping; then a `/dashboard` smoke render against a mocked backend.
 - **Acceptance:** CI fails on a broken route, a broken caregiver-access rule, or a broken render of any
   covered component. The first two are already true. Prove each new test by reintroducing the bug it
