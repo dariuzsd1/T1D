@@ -41,8 +41,12 @@ test cannot pass while the panel and the underlying merge disagree.
 fields inside a scroll region, close and Save/Cancel outside it. Worth copying that idea: when the bug
 was structural, assert the structure, not just the copy.
 
-- **Remaining scope, highest value first:** the scan page's discontinued notice and quantity field; the
-  refill list's channel grouping; then a `/dashboard` smoke render against a mocked backend.
+The scan flow is now covered: `DuplicatePanel`, `QuantityField` and `DiscontinuedNotice` all have tests,
+and extracting each one shrank `src/app/scan/page.tsx` from 1,238 to ~1,100 lines along the way.
+
+- **Remaining scope, highest value first:** the refill list's channel grouping (ready-to-refill vs
+  needs-a-new-script vs no-prescription, plus the discontinued override); then a `/dashboard` smoke
+  render against a mocked backend.
 - **Acceptance:** CI fails on a broken route, a broken caregiver-access rule, or a broken render of any
   covered component. The first two are already true. Prove each new test by reintroducing the bug it
   guards and watching it fail — that is how the ProductCard and SQL-lint tests were validated.
