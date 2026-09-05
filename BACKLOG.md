@@ -44,9 +44,13 @@ was structural, assert the structure, not just the copy.
 The scan flow is now covered: `DuplicatePanel`, `QuantityField` and `DiscontinuedNotice` all have tests,
 and extracting each one shrank `src/app/scan/page.tsx` from 1,238 to ~1,100 lines along the way.
 
-- **Remaining scope, highest value first:** the refill list's channel grouping (ready-to-refill vs
-  needs-a-new-script vs no-prescription, plus the discontinued override); then a `/dashboard` smoke
-  render against a mocked backend.
+The refill list's grouping and its exported text are covered too (`src/lib/refillList.test.ts`), using
+the real English dictionary rather than a stub translator — a stub that echoes keys lets a
+wrong-but-plausible message pass.
+
+- **Remaining scope:** a `/dashboard` smoke render against a mocked backend, which is the last
+  significant uncovered surface. After that the gap is genuine end-to-end (Playwright), which is a
+  separate tooling decision and not obviously worth it for a single-user app.
 - **Acceptance:** CI fails on a broken route, a broken caregiver-access rule, or a broken render of any
   covered component. The first two are already true. Prove each new test by reintroducing the bug it
   guards and watching it fail — that is how the ProductCard and SQL-lint tests were validated.
