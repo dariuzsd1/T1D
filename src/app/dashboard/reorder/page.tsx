@@ -6,37 +6,27 @@ import { motion } from 'framer-motion'
 import { format } from 'date-fns'
 import { useStore, type Product } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
-import { effectiveLeadTimeDays, type DisplayStatus } from '@/lib/depletion'
+import { effectiveLeadTimeDays } from '@/lib/depletion'
 import { itemDisplayStatus } from '@/lib/rescueItems'
 import { DME_SUPPLIERS } from '@/lib/suppliers'
 import { createClient } from '@/lib/supabase/client'
 import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
-import type { TKey } from '@/lib/i18n/dictionaries'
 import { useProfile } from '@/components/profile/ProfileProvider'
 import { trackEvent } from '@/lib/analytics'
 import { BackButton } from '@/components/ui/BackButton'
 import {
   CheckCircle2, ExternalLink, Truck, Copy, Share2, Printer, Check, Pill,
 } from 'lucide-react'
+import {
+  buildRefillText,
+  CHANNELS,
+  refillActionLabel,
+  refillChannelFor,
+  type RefillPlan,
+} from '@/lib/refillList'
 
-/** Which real-world path resupplies this item, inferred from its linked Rx. */
-type RefillChannel = 'refill' | 'newRx' | 'noRx'
-
-interface RefillPlan {
-  product: Product
-  status: DisplayStatus
-  rx: Prescription | null
-  channel: RefillChannel
-}
-
-/** Channel groups, in the order they appear on screen and in the exported text. */
-const CHANNELS: { key: RefillChannel; head: TKey }[] = [
-  { key: 'refill', head: 'reorder.groupRefill' },
-  { key: 'newRx', head: 'reorder.groupNewRx' },
-  { key: 'noRx', head: 'reorder.groupNoRx' },
-]
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))
@@ -95,12 +85,7 @@ export default function ReorderPage() {
     .sort((a, b) => a.product.remainingDays - b.product.remainingDays)
     .map(({ product, status }) => {
       const rx = product.prescriptionId ? rxById.get(product.prescriptionId) ?? null : null
-      const channel: RefillChannel = !rx
-        ? 'noRx'
-        : rx.refillsRemaining != null && rx.refillsRemaining <= 0
-          ? 'newRx'
-          : 'refill'
-      return { product, status, rx, channel }
+      return { product, status, rx, channel: refillChannelFor(rx) }
     })
 
   const notForecast = inventory.filter((p) => statusOf(p) === 'unset')
@@ -115,37 +100,7 @@ export default function ReorderPage() {
     })
 
   // ---- Build the shareable / printable text (grouped by channel) ----
-  const buildText = (): string => {
-    const byChannel = (c: RefillChannel) => included.filter((pl) => pl.channel === c)
-    const line = (pl: RefillPlan): string => {
-      const name = pl.product.brand ? `${pl.product.name} (${pl.product.brand})` : pl.product.name
-      // Lead with the stock word so a plain-text reader (or the pharmacy) still
-      // learns which items are already out vs merely low — color can't carry it.
-      const bits: string[] = [t(pl.status === 'out' ? 'reorder.stOut' : 'reorder.stLow')]
-      // Flag it in the printed/shared list too: this is the copy a prescriber sees.
-      if (pl.product.discontinued) bits.push(t('catalog.discontinued'))
-      if (pl.rx?.rxNumber) bits.push(t('reorder.rxNumber', { rx: pl.rx.rxNumber }))
-      if (pl.rx?.pharmacy) bits.push(pl.rx.pharmacy)
-      if (pl.channel === 'refill' && pl.rx?.refillsRemaining != null) {
-        bits.push(t(pl.rx.refillsRemaining === 1 ? 'reorder.refillsLeftOne' : 'reorder.refillsLeftOther', { count: pl.rx.refillsRemaining }))
-      }
-      if (pl.channel === 'newRx' && pl.rx?.prescriber) bits.push(pl.rx.prescriber)
-      return `- ${name}: ${bits.join(', ')}`
-    }
-    const section = (headingKey: TKey, c: RefillChannel): string[] => {
-      const rows = byChannel(c)
-      if (rows.length === 0) return []
-      return [`${t(headingKey)}:`, ...rows.map(line), '']
-    }
-    return [
-      t('reorder.textTitle'),
-      format(new Date(), 'PP'),
-      '',
-      ...section('reorder.groupRefill', 'refill'),
-      ...section('reorder.groupNewRx', 'newRx'),
-      ...section('reorder.groupNoRx', 'noRx'),
-    ].join('\n').trim()
-  }
+  const buildText = (): string => buildRefillText(included, t, format(new Date(), 'PP'))
 
   const copyList = async () => {
     if (included.length === 0) { showToast(t('reorder.nothingToCopy'), 'info'); return }
@@ -192,19 +147,7 @@ export default function ReorderPage() {
     }
   }
 
-  const channelLabel = (pl: RefillPlan): string => {
-    // A discontinued product overrides every channel: there is nothing to refill
-    // and no new script to chase, so the only honest action is to ask for a
-    // replacement. Never suggest reordering something nobody makes any more.
-    if (pl.product.discontinued) return t('reorder.actionDiscontinued')
-    if (pl.channel === 'refill') {
-      return pl.rx?.pharmacy ? t('reorder.actionRefillAt', { pharmacy: pl.rx.pharmacy }) : t('reorder.actionRefillGeneric')
-    }
-    if (pl.channel === 'newRx') {
-      return pl.rx?.prescriber ? t('reorder.actionNewRxFrom', { prescriber: pl.rx.prescriber }) : t('reorder.actionNewRxGeneric')
-    }
-    return t('reorder.actionNoRx')
-  }
+  const channelLabel = (pl: RefillPlan): string => refillActionLabel(pl, t)
 
   return (
     <div className="max-w-2xl mx-auto space-y-8" aria-busy={loading}>
