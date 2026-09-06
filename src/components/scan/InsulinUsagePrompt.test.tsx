@@ -23,7 +23,7 @@ describe('InsulinUsagePrompt', () => {
     renderWithProviders(
       <InsulinUsagePrompt id="t" dose="" container="" onDose={noop} onContainer={noop} />,
     )
-    expect(screen.getByLabelText(/units a day/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/units drawn a day/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/units per vial\/pen/i)).toBeInTheDocument()
   })
 
@@ -35,6 +35,26 @@ describe('InsulinUsagePrompt', () => {
     // Optional, not a gate: someone who does not know their pen size must still
     // be able to add the insulin.
     expect(screen.getByText(/skip this and set it later/i)).toBeInTheDocument()
+  })
+
+  it('asks what leaves the container, not just the dose', () => {
+    // The field used to read "Units a day", so people typed their TDD, and the
+    // runway then ignored everything spent priming: about 2 units a pen
+    // injection, or 10 to 20 filling a pump line at each set change. That is 9
+    // to 19 percent of what actually goes, always in the optimistic direction.
+    //
+    // Deliberately not modelled. Priming volume depends on tubing length, pump
+    // and how many injections someone takes, so a single number in the catalog
+    // would be the flat 28-day discard window all over again. The user already
+    // has to answer this question; it just had to ask for the right thing, and
+    // show the arithmetic so they can work theirs out.
+    renderWithProviders(
+      <InsulinUsagePrompt id="t" dose="" container="" onDose={noop} onContainer={noop} />,
+    )
+    expect(screen.getByLabelText(/units drawn a day/i)).toBeInTheDocument()
+    expect(screen.getByText(/priming included/i)).toBeInTheDocument()
+    expect(screen.getByText(/pen injection/i)).toBeInTheDocument()
+    expect(screen.getByText(/pump line/i)).toBeInTheDocument()
   })
 
   it('offers the container size people actually have to look up', () => {
@@ -53,7 +73,7 @@ describe('InsulinUsagePrompt', () => {
     renderWithProviders(
       <InsulinUsagePrompt id="t" dose="" container="" onDose={onDose} onContainer={onContainer} />,
     )
-    fireEvent.change(screen.getByLabelText(/units a day/i), { target: { value: '40' } })
+    fireEvent.change(screen.getByLabelText(/units drawn a day/i), { target: { value: '40' } })
     fireEvent.change(screen.getByLabelText(/units per vial\/pen/i), { target: { value: '1000' } })
     expect(onDose).toHaveBeenCalledWith('40')
     expect(onContainer).toHaveBeenCalledWith('1000')
@@ -66,7 +86,7 @@ describe('InsulinUsagePrompt', () => {
     renderWithProviders(
       <InsulinUsagePrompt id="t" dose="24" container="300" onDose={noop} onContainer={noop} />,
     )
-    expect(screen.getByLabelText(/units a day/i)).toHaveValue(24)
+    expect(screen.getByLabelText(/units drawn a day/i)).toHaveValue(24)
     expect(screen.getByLabelText(/units per vial\/pen/i)).toHaveValue(300)
   })
 
