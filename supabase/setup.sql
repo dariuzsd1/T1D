@@ -131,6 +131,12 @@ alter table public.supplies
   add column if not exists category              text,
   add column if not exists model                text,
   add column if not exists usage_rate_per_day    numeric,
+  -- The user's MEASURED replacement cadence, recomputed from their own
+  -- site_changes rows each time one is logged (src/lib/observedWear.ts). Kept
+  -- apart from usage_rate_per_day, which stays the label figure: the forecast
+  -- runs on whichever is faster, and only ever faster. Null until there is
+  -- enough history to say anything.
+  add column if not exists observed_rate_per_day numeric,
   add column if not exists copay                 numeric,
   add column if not exists refill_interval_days integer,
   -- The catalog's TYPICAL dispensing cycle for this product, copied over when the

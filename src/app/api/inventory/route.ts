@@ -55,6 +55,7 @@ export async function GET() {
         expirationDate: supply.expiration_date,
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        observedRatePerDay: supply.observed_rate_per_day ?? null,
       })
 
       return {
@@ -85,6 +86,7 @@ export async function GET() {
         // Insulin in-use clock (null until set / columns exist).
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        observedRatePerDay: supply.observed_rate_per_day ?? null,
         // Reorder-loop tracking (null until marked ordered / column exists).
         lastOrderedDate: supply.last_ordered_date ?? null,
         // Per-item shipping lead time (null = inherit the account default).

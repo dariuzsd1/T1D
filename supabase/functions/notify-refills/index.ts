@@ -236,6 +236,7 @@ interface SupplyRow {
   name: string
   quantity: number
   usage_rate_per_day: number | null
+  observed_rate_per_day: number | null
   expiration_date: string | null
   refill_interval_days: number | null
   last_filled_date: string | null
@@ -317,7 +318,9 @@ Deno.serve(async (req) => {
   const [tokensRes, suppliesRes, prefsRes, profilesRes, logRes] = await Promise.all([
     supabase.from('fcm_tokens').select('id, user_id, token'),
     supabase.from('supplies').select(
-      'id, user_id, name, quantity, usage_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days, last_ordered_date, lead_time_days'
+      // observed_rate_per_day rides along so the push channel forecasts on the
+      // same rate the app shows. This file exists because the two drifted once.
+      'id, user_id, name, quantity, usage_rate_per_day, observed_rate_per_day, expiration_date, refill_interval_days, last_filled_date, opened_date, in_use_days, last_ordered_date, lead_time_days'
     ),
     supabase.from('notification_prefs').select('*'),
     supabase.from('profiles').select('id, timezone, safety_buffer_days, shipping_lead_time_days'),
@@ -371,6 +374,7 @@ Deno.serve(async (req) => {
       const input: RunwayInput = {
         quantity: s.quantity,
         usageRatePerDay: s.usage_rate_per_day ?? 0,
+        observedRatePerDay: s.observed_rate_per_day ?? null,
         expirationDate: s.expiration_date,
         openedDate: s.opened_date,
         inUseDays: s.in_use_days,

@@ -18,6 +18,7 @@ import {
   daysUntilExpiration,
   inUseDaysRemaining,
   isRateEstimated,
+  effectiveRatePerDay,
   effectiveLeadTimeDays,
   DEFAULT_SAFETY_BUFFER_DAYS,
   DEFAULT_SHIPPING_LEAD_TIME_DAYS,
@@ -123,6 +124,10 @@ export function ProductCard({
   // When the user hasn't set a real daily usage, the runway is a conservative
   // estimate — say so plainly rather than presenting a guess as fact (CLAUDE.md §9).
   const estimated = isRateEstimated(product.usageRatePerDay)
+  // The rate the runway is actually built on, and whether it came from this
+  // user's logged changes rather than the box (src/lib/observedWear.ts).
+  const forecastRate = effectiveRatePerDay(product.usageRatePerDay, product.observedRatePerDay)
+  const measured = !estimated && forecastRate > product.usageRatePerDay
 
   // Runway ↔ prescription reconciliation ("no refills left and it runs out in
   // 9 days") — the moment to call the prescriber. Null when nothing actionable.
@@ -404,7 +409,19 @@ export function ProductCard({
                           {estimated ? t('product.estimateBadge') : t('product.trackedBadge')}
                         </span>
                         <span>
-                          {estimated ? t('product.usageNotSet') : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
+                          {estimated
+                            ? t('product.usageNotSet')
+                            : measured
+                              // The forecast is running on this user's own logged
+                              // cadence, not the figure on the box. Saying so
+                              // matters: the number moved, and they are entitled
+                              // to know it moved because of their own history
+                              // rather than something the app decided.
+                              ? t('product.perDayMeasured', {
+                                  rate: Math.round(forecastRate * 100) / 100,
+                                  days: Math.round(1 / forecastRate),
+                                })
+                              : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
                         </span>
                       </>
                     ) : (

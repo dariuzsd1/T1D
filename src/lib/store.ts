@@ -18,6 +18,9 @@ export interface Product {
   // The user's real daily usage. 0/absent means "not set yet" → the runway is a
   // conservative ESTIMATE (see isRateEstimated in depletion.ts), labelled as such.
   usageRatePerDay: number;
+  /** Measured cadence from this user's own logged site changes. The forecast
+   *  runs on whichever of the two is faster; see depletion.effectiveRatePerDay. */
+  observedRatePerDay?: number | null;
   expirationDate?: string | null;
   /** Copied from the catalog when the supply was added: the manufacturer has
    *  stopped making it, so the app must never present it as reorderable. */
@@ -69,6 +72,7 @@ export interface SupplyRow {
   quantity: number;
   updated_at: string | null;
   usage_rate_per_day: number | null;
+  observed_rate_per_day: number | null;
   expiration_date: string | null;
   refill_interval_days: number | null;
   catalog_refill_interval_days: number | null;

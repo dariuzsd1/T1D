@@ -26,6 +26,8 @@ import {
   zoneCenter,
   elapsedTextKey,
 } from '@/lib/siteRotation'
+import { observedWear } from '@/lib/observedWear'
+import { daysPerUnitFromRate } from '@/lib/depletion'
 import {
   REST_WINDOW_OPTIONS,
   getSiteRestWindowDays,
@@ -148,6 +150,39 @@ export default function SiteTrackerPage() {
     setActiveId(null)
   }
 
+  /**
+   * Recompute what this supply's replacement cadence actually looks like, from
+   * the user's own logged changes, and store it alongside the label rate.
+   *
+   * Every catalog rate is the label figure: a G7 lasts 10 days, a pod 3. That is
+   * what you get when nothing goes wrong. Sensors fail early, pods get knocked
+   * off, sites go sore, and a DME ships exactly 30 days of pods for 30 days, so
+   * a forecast that assumes a clean run runs late in the one direction that
+   * matters. The alternative to measuring would be baking a failure percentage
+   * into the catalog, which is a number nobody could source.
+   *
+   * Best-effort and silent, like the other optional-column writes here: this is
+   * a refinement of a forecast, and it must never cost someone the site log they
+   * came here to record. `observedWear` returns null until there is enough
+   * history, and the write is skipped rather than clearing a good value.
+   */
+  const syncObservedRate = async (supplyId: string | null, rows: SiteChangeRow[]) => {
+    if (!supplyId) return
+    const linked = inventory.find((p) => p.id === supplyId)
+    const dates = rows
+      .filter((r) => r.supply_id === supplyId && r.applied_date)
+      .map((r) => r.applied_date as string)
+    const observed = observedWear(dates, daysPerUnitFromRate(linked?.usageRatePerDay ?? 0))
+    if (!observed) return
+    const { error } = await supabase
+      .from('supplies')
+      .update({ observed_rate_per_day: observed.ratePerDay })
+      .eq('id', supplyId)
+    if (error) {
+      console.warn('observed_rate_per_day not saved — run supabase/setup.sql:', error.message)
+    }
+  }
+
   const handleSave = async (zone: BodyZone, input: SiteChangeInput) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error(t('siteTracker.errSignedOut'))
@@ -199,6 +234,7 @@ export default function SiteTrackerPage() {
     }
 
     const fresh = await loadChanges()
+    await syncObservedRate(input.supplyId ?? null, fresh)
     setJustLogged(Date.now())
     if (usedFailed) {
       showToast(t('siteTracker.toastLoggedButFailed', { name: usedFailed }), 'caution')
@@ -244,7 +280,11 @@ export default function SiteTrackerPage() {
         setInventory((prev) => prev.map((p) => (p.id === linked.id ? { ...p, quantity: nextQty } : p)))
       }
     }
-    await loadChanges()
+    // Deleting a change alters the history the cadence is measured from, so it
+    // has to be recomputed here too, or the forecast keeps running on a gap that
+    // no longer exists.
+    const afterDelete = await loadChanges()
+    await syncObservedRate(row.supply_id ?? null, afterDelete)
     showToast(t('siteHistory.deleted'), 'success')
   }
 
@@ -287,7 +327,13 @@ export default function SiteTrackerPage() {
       }
     }
 
-    await loadChanges()
+    // An edit can move a date or re-point the change at a different supply, so
+    // both the supply it left and the one it landed on need recomputing.
+    const afterEdit = await loadChanges()
+    await syncObservedRate(row.supply_id ?? null, afterEdit)
+    if (values.supplyId && values.supplyId !== row.supply_id) {
+      await syncObservedRate(values.supplyId, afterEdit)
+    }
     showToast(t('siteHistory.edited'), 'success')
   }
 

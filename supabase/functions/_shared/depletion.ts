@@ -41,6 +41,13 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24
 export interface RunwayInput {
   quantity: number
   usageRatePerDay: number
+  /**
+   * The user's MEASURED replacement cadence, from their own logged site changes
+   * (src/lib/observedWear.ts). Every catalog rate is the label figure, which is
+   * what the manufacturer promises when nothing goes wrong; sensors fail, pods
+   * get knocked off, sites go sore. Null until there is enough history to say.
+   */
+  observedRatePerDay?: number | null
   expirationDate?: string | null
   // Insulin in-use clock: when the current vial/pen was opened, and how many
   // days it stays good once opened (28 for most insulins). Both optional.
@@ -71,6 +78,33 @@ export function daysPerUnitFromRate(usageRatePerDay?: number | null): number | n
   if (!(typeof usageRatePerDay === 'number' && usageRatePerDay > 0)) return null
   if (usageRatePerDay > 1) return null // more than one unit/day → not a wear item
   return Math.round(1 / usageRatePerDay)
+}
+
+/**
+ * The rate a forecast should actually run on: the label, or the user's own
+ * measured cadence when that is faster.
+ *
+ * One-directional on purpose. Burning through supplies quicker than the box
+ * claims is the case that leaves someone short, so it moves the number. Lasting
+ * longer than the box claims does not, because a forecast built on stretching a
+ * sensor is a promise the app cannot keep. Same shape as the shipping lead time,
+ * which can only ever add reserve.
+ *
+ * An unknown label rate is returned untouched, so an item whose runway is
+ * already a labelled estimate cannot acquire a confident-looking number just
+ * because its sites were logged.
+ *
+ * Lives here, in the file both runtimes share, so the app and the notify-refills
+ * Edge Function cannot end up forecasting on different rates. `observedWear.ts`
+ * wraps it rather than restating it.
+ */
+export function effectiveRatePerDay(
+  labelRatePerDay: number,
+  observedRatePerDay?: number | null,
+): number {
+  if (!(labelRatePerDay > 0)) return labelRatePerDay
+  if (!(typeof observedRatePerDay === 'number' && observedRatePerDay > 0)) return labelRatePerDay
+  return Math.max(labelRatePerDay, observedRatePerDay)
 }
 
 /** Days of stock left, derived from units on hand and daily usage. */
@@ -135,11 +169,15 @@ export function inUseDaysRemaining(
  * with its remaining clock, which is the most it can possibly be worth).
  */
 export function stockRunwayDays(p: RunwayInput, now: Date = new Date()): number {
+  // The measured cadence, when there is one, stands in for the label rate here
+  // and nowhere else: it changes how fast stock is forecast to go, not what the
+  // product is, and never makes the runway longer (see effectiveRatePerDay).
+  const rate = effectiveRatePerDay(p.usageRatePerDay, p.observedRatePerDay)
   const window = p.inUseDays
-  if (!window || window <= 0) return daysOfStock(p.quantity, p.usageRatePerDay)
+  if (!window || window <= 0) return daysOfStock(p.quantity, rate)
   if (p.quantity <= 0) return 0
 
-  const usage = p.usageRatePerDay > 0 ? p.usageRatePerDay : DEFAULT_USAGE_RATE_PER_DAY
+  const usage = rate > 0 ? rate : DEFAULT_USAGE_RATE_PER_DAY
   // What one container is good for: emptied at the dose rate, or discarded at
   // the end of its window, whichever comes first.
   const perContainer = Math.min(1 / usage, window)

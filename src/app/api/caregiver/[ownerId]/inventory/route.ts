@@ -62,6 +62,7 @@ export async function GET(
         expirationDate: supply.expiration_date,
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        observedRatePerDay: supply.observed_rate_per_day ?? null,
       })
       return {
         id: supply.id,
@@ -84,6 +85,7 @@ export async function GET(
         prescriptionId: supply.prescription_id ?? null,
         openedDate: supply.opened_date ?? null,
         inUseDays: supply.in_use_days ?? null,
+        observedRatePerDay: supply.observed_rate_per_day ?? null,
         lastOrderedDate: supply.last_ordered_date ?? null,
         leadTimeDays: supply.lead_time_days ?? null,
       }
