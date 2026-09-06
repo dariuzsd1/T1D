@@ -80,6 +80,75 @@ describe('product catalog integrity', () => {
     expect(named(bad)).toEqual([])
   })
 
+  /**
+   * The rate checks below exist because "numeric" was the only bar a rate had to
+   * clear, and two wrong ones walked straight through review looking perfectly
+   * plausible:
+   *
+   *   - Omnipod GO carried 0.014, which is 1/72: its 72-HOUR wear had been
+   *     entered as 72 days. The app then told anyone holding ten pods they had
+   *     714 days of supply, and never warned them.
+   *   - FreeStyle Libre 3 carried 0.067 (1/15), the wear time of the Libre 3
+   *     PLUS, so a 14-day sensor was credited with a day it does not have.
+   *
+   * Neither is catchable by eye. Both are caught below.
+   */
+
+  /** Days one unit lasts, implied by the rate the catalog actually stores. */
+  const impliedDaysPerUnit = (r: Row) => 1 / Number(r.typical_usage_per_day)
+  const rated = rows.filter((r) => Number(r.typical_usage_per_day) > 0)
+
+  it('has rated rows to check', () => {
+    expect(rated.length).toBeGreaterThan(40)
+  })
+
+  it('keeps a rate consistent with the one its own notes claim', () => {
+    // Most notes show their working ("10-day wear = 0.10/day"). Where they do,
+    // the two must agree: a note edited without the column, or the reverse, is
+    // how a reviewed row quietly stops meaning what it says.
+    const drifted = rated.filter((r) => {
+      const m = r.notes.match(/=\s*~?([\d.]+)\s*\/\s*day/i)
+      return m ? Math.abs(Number(m[1]) - Number(r.typical_usage_per_day)) > 1e-9 : false
+    })
+    expect(named(drifted)).toEqual([])
+  })
+
+  it('keeps a rate consistent with the wear time its own notes state', () => {
+    // Match the FIRST day figure in the notes: these are written wear-time
+    // first, with comparisons ("the Plus is the 15-day sensor") afterwards. 3%
+    // absorbs two-decimal rounding (0.143 reads as 6.99 days, not 7) and
+    // nothing wider, since the Libre 3 error was 6.6% off and must not survive.
+    const off = rated.filter((r) => {
+      const m = r.notes.match(/(\d+)\s*-?\s*days?\b/i)
+      if (!m) return false // no claim to check; the bounds test below covers it
+      const claimed = Number(m[1])
+      return Math.abs(impliedDaysPerUnit(r) - claimed) / claimed > 0.03
+    })
+    expect(named(off)).toEqual([])
+  })
+
+  it('keeps every rate inside the wear time its category can physically have', () => {
+    // The backstop for a row whose notes claim nothing, which is exactly where
+    // Omnipod GO hid. These bounds are clinical facts, not style: an infusion
+    // set, pod, reservoir or cartridge is changed every 1-3 days, and the
+    // longest-wearing one that exists (MiniMed Extended) is 7. A sensor runs
+    // from the 7-day Guardian to the 365-day implanted Eversense.
+    const BOUNDS: Record<string, [number, number]> = {
+      infusion_set: [1, 7],
+      patch_pump: [1, 7],
+      cgm_sensor: [7, 365],
+    }
+    const impossible = rated.filter((r) => {
+      const b = BOUNDS[r.category]
+      if (!b) return false
+      const days = impliedDaysPerUnit(r)
+      // 2% either side, because a two-decimal rate lands just off a whole day:
+      // the 7-day Guardian is stored as 0.143, which reads back as 6.99 days.
+      return days < b[0] * 0.98 || days > b[1] * 1.02
+    })
+    expect(named(impossible)).toEqual([])
+  })
+
   it('reports how stale the verified rows are getting', () => {
     const MONTHS = 12
     const cutoff = new Date()

@@ -821,6 +821,64 @@ alter table public.notification_log enable row level security;
 
 
 -- ============================================================================
+-- 17. CATALOG WEAR-RATE CORRECTIONS  (reference data, not PHI)
+--
+--     typical_usage_per_day drives every "days left" number the app prints, so
+--     a wrong rate here is a wrong reorder date for every user holding that
+--     product. The catalog CSV is the reviewed source of truth, but nothing in
+--     this repo replays it onto an already-populated products table, so a fix
+--     to data/diabetes_catalog.csv reaches nobody without a statement here.
+--
+--     Each update is guarded on the OLD value, so it is idempotent, it cannot
+--     clobber a later correction, and it no-ops on a fresh import that already
+--     carries the right number.
+-- ============================================================================
+
+-- Omnipod GO: was 0.014, which is 1/72 -- the 72-HOUR wear had been entered as
+-- 72 days, so the app credited one pod with 71 days and told a user holding ten
+-- of them they had 714 days of supply. It is a 3-day pod like every other
+-- Omnipod. Source: Omnipod GO user guide (72 hours of insulin delivery).
+update public.products set typical_usage_per_day = 0.33
+  where product_name = 'Omnipod GO Pod' and typical_usage_per_day = 0.014;
+
+-- FreeStyle Libre 3: was 0.067 (1/15), the wear time of the Libre 3 PLUS. The
+-- Libre 3 itself is a 14-day sensor. Source: Abbott support FAQ comparing the
+-- two sensors directly.
+update public.products set typical_usage_per_day = 0.071
+  where product_name = 'FreeStyle Libre 3 Sensor' and typical_usage_per_day = 0.067;
+
+-- Abbott Lingo: was 0.067 (1/15). Abbott's own launch release states 14 days.
+update public.products set typical_usage_per_day = 0.071
+  where product_name = 'Lingo Sensor' and typical_usage_per_day = 0.067;
+
+--     ---- Backfill: supplies already on shelves -------------------------
+--     A supply copies the catalog rate onto its own row when it is added, so
+--     fixing products alone leaves everyone who already scanned one of these
+--     boxes still reading the wrong runway. These three statements repair the
+--     rows the bug actually produced, and nothing else:
+--       - each is guarded on the EXACT wrong value, and the values the app
+--         writes for a hand-entered rate never land on them (the UI stores
+--         1/days, so 15 days is 0.0666..., not 0.067, and 71 days is
+--         0.014084, not 0.014). A rate a user typed themselves is untouched.
+--       - the name filters keep 0.067 away from the sensors that really are
+--         15-day (Libre 3 PLUS, Libre 2 Plus, G7 15-Day, Stelo, Rio, Instinct).
+--     Delete this block if you would rather let users re-enter the rate
+--     by hand; the catalog fix above still stands on its own.
+
+update public.supplies set usage_rate_per_day = 0.33
+  where usage_rate_per_day = 0.014
+    and name ilike '%omnipod%go%';
+
+update public.supplies set usage_rate_per_day = 0.071
+  where usage_rate_per_day = 0.067
+    and name ilike '%libre 3%'
+    and name not ilike '%plus%';
+
+update public.supplies set usage_rate_per_day = 0.071
+  where usage_rate_per_day = 0.067
+    and name ilike '%lingo%';
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

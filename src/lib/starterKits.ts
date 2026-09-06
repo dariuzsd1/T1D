@@ -32,8 +32,11 @@ export interface KitOption {
 
 const POD_3DAY = 0.33 // a pod/set/cartridge changed every ~3 days
 const SENSOR_10DAY = 0.1 // Dexcom G6/G7 (10-day wear)
-const SENSOR_14DAY = 0.067 // FreeStyle Libre 3 (~15-day wear)
-const SENSOR_LIBRE2 = 0.071 // FreeStyle Libre 2 (14-day wear)
+// 1/14. Libre 2 and Libre 3 are BOTH 14-day sensors; only the "Plus" revisions
+// run 15 days. This constant previously held 0.067 (1/15) under this same
+// SENSOR_14DAY name, which credited Libre 3 with the Plus wear time and read a
+// day long per sensor. Name and value now agree.
+const SENSOR_14DAY = 0.071
 const SENSOR_7DAY = 0.143 // Medtronic Guardian (7-day wear)
 
 export const DELIVERY_OPTIONS: KitOption[] = [
@@ -149,7 +152,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Abbott',
     device: { brand: 'Abbott', model: 'FreeStyle Libre 2', kind: 'cgm' },
     supplies: [
-      { name: 'FreeStyle Libre 2 Sensors', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_LIBRE2 },
+      { name: 'FreeStyle Libre 2 Sensors', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_14DAY },
     ],
   },
   {
