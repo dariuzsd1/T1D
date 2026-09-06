@@ -99,13 +99,14 @@ export function daysUntilExpiration(
  */
 export function inUseDaysRemaining(
   openedDate?: string | null,
-  inUseDays?: number | null
+  inUseDays?: number | null,
+  now: Date = new Date()
 ): number | null {
   if (!openedDate || !inUseDays || inUseDays <= 0) return null
   const opened = new Date(openedDate).getTime()
   if (Number.isNaN(opened)) return null
   const discardAt = opened + inUseDays * MS_PER_DAY
-  return Math.floor((discardAt - Date.now()) / MS_PER_DAY)
+  return Math.floor((discardAt - now.getTime()) / MS_PER_DAY)
 }
 
 /**
@@ -133,7 +134,7 @@ export function inUseDaysRemaining(
  * part-used container's fill level is never guessed at (the open one is credited
  * with its remaining clock, which is the most it can possibly be worth).
  */
-export function stockRunwayDays(p: RunwayInput): number {
+export function stockRunwayDays(p: RunwayInput, now: Date = new Date()): number {
   const window = p.inUseDays
   if (!window || window <= 0) return daysOfStock(p.quantity, p.usageRatePerDay)
   if (p.quantity <= 0) return 0
@@ -143,7 +144,7 @@ export function stockRunwayDays(p: RunwayInput): number {
   // the end of its window, whichever comes first.
   const perContainer = Math.min(1 / usage, window)
 
-  const open = inUseDaysRemaining(p.openedDate, window)
+  const open = inUseDaysRemaining(p.openedDate, window, now)
   // Nothing opened yet: every container still has its full window ahead of it.
   if (open === null) return Math.max(0, Math.floor(p.quantity * perContainer))
   // One is open. It is worth what is left on its clock (nothing, once that has
@@ -157,9 +158,9 @@ export function stockRunwayDays(p: RunwayInput): number {
  * running out already accounts for containers thrown away part-used (see
  * `stockRunwayDays`). Nothing here is fabricated.
  */
-export function effectiveRunwayDays(p: RunwayInput): number {
-  const caps = [stockRunwayDays(p)]
-  const exp = daysUntilExpiration(p.expirationDate)
+export function effectiveRunwayDays(p: RunwayInput, now: Date = new Date()): number {
+  const caps = [stockRunwayDays(p, now)]
+  const exp = daysUntilExpiration(p.expirationDate, now)
   if (exp !== null) caps.push(exp)
   return Math.max(0, Math.min(...caps))
 }
@@ -230,13 +231,14 @@ export type DisplayStatus = StockStatus | 'unset'
 export function displayStatus(
   p: RunwayInput,
   bufferDays: number = DEFAULT_SAFETY_BUFFER_DAYS,
-  leadTimeDays: number = 0
+  leadTimeDays: number = 0,
+  now: Date = new Date()
 ): DisplayStatus {
   if (p.quantity <= 0) return 'out'
   if (!isRateEstimated(p.usageRatePerDay)) {
-    return stockStatus(effectiveRunwayDays(p), bufferDays, leadTimeDays)
+    return stockStatus(effectiveRunwayDays(p, now), bufferDays, leadTimeDays)
   }
-  const exp = daysUntilExpiration(p.expirationDate)
+  const exp = daysUntilExpiration(p.expirationDate, now)
   if (exp !== null && exp <= 0) return 'out'
   // Expiry is dated fact, so it may still flag an estimated-rate item — and the
   // reorder window here includes shipping lead time, same as a known-rate item.

@@ -12,11 +12,22 @@
  * turns those items back into something the app can actually warn about.
  */
 
-/** Catalog categories whose usage is per-person and routinely above one a day. */
+/**
+ * Catalog categories whose usage is per-person and routinely above one a day.
+ *
+ * `ketone_supply` used to be in here and is not any more. Ketone strips are used
+ * when someone is ill or running high, not on a schedule, so "how many a day?"
+ * describes nobody who actually uses them, and rescueItems ignored the answer
+ * anyway: those are judged on expiry. Asking a question whose answer is thrown
+ * away is worse than not asking.
+ *
+ * `hypo_treatment` stays, and now its answer is used (see
+ * rescueItems.tracksDailyUse). Fast carbs are genuinely eaten and a tube runs
+ * out, which is a thing the app could not previously say.
+ */
 const PER_PERSON_CONSUMPTION = new Set([
   'bg_supply',
   'mdi_supply',
-  'ketone_supply',
   'hypo_treatment',
 ])
 

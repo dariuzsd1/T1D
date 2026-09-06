@@ -3,9 +3,17 @@ import { needsUsageRate, needsInsulinRate, insulinRatePerDay, parseUsagePerDay }
 
 describe('needsUsageRate', () => {
   it('asks for the per-person consumables', () => {
-    for (const c of ['bg_supply', 'mdi_supply', 'ketone_supply', 'hypo_treatment']) {
+    for (const c of ['bg_supply', 'mdi_supply', 'hypo_treatment']) {
       expect(needsUsageRate(c, 0)).toBe(true)
     }
+  })
+
+  it('no longer asks about ketone strips, whose answer was thrown away', () => {
+    // Ketones are checked when someone is ill or running high, not daily, so the
+    // question described nobody who uses them; and rescueItems judged them on
+    // expiry regardless, so whatever was typed went nowhere. This assertion used
+    // to demand the opposite.
+    expect(needsUsageRate('ketone_supply', 0)).toBe(false)
   })
 
   it('never asks for something the catalog already knows', () => {

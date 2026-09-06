@@ -15,7 +15,7 @@ import { BackButton } from '@/components/ui/BackButton'
 import { useStore } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
 import { displayStatus, stockStatus, effectiveLeadTimeDays, type StockStatus } from '@/lib/depletion'
-import { isRescueItem } from '@/lib/rescueItems'
+import { rescueLeadsWithExpiry } from '@/lib/rescueItems'
 import { assessRefill, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { useI18n } from '@/lib/i18n'
@@ -49,11 +49,12 @@ export default function CalendarPage() {
   const items = inventory.map((item) => {
     const rule = refillRuleFrom(item)
     const lead = effectiveLeadTimeDays(item, shippingLeadTimeDays)
-    // A rescue item (glucagon, ketones, hypo carbs) has no usage-driven run-out —
-    // its meaningful date is expiry, surfaced elsewhere. Treat it as unset here so
-    // the calendar never plots a bogus usage run-out marker for it. Its
-    // refill-eligible marker (from real entered dates) still shows.
-    const rescue = isRescueItem(item)
+    // Glucagon and ketone strips have no usage-driven run-out: their meaningful
+    // date is expiry, surfaced elsewhere, so they are treated as unset here and
+    // the calendar never plots a made-up run-out marker for them. Fast carbs
+    // with a rate the user gave us DO have a real run-out date and now get one.
+    // Refill-eligible markers (from real entered dates) show either way.
+    const rescue = rescueLeadsWithExpiry(item)
     return {
       item,
       unset: rescue || displayStatus(item, safetyBufferDays, lead) === 'unset',

@@ -23,7 +23,7 @@ import {
   DEFAULT_SHIPPING_LEAD_TIME_DAYS,
 } from "@/lib/depletion";
 import { reorderTargetFor } from "@/lib/suppliers";
-import { rescueKindOf, itemDisplayStatus } from "@/lib/rescueItems";
+import { rescueKindOf, itemDisplayStatus, rescueLeadsWithExpiry, tracksDailyUse } from "@/lib/rescueItems";
 import { isOrderPending, daysSinceOrdered } from "@/lib/orderTracking";
 import { logActivity } from "@/lib/activity";
 import { trackEvent } from "@/lib/analytics";
@@ -61,10 +61,16 @@ export function ProductCard({
   // This item's shipping lead time (its own override, or the account default),
   // folded into the reorder trigger so a slow-shipping item flags earlier.
   const leadTime = effectiveLeadTimeDays(product, shippingLeadTimeDays)
-  // Emergency rescue items (glucagon, ketones, hypo carbs) are judged on expiry,
-  // not a usage runway — so we suppress the usage nudge and lead with the date.
+  // Three separate questions, which used to share one flag:
+  //   isRescue      — is this emergency kit? drives the badge.
+  //   leadsWithExpiry — is the date the headline, rather than a runway?
+  //   tracksDailyUse  — does a daily rate mean anything here? drives the nudge.
+  // Glucagon and ketones answer yes/yes/no. Fast carbs answer yes/no-once-a-rate-
+  // is-known/yes, which is why collapsing them hid a tube running out.
   const rescueKind = rescueKindOf(product)
   const isRescue = rescueKind !== null
+  const leadsWithExpiry = rescueLeadsWithExpiry(product)
+  const ratesApply = tracksDailyUse(product)
   // Semantic color: red is reserved for a true stockout; routine low stock is
   // amber; an unknown usage rate is neutral 'unset' (an estimate never alarms).
   const status = itemDisplayStatus(product, bufferDays, leadTime)
@@ -153,7 +159,7 @@ export function ProductCard({
       : status === 'low'
       ? t('product.summaryRescueSoon', { date: expiryDateLabel, days: expiryDays })
       : t('product.summaryRescueOk', { date: expiryDateLabel })
-  const summary = isRescue
+  const summary = leadsWithExpiry
     ? rescueSummary
     : status === 'out'
       ? t('product.summaryOut')
@@ -288,8 +294,11 @@ export function ProductCard({
               </div>
 
               <div className="text-right shrink-0">
-                {isRescue ? (
-                  // Rescue items lead with expiry, not a usage runway.
+                {leadsWithExpiry ? (
+                  // Expiry is the headline for glucagon and ketones always, and
+                  // for fast carbs until a rate is known. Once it is, the item
+                  // falls through to the ordinary runway below, which already
+                  // caps itself at the expiry date.
                   expiryDays === null ? (
                     <>
                       <div className={cn("text-2xl font-black tabular-nums leading-none", tone.number)}>–</div>
@@ -368,18 +377,21 @@ export function ProductCard({
                 className="overflow-hidden"
               >
                 <div className="px-5 pb-5 pt-1 space-y-4 border-t border-line">
-                  {/* Usage rate + edit hand-off. Rescue items skip the usage
-                      nudge entirely — they're tracked by expiry, not daily use. */}
+                  {/* Emergency kit keeps its badge whatever else is true: it is
+                      what marks the item as the thing you reach for in a crisis.
+                      The usage row is separate, and appears for anything a daily
+                      rate means something for. Fast carbs get both, which is the
+                      combination the old single branch could not express: the
+                      badge told you it was rescue kit, and the nudge that would
+                      have let you track a tube running out never appeared. */}
                   <div className="flex items-center gap-1.5 pt-3 text-xs text-muted">
-                    {isRescue ? (
-                      <>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-urgent-soft text-urgent border border-urgent/30">
-                          <ShieldAlert className="w-3 h-3" aria-hidden="true" />
-                          {t('product.rescueBadge')}
-                        </span>
-                        <span>{t('product.rescueTrackExpiry')}</span>
-                      </>
-                    ) : (
+                    {isRescue && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-urgent-soft text-urgent border border-urgent/30">
+                        <ShieldAlert className="w-3 h-3" aria-hidden="true" />
+                        {t('product.rescueBadge')}
+                      </span>
+                    )}
+                    {ratesApply ? (
                       <>
                         <span
                           className={cn(
@@ -395,6 +407,8 @@ export function ProductCard({
                           {estimated ? t('product.usageNotSet') : t('product.perDay', { rate: Math.round(product.usageRatePerDay * 10) / 10 })}
                         </span>
                       </>
+                    ) : (
+                      <span>{t('product.rescueTrackExpiry')}</span>
                     )}
                     <span aria-hidden="true">·</span>
                     <button
@@ -402,7 +416,7 @@ export function ProductCard({
                       aria-label={t('common.editAria', { name: product.name })}
                       className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
                     >
-                      {isRescue ? t('common.edit') : estimated ? t('product.setRate') : t('common.edit')}
+                      {ratesApply && estimated ? t('product.setRate') : t('common.edit')}
                     </button>
                   </div>
 
@@ -464,9 +478,10 @@ export function ProductCard({
                     )
                   )}
 
-                  {/* The runway bar is meaningless for a rescue item (no usage
-                      forecast) — its expiry line above carries the status instead. */}
-                  {!isRescue && (
+                  {/* The runway bar needs a forecast to draw. Glucagon and ketone
+                      strips have none, so the expiry line above carries their
+                      status instead; fast carbs with a known rate do have one. */}
+                  {!leadsWithExpiry && (
                     <div className="bg-surface-2 rounded-xl p-4 border border-line">
                       <RefillStatusBar daysRemaining={product.remainingDays} bufferDays={bufferDays} estimated={estimated} status={status} />
                     </div>

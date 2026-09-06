@@ -2,7 +2,7 @@
 
 import type { Product } from '@/lib/store'
 import { isRateEstimated, effectiveLeadTimeDays, daysUntilExpiration, DEFAULT_SAFETY_BUFFER_DAYS, DEFAULT_SHIPPING_LEAD_TIME_DAYS } from '@/lib/depletion'
-import { rescueKindOf, itemDisplayStatus } from '@/lib/rescueItems'
+import { itemDisplayStatus, rescueLeadsWithExpiry } from '@/lib/rescueItems'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { isOrderPending } from '@/lib/orderTracking'
 import { ShoppingCart, CheckCircle2, Undo2, Loader2 } from 'lucide-react'
@@ -34,7 +34,10 @@ export function SupplyStatusRow({
 }) {
   const { t } = useI18n()
   // Rescue items (glucagon, ketones, hypo) are judged on expiry, not runway.
-  const isRescue = rescueKindOf(product) !== null
+  // Fast carbs with a known rate read as an ordinary consumable here: their
+  // runway is real and already capped at their expiry. Glucagon and ketone
+  // strips still speak in expiry, because they have no usage forecast.
+  const leadsWithExpiry = rescueLeadsWithExpiry(product)
   // itemDisplayStatus: rescue → expiry-driven; else the usage/expiry status with
   // lead time folded into the reorder trigger. An unknown rate stays neutral 'unset'.
   const status = itemDisplayStatus(product, bufferDays, effectiveLeadTimeDays(product, shippingLeadTimeDays))
@@ -77,7 +80,7 @@ export function SupplyStatusRow({
     : expiryDays <= 0 ? t('row.rescueExpired')
     : t(expiryDays === 1 ? 'row.rescueExpiresOne' : 'row.rescueExpiresOther', { count: expiryDays })
   const daysLine =
-    isRescue ? rescueDaysLine
+    leadsWithExpiry ? rescueDaysLine
     : status === 'out' ? t('row.noneOnHand')
     : status === 'unset' ? t('row.unsetDays')
     : daysLabel
