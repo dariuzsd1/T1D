@@ -71,6 +71,7 @@ export async function GET() {
         expirationDate: supply.expiration_date || null,
         // Optional refill-cycle fields (null until the migration is applied).
         refillIntervalDays: supply.refill_interval_days ?? null,
+        catalogRefillIntervalDays: supply.catalog_refill_interval_days ?? null,
         lastFilledDate: supply.last_filled_date ?? null,
         refillRuleKind: supply.refill_rule_kind ?? null,
         refillThresholdPct: supply.refill_threshold_pct ?? null,

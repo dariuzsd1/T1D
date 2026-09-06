@@ -61,8 +61,17 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
   const [inUseDays, setInUseDays] = useState<string>(
     product.inUseDays != null ? String(product.inUseDays) : ''
   )
+  // Prefilled with the catalog's typical cycle when the user has not set their
+  // own, so confirming it is one tap rather than a number to go and look up.
+  // Saving promotes it to refill_interval_days, which is what the shortfall
+  // alarm requires: an assumed cycle can say "likely eligible around then", only
+  // a confirmed one can say "you will run out first".
   const [refillIntervalDays, setRefillIntervalDays] = useState<string>(
-    product.refillIntervalDays != null ? String(product.refillIntervalDays) : ''
+    product.refillIntervalDays != null
+      ? String(product.refillIntervalDays)
+      : product.catalogRefillIntervalDays != null
+        ? String(product.catalogRefillIntervalDays)
+        : ''
   )
   const [lastFilledDate, setLastFilledDate] = useState(
     product.lastFilledDate ? product.lastFilledDate.slice(0, 10) : ''

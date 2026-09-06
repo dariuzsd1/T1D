@@ -27,6 +27,9 @@ export interface Product {
   // (threshold % for 'percent', days-before for 'days_before') model how the
   // plan opens its refill window. Optional until the DB columns land.
   refillIntervalDays?: number | null;
+  /** The catalog's typical cycle for this product, used only when the user has
+   *  not given their own. Kept apart so an alarm never rests on it. */
+  catalogRefillIntervalDays?: number | null;
   lastFilledDate?: string | null;
   refillRuleKind?: string | null;
   refillThresholdPct?: number | null;
@@ -68,6 +71,7 @@ export interface SupplyRow {
   usage_rate_per_day: number | null;
   expiration_date: string | null;
   refill_interval_days: number | null;
+  catalog_refill_interval_days: number | null;
   last_filled_date: string | null;
   refill_rule_kind: string | null;
   refill_threshold_pct: number | null;

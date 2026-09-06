@@ -34,6 +34,25 @@ export interface RefillRule {
   /** Length of one dispensed supply, in days (e.g. 30 or 90). */
   supplyDays: number
   /**
+   * True when `supplyDays` is the catalog's TYPICAL cycle for this product
+   * rather than a number this user gave us off their own label.
+   *
+   * The distinction matters because the two are not interchangeable. The catalog
+   * cycle is what a pharmacy or DME usually dispenses at once: for a Dexcom G7
+   * that is 90 days, which is three boxes. The add flow records one box. Feeding
+   * a 90-day cycle against a 30-day box makes assessRefill report a 38-day
+   * shortfall on the day of the fill, and the same for a Libre 3 (54 days), an
+   * Omnipod 5 (53) and a box of infusion sets (38): a red alarm on most wear
+   * items, every cycle, forever.
+   *
+   * Neither number is wrong. They answer different questions, and the app cannot
+   * tell whether a user recorded their whole fill or one box of it. So an
+   * estimated cycle may still say WHEN a refill is likely allowed, which is
+   * useful and low-stakes, but it may not raise the shortfall alarm. Same rule
+   * the runway follows: an alarm rests on facts, never on a typical value.
+   */
+  estimated?: boolean
+  /**
    * ('percent' shape) Fraction of the supply that must be used before insurance
    * allows a refill. 0.75 → eligible at day 68 of a 90-day supply. Defaults to 0.75.
    */
@@ -53,15 +72,30 @@ export interface RefillRule {
  */
 export function refillRuleFrom(input: {
   refillIntervalDays?: number | null
+  catalogRefillIntervalDays?: number | null
   refillRuleKind?: string | null
   refillThresholdPct?: number | null
   refillDaysBefore?: number | null
 }): RefillRule | null {
-  if (!input.refillIntervalDays || input.refillIntervalDays <= 0) return null
+  // The user's own number wins whenever they have given us one. The catalog's
+  // typical cycle is the fallback, and is flagged so nothing alarms on it.
+  // Before this fallback existed the engine returned null for every supply,
+  // because nothing ever wrote refillIntervalDays: the catalog carried a cycle
+  // for most products, no add path copied it across, and the field was only
+  // reachable by opening the edit dialog by hand. The one feature CLAUDE.md
+  // calls the moat was dark for everybody by default.
+  const own = input.refillIntervalDays && input.refillIntervalDays > 0 ? input.refillIntervalDays : null
+  const fallback =
+    input.catalogRefillIntervalDays && input.catalogRefillIntervalDays > 0
+      ? input.catalogRefillIntervalDays
+      : null
+  const supplyDays = own ?? fallback
+  if (!supplyDays) return null
   const kind: RefillRuleKind = input.refillRuleKind === 'days_before' ? 'days-before' : 'percent'
   return {
     kind,
-    supplyDays: input.refillIntervalDays,
+    supplyDays,
+    estimated: own === null,
     refillThreshold:
       input.refillThresholdPct != null && input.refillThresholdPct > 0
         ? input.refillThresholdPct / 100
@@ -81,6 +115,12 @@ export type RefillState =
 
 export interface RefillAssessment {
   state: RefillState
+  /**
+   * True when this rests on the catalog's typical cycle rather than the user's
+   * own. A 'gap' can never be estimated: see the note on RefillRule.estimated.
+   * Callers should present an estimated assessment as a likelihood, not a fact.
+   */
+  estimated: boolean
   /** Days until insurance allows a refill (0 = today). null when unknown. */
   daysUntilEligible: number | null
   /** The date insurance allows a refill. null when unknown. */
@@ -144,10 +184,12 @@ export function assessRefill(
 ): RefillAssessment {
   const eligibleDate = nextEligibleRefillDate(lastFilledDate, rule)
   const daysUntilEligible = daysUntilRefillEligible(lastFilledDate, rule, now)
+  const estimated = rule?.estimated === true
 
   if (daysUntilEligible === null || eligibleDate === null) {
     return {
       state: 'unknown',
+      estimated: false,
       daysUntilEligible: null,
       eligibleDate: null,
       shortfallDays: 0,
@@ -158,17 +200,28 @@ export function assessRefill(
   if (daysUntilEligible <= 0) {
     return {
       state: 'eligible-now',
+      estimated,
       daysUntilEligible: 0,
       eligibleDate,
       shortfallDays: 0,
-      message: 'Refill-eligible now. Tap to reorder.',
+      message: estimated
+        ? 'Likely refill-eligible now, going by the usual cycle for this product.'
+        : 'Refill-eligible now. Tap to reorder.',
     }
   }
 
   // The dangerous case: you run out before insurance lets you refill.
-  if (runwayDays < daysUntilEligible) {
+  //
+  // Only ever raised on the user's own cycle. On the catalog's typical one the
+  // shortfall is unknowable rather than absent: a 90-day cycle against a single
+  // 30-day box is either a real 38-day hole or simply the other two boxes not
+  // being recorded yet, and the app cannot tell which. Reporting it as fact
+  // would put a red alarm on most wear items at every fill. So the eligibility
+  // date still shows, with the caveat, and the alarm waits for a real number.
+  if (runwayDays < daysUntilEligible && !estimated) {
     return {
       state: 'gap',
+      estimated: false,
       daysUntilEligible,
       eligibleDate,
       shortfallDays: daysUntilEligible - runwayDays,
@@ -180,11 +233,16 @@ export function assessRefill(
 
   return {
     state: 'covered',
+    estimated,
     daysUntilEligible,
     eligibleDate,
     shortfallDays: 0,
-    message: `Refill-eligible in ${daysUntilEligible} day${
-      daysUntilEligible === 1 ? '' : 's'
-    }.`,
+    message: estimated
+      ? `Likely refill-eligible in about ${daysUntilEligible} day${
+          daysUntilEligible === 1 ? '' : 's'
+        }, going by the usual cycle for this product. Set your own to be sure.`
+      : `Refill-eligible in ${daysUntilEligible} day${
+          daysUntilEligible === 1 ? '' : 's'
+        }.`,
   }
 }

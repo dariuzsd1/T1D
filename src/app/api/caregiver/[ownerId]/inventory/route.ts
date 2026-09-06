@@ -74,6 +74,7 @@ export async function GET(
         usageRatePerDay,
         expirationDate: supply.expiration_date || null,
         refillIntervalDays: supply.refill_interval_days ?? null,
+        catalogRefillIntervalDays: supply.catalog_refill_interval_days ?? null,
         lastFilledDate: supply.last_filled_date ?? null,
         refillRuleKind: supply.refill_rule_kind ?? null,
         refillThresholdPct: supply.refill_threshold_pct ?? null,

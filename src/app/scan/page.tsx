@@ -125,6 +125,11 @@ export default function ScanPage() {
   // Mix pen is 10 days, Novolin 42, Toujeo 56. Null = the item is not
   // container-tracked, or the catalog has no single window for it (Afrezza).
   const [autoInUseDays, setAutoInUseDays] = useState<number | null>(null)
+  // The catalog's typical dispensing cycle (30 or 90 days for most things).
+  // Stored in its own column, never merged into the user's own figure: it is
+  // enough to say when a refill is LIKELY allowed, and not enough to claim a
+  // shortfall. See RefillRule.estimated in src/lib/refill.ts.
+  const [autoRefillDays, setAutoRefillDays] = useState<number | null>(null)
   // What the user typed when asked how many they use a day. Held as text so a
   // half-typed "0." survives the keystroke; only a valid answer becomes a rate.
   const [usageInput, setUsageInput] = useState('')
@@ -275,6 +280,7 @@ export default function ScanPage() {
     if (opts?.lot) idPayload.lot_number = opts.lot
     if (rate > 0) idPayload.usage_rate_per_day = rate
     if (autoInUseDays && autoInUseDays > 0) idPayload.in_use_days = autoInUseDays
+    if (autoRefillDays && autoRefillDays > 0) idPayload.catalog_refill_interval_days = autoRefillDays
     if (Object.keys(idPayload).length > 0) {
       const { error: idError } = await supabase
         .from('supplies')
@@ -314,6 +320,7 @@ export default function ScanPage() {
     // stays 0 for per-person items (insulin/strips), which remain an estimate.
     setAutoRate(item.typical_usage_per_day ?? 0)
     setAutoInUseDays(item.in_use_days ?? null)
+    setAutoRefillDays(item.default_refill_interval_days ?? null)
     setDiscontinued(!!item.discontinued)
     setCatalogMatch(true)
     setPersonalMatch(false)
@@ -381,6 +388,7 @@ export default function ScanPage() {
         const product = await res.json()
         setAutoRate(product?.typical_usage_per_day ?? 0)
         setAutoInUseDays(product?.in_use_days ?? null)
+        setAutoRefillDays(product?.default_refill_interval_days ?? null)
         setDiscontinued(!!product?.discontinued)
         if (product?.category) setCatalogCategory(product.category)
       }
@@ -497,6 +505,7 @@ export default function ScanPage() {
             if (product.units_per_box) setQuantity(product.units_per_box)
             setAutoRate(product.typical_usage_per_day ?? 0)
             setAutoInUseDays(product.in_use_days ?? null)
+            setAutoRefillDays(product.default_refill_interval_days ?? null)
             setCatalogCategory(product.category ?? null)
             setDiscontinued(!!product.discontinued)
             setCatalogMatch(true)
@@ -592,6 +601,16 @@ export default function ScanPage() {
             {
               quantity: plan.quantity,
               ...(plan.expirationDate ? { expirationDate: plan.expirationDate } : {}),
+              // A restock IS a fill: the user is holding a box that just arrived
+              // and is saying so. That makes today the honest last-filled date,
+              // and it is the only place the app can know one without asking.
+              //
+              // Only here, not on a first add. Adding a supply is ambiguous:
+              // someone setting up their inventory may be logging a half-used
+              // box from months ago, and stamping today on that would invent the
+              // date every refill projection is then anchored to. The field
+              // stays editable either way.
+              lastFilledDate: new Date().toISOString().slice(0, 10),
             },
             { ifQuantityIs: current.quantity },
           )

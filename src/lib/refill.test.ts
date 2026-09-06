@@ -135,3 +135,73 @@ describe('assessRefill', () => {
     expect(a.shortfallDays).toBe(0)
   })
 })
+
+describe('the catalog cycle as a fallback (wiring the refill window at all)', () => {
+  const isoDaysFromNow = (n: number) =>
+    new Date(NOW.getTime() + n * MS_PER_DAY).toISOString().slice(0, 10)
+
+  it('produced no rule at all before the fallback existed', () => {
+    // Nothing ever wrote refillIntervalDays: the catalog carried a cycle for most
+    // products, no add path copied it across, and the field was only reachable by
+    // opening the edit dialog by hand. So the moat feature was dark by default.
+    expect(refillRuleFrom({ refillIntervalDays: null })).toBeNull()
+    expect(assessRefill(30, isoDaysFromNow(-10), null, NOW).state).toBe('unknown')
+  })
+
+  it('falls back to the catalog cycle and says so', () => {
+    const rule = refillRuleFrom({ catalogRefillIntervalDays: 90 })
+    expect(rule?.supplyDays).toBe(90)
+    expect(rule?.estimated).toBe(true)
+  })
+
+  it('prefers a number the user gave and drops the estimate flag', () => {
+    const rule = refillRuleFrom({ refillIntervalDays: 30, catalogRefillIntervalDays: 90 })
+    expect(rule?.supplyDays).toBe(30)
+    expect(rule?.estimated).toBe(false)
+  })
+
+  it('never raises the shortfall alarm on a cycle the user did not give', () => {
+    // The failure this prevents. A catalog 90-day cycle is three boxes of Dexcom
+    // G7; the add flow records one, which is 30 days. Reported as fact that is a
+    // 38-day shortfall on the day of the fill, and the same for Libre 3 (54),
+    // Omnipod 5 (53) and infusion sets (38): a red alarm on most wear items,
+    // every cycle, forever. The hole is unknowable rather than absent, because
+    // the other two boxes may simply not be recorded yet.
+    const estimated = refillRuleFrom({ catalogRefillIntervalDays: 90 })
+    const a = assessRefill(30, isoDaysFromNow(0), estimated, NOW)
+    expect(a.state).toBe('covered')
+    expect(a.estimated).toBe(true)
+    expect(a.shortfallDays).toBe(0)
+    // The useful half survives: it still says roughly when a refill opens up.
+    expect(a.daysUntilEligible).toBe(68)
+    expect(a.message).toMatch(/likely/i)
+  })
+
+  it('raises it as soon as the same cycle is confirmed', () => {
+    const confirmed = refillRuleFrom({ refillIntervalDays: 90 })
+    const a = assessRefill(30, isoDaysFromNow(0), confirmed, NOW)
+    expect(a.state).toBe('gap')
+    expect(a.estimated).toBe(false)
+    expect(a.shortfallDays).toBe(38)
+  })
+
+  it('marks an estimated eligible-now as a likelihood, not a fact', () => {
+    const rule = refillRuleFrom({ catalogRefillIntervalDays: 30 })
+    const a = assessRefill(60, isoDaysFromNow(-40), rule, NOW)
+    expect(a.state).toBe('eligible-now')
+    expect(a.estimated).toBe(true)
+    expect(a.message).toMatch(/likely/i)
+  })
+
+  it('an unknown assessment is never flagged estimated', () => {
+    // Nothing to be estimated about: there is no cycle from either source.
+    expect(assessRefill(30, isoDaysFromNow(-10), null, NOW).estimated).toBe(false)
+  })
+
+  it('ignores a zero or negative cycle from either source', () => {
+    expect(refillRuleFrom({ catalogRefillIntervalDays: 0 })).toBeNull()
+    expect(refillRuleFrom({ refillIntervalDays: 0, catalogRefillIntervalDays: -5 })).toBeNull()
+    // A zero own-value falls through to a usable catalog one rather than blocking.
+    expect(refillRuleFrom({ refillIntervalDays: 0, catalogRefillIntervalDays: 90 })?.estimated).toBe(true)
+  })
+})

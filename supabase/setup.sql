@@ -133,6 +133,12 @@ alter table public.supplies
   add column if not exists usage_rate_per_day    numeric,
   add column if not exists copay                 numeric,
   add column if not exists refill_interval_days integer,
+  -- The catalog's TYPICAL dispensing cycle for this product, copied over when the
+  -- supply is added. Deliberately a separate column from refill_interval_days,
+  -- which stays the user's own number off their label: the two answer different
+  -- questions and only the user's may raise the shortfall alarm. See the note on
+  -- RefillRule.estimated in src/lib/refill.ts.
+  add column if not exists catalog_refill_interval_days integer,
   add column if not exists last_filled_date      date,
   add column if not exists refill_rule_kind      text,
   add column if not exists refill_threshold_pct  numeric,
