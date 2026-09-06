@@ -8,6 +8,9 @@ export interface NewSupply {
   quantity: number
   /** units/day; 0/undefined leaves the runway a labelled estimate. */
   usageRatePerDay?: number
+  /** Days an opened container stays usable, from the catalog. Undefined leaves
+   *  the discard clock unset rather than assuming the common 28. */
+  inUseDays?: number | null
   expirationDate?: string | null
 }
 
@@ -44,6 +47,8 @@ export async function createSupplies(
       const patch: Record<string, unknown> = {}
       const rate = items[i]?.usageRatePerDay ?? 0
       if (rate > 0) patch.usage_rate_per_day = rate
+      const window = items[i]?.inUseDays ?? 0
+      if (window > 0) patch.in_use_days = window
       const category = items[i]?.category?.trim()
       if (category && category !== 'unknown') patch.category = category
       return Object.keys(patch).length
@@ -61,6 +66,7 @@ export async function createSupplies(
     remainingDays: 30, // Recomputed honestly by the store's withRunway().
     lastScanned: new Date().toISOString().split('T')[0],
     usageRatePerDay: items[i]?.usageRatePerDay ?? 0,
+    inUseDays: items[i]?.inUseDays ?? null,
     expirationDate: row.expiration_date || null,
   }))
 }

@@ -879,6 +879,66 @@ update public.supplies set usage_rate_per_day = 0.071
     and name ilike '%lingo%';
 
 -- ============================================================================
+-- 18. INSULIN DISCARD WINDOWS  (reference data, not PHI)
+--
+--     in_use_days is how long a vial or pen stays usable AFTER it is opened,
+--     regardless of the printed expiry. The catalog carried a flat 28 for every
+--     insulin, which is the common figure and not the rule: across these
+--     products the real range is 10 to 56 days. Values below are read off the
+--     manufacturer's own prescribing information, one product at a time; the
+--     source URL for each sits in data/diabetes_catalog.csv.
+--
+--     Same guard as section 17: each update names the old value, so it is
+--     idempotent and cannot overwrite a later correction.
+-- ============================================================================
+
+-- Longer than 28, so a flat 28 was making people bin insulin that was still
+-- good. Wasteful rather than unsafe, but wrong.
+update public.products set in_use_days = 56
+  where product_name = 'Toujeo (insulin glargine U-300)' and in_use_days = 28;
+update public.products set in_use_days = 42
+  where product_name = 'Levemir (insulin detemir)' and in_use_days = 28;
+update public.products set in_use_days = 42
+  where product_name in ('Novolin R (regular insulin)', 'Novolin N (NPH insulin)')
+    and in_use_days = 28;
+update public.products set in_use_days = 40
+  where product_name = 'Humulin R U-500 (concentrated)' and in_use_days = 28;
+update public.products set in_use_days = 31
+  where product_name in ('Humulin R (regular insulin)', 'Humulin N (NPH insulin)', 'Humulin 70/30')
+    and in_use_days = 28;
+
+-- SHORTER than 28, which is the direction that matters: the app was telling
+-- people a premixed pen was still fine for another two weeks after the day the
+-- label says to throw it away.
+update public.products set in_use_days = 10
+  where product_name = 'Humalog Mix 75/25' and in_use_days = 28;
+update public.products set in_use_days = 14
+  where product_name = 'NovoLog Mix 70/30' and in_use_days = 28;
+update public.products set in_use_days = 30
+  where product_name = 'Symlin (pramlintide)' and in_use_days = 28;
+
+-- Afrezza has no single in-use window to record: an unopened blister strip
+-- keeps 10 days at room temperature, a punctured one 3, and the inhaler is
+-- replaced every 15. The 28 it carried appears nowhere in the label, so it
+-- goes back to null until the app can model a clock with three parts.
+update public.products set in_use_days = null
+  where product_name = 'Afrezza (inhaled insulin)' and in_use_days = 28;
+
+--     ---- Backfill: supplies already on shelves -------------------------
+--     Deliberately only the two products where the stored 28 is LONGER than
+--     the label, because those are the ones where the app is actively saying
+--     that insulin past its discard date is still fine to inject. The rest of
+--     the corrections above make the app more cautious than the user's saved
+--     value, so they can arrive on the next add rather than by rewriting a
+--     number someone may have set deliberately.
+
+update public.supplies set in_use_days = 10
+  where in_use_days = 28 and name ilike '%humalog%mix%';
+
+update public.supplies set in_use_days = 14
+  where in_use_days = 28 and name ilike '%novolog%mix%';
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================

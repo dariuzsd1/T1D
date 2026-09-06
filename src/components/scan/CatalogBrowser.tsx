@@ -23,6 +23,11 @@ export interface CatalogItem {
   // for wear-duration items; blank for per-person-consumption items (insulin, strips).
   typical_usage_per_day: number | null
   default_refill_interval_days: number | null
+  /** Days an opened vial/pen/cartridge stays usable, whatever the printed
+   *  expiry says. Carried through to the supply so the discard clock starts
+   *  from the product's own label rather than a blanket 28. Null when the item
+   *  has no single in-use window (Afrezza) or is not container-tracked. */
+  in_use_days: number | null
   gtin: string | null
   /** Manufacturer has stopped making it: still selectable to track existing stock,
    *  but flagged so nobody picks it expecting to reorder. */

@@ -149,6 +149,54 @@ describe('product catalog integrity', () => {
     expect(named(impossible)).toEqual([])
   })
 
+  /**
+   * in_use_days is how long an opened vial or pen stays usable. It reaches the
+   * user as "discard in N days", so a wrong one either wastes insulin or, in the
+   * direction that matters, tells someone that insulin past its discard date is
+   * still fine to inject. Every insulin here carried a flat 28 until the labels
+   * were read one at a time; the real spread is 10 to 56.
+   */
+  const windowed = rows.filter((r) => Number(r.in_use_days) > 0)
+
+  it('keeps every discard window inside what an insulin label can say', () => {
+    // 10 (Humalog Mix KwikPen) to 56 (Tresiba, Toujeo) covers every product in
+    // this catalog. Anything outside it is a typo or a unit mix-up, which is
+    // exactly how 0.014 got into a usage rate.
+    const impossible = windowed.filter((r) => {
+      const d = Number(r.in_use_days)
+      return !Number.isInteger(d) || d < 10 || d > 56
+    })
+    expect(named(impossible)).toEqual([])
+  })
+
+  it('names a source for every discard window it states', () => {
+    // A window is a claim about a drug label. Unsourced, nobody can tell later
+    // whether it was read off the PI or assumed from the product next to it,
+    // which is how one number ended up on all twenty-odd of them.
+    expect(named(windowed.filter((r) => !r.source_url || !r.last_verified))).toEqual([])
+  })
+
+  it('keeps a discard window consistent with the one its own notes state', () => {
+    // The bounds test cannot catch the failure that actually happened, because
+    // a flat 28 is a legitimate window for most of these products and only wrong
+    // on some. What separates them is the note: where a row states its window,
+    // the column has to match, and putting 28 back on the Humalog Mix pen makes
+    // its own note ("discarded 10 days after first use") contradict it.
+    //
+    // Match the FIRST day figure: these notes are written window-first, with the
+    // other presentation ("the VIAL presentation is 28") after it.
+    //
+    // Conditional on purpose. Rows whose notes claim nothing are skipped rather
+    // than failed: forcing a figure into every note would mean writing a claim
+    // about a drug label nobody had read, which is the habit that produced the
+    // flat 28 in the first place. Sourcing a row is what earns it a claim.
+    const contradicted = windowed.filter((r) => {
+      const m = r.notes.match(/(\d+)\s*-?\s*days?\b/i)
+      return m ? Number(m[1]) !== Number(r.in_use_days) : false
+    })
+    expect(named(contradicted)).toEqual([])
+  })
+
   it('reports how stale the verified rows are getting', () => {
     const MONTHS = 12
     const cutoff = new Date()

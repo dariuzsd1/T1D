@@ -8,12 +8,17 @@ export interface CatalogProduct {
   units_per_box: number | null
   typical_usage_per_day: number | null
   default_refill_interval_days: number | null
+  /** Days an opened vial/pen/cartridge stays usable, whatever the printed
+   *  expiry says. Carried through to the supply so the discard clock starts
+   *  from the product's own label rather than a blanket 28. Null when the item
+   *  has no single in-use window (Afrezza) or is not container-tracked. */
+  in_use_days: number | null
   /** The manufacturer has stopped making it: identify it, never suggest reordering. */
   discontinued: boolean | null
 }
 
 const PRODUCT_COLUMNS =
-  'product_name, brand, category, unit, units_per_box, typical_usage_per_day, default_refill_interval_days, discontinued'
+  'product_name, brand, category, unit, units_per_box, typical_usage_per_day, default_refill_interval_days, in_use_days, discontinued'
 
 type CodeType = 'gtin' | 'pzn' | 'ndc' | 'cip'
 

@@ -524,7 +524,8 @@ export const en = {
   'editModal.openedOnLabel': 'Opened on',
   'editModal.discardAfterLabel': 'Discard after (days)',
   'editModal.discardAfterPlaceholder': '28',
-  'editModal.discardHint': 'Most insulins keep about 28 days once opened (Tresiba 56). Leave the date blank until you open one.',
+  'editModal.discardHint':
+    'This varies more than people expect: 28 days for most, 10 for Humalog Mix pens, 14 for NovoLog Mix pens, 31 to 42 for the human insulins, 56 for Tresiba and Toujeo. Check your box. Leave the date blank until you open one.',
   'editModal.expirationLabel': 'Expiration date (optional)',
   'editModal.deviceLabel': 'Part of a device (optional)',
   'editModal.deviceNone': 'Not linked to a device',
@@ -1708,7 +1709,8 @@ export const fr: Record<TKey, string> = {
   'editModal.openedOnLabel': 'Ouvert le',
   'editModal.discardAfterLabel': 'À jeter après (jours)',
   'editModal.discardAfterPlaceholder': '28',
-  'editModal.discardHint': "La plupart des insulines se conservent environ 28 jours après ouverture (56 pour Tresiba). Laissez la date vide tant que vous n'en avez pas ouvert.",
+  'editModal.discardHint':
+    "Ce délai varie plus qu'on ne le croit : 28 jours pour la plupart, 10 pour les stylos Humalog Mix, 14 pour les stylos NovoLog Mix, 31 à 42 pour les insulines humaines, 56 pour Tresiba et Toujeo. Vérifiez votre boîte. Laissez la date vide tant que vous n'en avez pas ouvert.",
   'editModal.expirationLabel': 'Date de péremption (facultatif)',
   'editModal.deviceLabel': 'Rattaché à un appareil (facultatif)',
   'editModal.deviceNone': 'Non rattaché à un appareil',
@@ -2889,7 +2891,7 @@ export const es: Record<TKey, string> = {
   'editModal.discardAfterLabel': 'Desechar después de (días)',
   'editModal.discardAfterPlaceholder': '28',
   'editModal.discardHint':
-    'La mayoría de las insulinas duran unos 28 días una vez abiertas (Tresiba 56). Deja la fecha en blanco hasta que abras una.',
+    'Esto varía más de lo que se cree: 28 días para la mayoría, 10 para las plumas Humalog Mix, 14 para las plumas NovoLog Mix, de 31 a 42 para las insulinas humanas y 56 para Tresiba y Toujeo. Comprueba tu caja. Deja la fecha en blanco hasta que abras una.',
   'editModal.expirationLabel': 'Fecha de vencimiento (opcional)',
   'editModal.deviceLabel': 'Parte de un dispositivo (opcional)',
   'editModal.deviceNone': 'No vinculado a un dispositivo',

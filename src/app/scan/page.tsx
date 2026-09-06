@@ -118,6 +118,11 @@ export default function ScanPage() {
   // entry. 0 = not identified → the runway stays a labelled estimate. The user is
   // never asked for this; it fills itself in when we recognize the product.
   const [autoRate, setAutoRate] = useState(0)
+  // The product's own discard window once opened, from the catalog. Stored on the
+  // supply so the clock runs on the label rather than a blanket 28: a Humalog
+  // Mix pen is 10 days, Novolin 42, Toujeo 56. Null = the item is not
+  // container-tracked, or the catalog has no single window for it (Afrezza).
+  const [autoInUseDays, setAutoInUseDays] = useState<number | null>(null)
   // What the user typed when asked how many they use a day. Held as text so a
   // half-typed "0." survives the keystroke; only a valid answer becomes a rate.
   const [usageInput, setUsageInput] = useState('')
@@ -248,6 +253,7 @@ export default function ScanPage() {
     if (discontinued) idPayload.discontinued = true
     if (opts?.lot) idPayload.lot_number = opts.lot
     if (rate > 0) idPayload.usage_rate_per_day = rate
+    if (autoInUseDays && autoInUseDays > 0) idPayload.in_use_days = autoInUseDays
     if (Object.keys(idPayload).length > 0) {
       const { error: idError } = await supabase
         .from('supplies')
@@ -286,6 +292,7 @@ export default function ScanPage() {
     // Apply the catalog's verified wear rate when it has one (sensors/pods/sets);
     // stays 0 for per-person items (insulin/strips), which remain an estimate.
     setAutoRate(item.typical_usage_per_day ?? 0)
+    setAutoInUseDays(item.in_use_days ?? null)
     setDiscontinued(!!item.discontinued)
     setCatalogMatch(true)
     setPersonalMatch(false)
@@ -352,6 +359,7 @@ export default function ScanPage() {
       if (res.ok) {
         const product = await res.json()
         setAutoRate(product?.typical_usage_per_day ?? 0)
+        setAutoInUseDays(product?.in_use_days ?? null)
         setDiscontinued(!!product?.discontinued)
         if (product?.category) setCatalogCategory(product.category)
       }
@@ -467,6 +475,7 @@ export default function ScanPage() {
             if (product.brand) setBcBrand(product.brand)
             if (product.units_per_box) setQuantity(product.units_per_box)
             setAutoRate(product.typical_usage_per_day ?? 0)
+            setAutoInUseDays(product.in_use_days ?? null)
             setCatalogCategory(product.category ?? null)
             setDiscontinued(!!product.discontinued)
             setCatalogMatch(true)
@@ -494,6 +503,7 @@ export default function ScanPage() {
             setBcName(prior.name)
             if (prior.brand) setBcBrand(prior.brand)
             if (prior.usageRatePerDay > 0) setAutoRate(prior.usageRatePerDay)
+            if (prior.inUseDays && prior.inUseDays > 0) setAutoInUseDays(prior.inUseDays)
             setPersonalMatch(true)
             matched = true
           }

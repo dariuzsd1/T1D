@@ -31,6 +31,9 @@ export interface PriorSupplyRow {
   name: string
   brand: string | null
   usageRatePerDay: number
+  /** The discard window you already recorded for this product, so re-scanning a
+   *  box you have identified before does not lose it. */
+  inUseDays: number | null
 }
 
 /** A code-less row, matchable only by name (added by hand or from the catalog). */
@@ -81,7 +84,7 @@ export async function findPriorSupplyByCode(
 ): Promise<PriorSupplyRow | null> {
   const { data } = await supabase
     .from('supplies')
-    .select('name, brand, usage_rate_per_day')
+    .select('name, brand, usage_rate_per_day, in_use_days')
     .not('name', 'is', null)
     .eq('user_id', userId)
     .eq(column, value)
@@ -89,7 +92,12 @@ export async function findPriorSupplyByCode(
     .limit(1)
     .maybeSingle()
   if (!data?.name) return null
-  return { name: data.name, brand: data.brand ?? null, usageRatePerDay: num(data.usage_rate_per_day) }
+  return {
+    name: data.name,
+    brand: data.brand ?? null,
+    usageRatePerDay: num(data.usage_rate_per_day),
+    inUseDays: (data.in_use_days as number) ?? null,
+  }
 }
 
 /**

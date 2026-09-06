@@ -132,11 +132,18 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
           ? parseFloat(perDay)
           : 0
 
-  // Switching to the insulin tab offers the standard 28-day discard window if
-  // the user hasn't set one (most insulins; they can change it, e.g. 56 Tresiba).
+  // Switching to the insulin tab offers a discard window if the item has none
+  // yet. The catalog now carries the product's own figure and the add flow puts
+  // it on the supply, so `product.inUseDays` is the answer for anything scanned
+  // or picked from the catalog, and this is only reached for a hand-typed item.
+  //
+  // 28 is the fallback rather than the rule, because it is not the rule: the
+  // spread across the insulins in the catalog runs 10 (Humalog Mix KwikPen) to
+  // 56 (Tresiba, Toujeo), with the human insulins at 31 to 42. It is offered as
+  // a starting point next to a hint saying so, never applied silently.
   const selectInsulinMode = () => {
     setTrackMode('insulin')
-    if (!inUseDays) setInUseDays('28')
+    if (!inUseDays) setInUseDays(product.inUseDays ? String(product.inUseDays) : '28')
   }
 
   const handleSave = async () => {
