@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertCircle } from 'lucide-react'
-import { compareBox, hidesInUseClock, type ScannedBox, type StoredSupply } from '@/lib/duplicateSupply'
+import { compareBox, type ScannedBox, type StoredSupply } from '@/lib/duplicateSupply'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -52,9 +52,6 @@ export function DuplicatePanel({
   // A name match is a suggestion, not proof, so it gets the same restrained
   // treatment as a box whose expiry or lot disagrees.
   const cautiousMerge = mixedBox || duplicate.matchedBy === 'name'
-  // Would this restock quietly stop the opened-vial discard clock capping the runway?
-  const inUseWarning = hidesInUseClock(duplicate, addQuantity)
-
   return (
     <div className="rounded-xl border border-caution/30 bg-caution-soft p-4 space-y-3" role="status">
       <div className="flex items-start gap-2.5">
@@ -67,9 +64,6 @@ export function DuplicatePanel({
               : t('scan.duplicateBody', { name: duplicate.name, count: duplicate.quantity })}
         </p>
       </div>
-      {inUseWarning && (
-        <p className="text-xs leading-relaxed text-muted">{t('scan.duplicateInUseNote')}</p>
-      )}
       <button
         onClick={onRestock}
         disabled={saving}

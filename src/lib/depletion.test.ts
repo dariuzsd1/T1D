@@ -132,16 +132,59 @@ describe('effectiveRunwayDays', () => {
     expect(runway).toBeLessThanOrEqual(8)
   })
 
-  it('does NOT let the open-vial clock shrink runway when sealed backups exist', () => {
-    // Same open vial, but 3 on hand: opening the next one resets the clock, so
-    // folding the discard date in would be a false "reorder now". Stock wins.
+  it('gives a sealed spare one full window, not an unlimited one', () => {
+    // Same open vial, but 3 on hand. Opening the next one does reset the clock,
+    // which is why this is not simply capped at the open vial's 7 days left --
+    // but each spare is then worth ONE window at most, not "however long the
+    // dose takes". Here the dose empties a vial in 25 days, inside the 28-day
+    // window, so a spare is worth its full 25: 2 x 25 + 7 left on the open one.
+    //
+    // This asserted 75 (3 / 0.04) until the in-use window was folded in, which
+    // credited the open vial with insulin it would never get to use.
     const runway = effectiveRunwayDays({
       quantity: 3,
       usageRatePerDay: 0.04,
       openedDate: isoInDays(-20),
       inUseDays: 28,
     })
-    expect(runway).toBe(75) // 3 / 0.04
+    expect(runway).toBeGreaterThanOrEqual(57)
+    expect(runway).toBeLessThanOrEqual(58)
+  })
+
+  it('caps a low dose at the discard window rather than the volume', () => {
+    // The case the old rule got badly wrong. 20u/day of a 1000u vial is 0.02/day,
+    // so five vials hold 250 days of insulin -- but each one is binned 28 days
+    // after opening with more than half of it left, so five vials are five
+    // windows: 140 days. Anyone under ~36u/day is on this side of the line.
+    expect(effectiveRunwayDays({
+      quantity: 5,
+      usageRatePerDay: 0.02,
+      inUseDays: 28,
+    })).toBe(140)
+
+    // A toddler at 8u/day: 625 days of volume, still 140 days of supply.
+    expect(effectiveRunwayDays({
+      quantity: 5,
+      usageRatePerDay: 0.008,
+      inUseDays: 28,
+    })).toBe(140)
+  })
+
+  it('leaves a dose that empties a container in time alone', () => {
+    // 40u/day finishes a 1000u vial in 25 days, inside the 28-day window, so
+    // nothing is thrown away part-used and the volume still sets the runway.
+    expect(effectiveRunwayDays({
+      quantity: 5,
+      usageRatePerDay: 0.04,
+      inUseDays: 28,
+    })).toBe(125)
+  })
+
+  it('honours a longer window on the insulins that have one', () => {
+    // Tresiba and Toujeo run 56 days, not 28. At 20u/day a 300u pen empties in
+    // 15 days either way, so the window does not bite; at 5u/day it does, and
+    // three pens are three 56-day windows rather than 180 days of volume.
+    expect(effectiveRunwayDays({ quantity: 3, usageRatePerDay: 1 / 60, inUseDays: 56 })).toBe(168)
   })
 
   it('an already-past discard on the last vial reads as out (0)', () => {
@@ -151,6 +194,31 @@ describe('effectiveRunwayDays', () => {
       openedDate: isoInDays(-40),
       inUseDays: 28,
     })).toBe(0)
+  })
+
+  it('still counts the sealed spares behind a past-due open vial', () => {
+    // The open one must be binned today and is worth nothing, but throwing it
+    // out does not make the two sealed vials behind it disappear.
+    expect(effectiveRunwayDays({
+      quantity: 3,
+      usageRatePerDay: 0.04,
+      openedDate: isoInDays(-40),
+      inUseDays: 28,
+    })).toBe(50)
+  })
+
+  it('leaves an item with no in-use window exactly as it was', () => {
+    // Pods, sensors and sets have no discard clock; this must not touch them.
+    expect(effectiveRunwayDays({ quantity: 10, usageRatePerDay: 0.33 })).toBe(30)
+    expect(effectiveRunwayDays({ quantity: 6, usageRatePerDay: 0.071 })).toBe(84)
+  })
+
+  it('leaves an unset rate on the same estimate as before', () => {
+    // An in-use window must not turn the 1-a-day fallback into a different
+    // guess: an estimate that moved would start alarming on nothing.
+    expect(effectiveRunwayDays({ quantity: 5, usageRatePerDay: 0, inUseDays: 28 })).toBe(
+      effectiveRunwayDays({ quantity: 5, usageRatePerDay: 0 })
+    )
   })
   it('is capped by an earlier expiry (the sooner of the two)', () => {
     // 4 sensors at 0.07/day = ~57 days of stock, but expires in ~20 days

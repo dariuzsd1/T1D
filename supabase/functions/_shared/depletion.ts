@@ -15,7 +15,9 @@
  *
  * We deliberately separate the three numbers CLAUDE.md §7 calls out:
  *   1. stock-on-hand          → `quantity`
- *   2. how long the stock runs → `daysOfStock` (quantity ÷ daily usage)
+ *   2. how long the stock runs → `stockRunwayDays` (quantity ÷ daily usage, with
+ *                                a container thrown away part-used counted as
+ *                                spent; `daysOfStock` is the bare division)
  *   3. shelf-life expiry       → `daysUntilExpiration`
  *
  * The headline "runway" a user sees is the *sooner* of running out and expiring,
@@ -107,21 +109,58 @@ export function inUseDaysRemaining(
 }
 
 /**
- * The honest runway: the soonest of "stock runs out", "stock expires", and —
- * when there's no sealed backup — "the open vial must be discarded".
+ * Days the stock on hand actually delivers, honouring the in-use discard window.
  *
- * The in-use clock only caps the aggregate runway when quantity <= 1 (a single
- * open container, where the discard date genuinely IS the runway). With spare
- * sealed containers on hand, folding it in would fire a false "reorder now" —
- * so for those the discard date is surfaced separately on the card instead
- * (ProductCard), never blended into this number. Nothing here is fabricated.
+ * `daysOfStock` assumes a container is used until it is empty. An opened insulin
+ * vial or pen is thrown out `inUseDays` after opening whether or not it is empty,
+ * so for anyone whose dose does not finish a container inside that window it is
+ * the discard date, not the dose, that sets the real consumption rate. That is
+ * not an edge case: a 1000-unit vial on a 28-day clock only empties in time above
+ * about 36 units a day, which leaves most children and a large share of adults
+ * on the wrong side of the line.
+ *
+ * The window used to be left out of the aggregate entirely — it capped the runway
+ * only while quantity <= 1 — on the grounds that opening a sealed spare resets the
+ * clock. That is right about the sequence and wrong about the arithmetic: the
+ * spare does get a fresh window, but only ONE window, not the unlimited one that
+ * "quantity ÷ dose" assumed. Five vials at 20 units a day read 250 days when the
+ * truth was 140, and a toddler's five vials at 8 units a day read 625.
+ *
+ * So: each container is worth a full window, or the days it takes to empty,
+ * whichever is shorter; and the one already open is worth only what is left on
+ * its clock. Nothing is fabricated. An item with no in-use window is untouched,
+ * an unset usage rate still falls through to the same estimate as before, and a
+ * part-used container's fill level is never guessed at (the open one is credited
+ * with its remaining clock, which is the most it can possibly be worth).
+ */
+export function stockRunwayDays(p: RunwayInput): number {
+  const window = p.inUseDays
+  if (!window || window <= 0) return daysOfStock(p.quantity, p.usageRatePerDay)
+  if (p.quantity <= 0) return 0
+
+  const usage = p.usageRatePerDay > 0 ? p.usageRatePerDay : DEFAULT_USAGE_RATE_PER_DAY
+  // What one container is good for: emptied at the dose rate, or discarded at
+  // the end of its window, whichever comes first.
+  const perContainer = Math.min(1 / usage, window)
+
+  const open = inUseDaysRemaining(p.openedDate, window)
+  // Nothing opened yet: every container still has its full window ahead of it.
+  if (open === null) return Math.max(0, Math.floor(p.quantity * perContainer))
+  // One is open. It is worth what is left on its clock (nothing, once that has
+  // passed); the rest are sealed and each still worth a whole container.
+  const openLeft = Math.max(0, Math.min(open, perContainer))
+  return Math.max(0, Math.floor((p.quantity - 1) * perContainer + openLeft))
+}
+
+/**
+ * The honest runway: the sooner of "stock runs out" and "stock expires", where
+ * running out already accounts for containers thrown away part-used (see
+ * `stockRunwayDays`). Nothing here is fabricated.
  */
 export function effectiveRunwayDays(p: RunwayInput): number {
-  const caps = [daysOfStock(p.quantity, p.usageRatePerDay)]
+  const caps = [stockRunwayDays(p)]
   const exp = daysUntilExpiration(p.expirationDate)
   if (exp !== null) caps.push(exp)
-  const inUse = inUseDaysRemaining(p.openedDate, p.inUseDays)
-  if (inUse !== null && p.quantity <= 1) caps.push(inUse)
   return Math.max(0, Math.min(...caps))
 }
 

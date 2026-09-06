@@ -8,9 +8,18 @@ import { daysPerUnitFromRate } from './depletion'
  *
  * Deliberately narrow, matching CLAUDE.md's "never fabricate a supply level"
  * rule:
- *  - Only fires for genuine wear items — `daysPerUnitFromRate` already returns
- *    null for a >1/day consumption rate (test strips, insulin), so those are
- *    never touched here.
+ *  - Only fires for genuine wear items. `daysPerUnitFromRate` returns null for a
+ *    >1/day consumption rate, which covers test strips and lancets. It does NOT
+ *    cover insulin, and this comment used to claim it did: an insulin rate is
+ *    containers per day, so 20u/day of a 1000u vial is 0.02 — a fraction, well
+ *    under the 1/day cut-off — and a vial was quietly being removed from the
+ *    count every 50 days. Anything carrying an in-use discard window is
+ *    therefore excluded explicitly below. That is also the only way the two
+ *    clocks can agree: `depletion.stockRunwayDays` says a vial on a 28-day
+ *    window is worth 28 days, so a 50-day auto-decrement was contradicting the
+ *    runway printed next to it. How fast someone actually gets through a vial
+ *    depends on dosing we never observe, so the honest answer is not a better
+ *    guess here, it is no guess at all.
  *  - Only fires when there IS a real reference date (a manual log, or a prior
  *    auto-depletion run) — no reference point means no elapsed time can be
  *    honestly computed, so nothing happens.
@@ -35,6 +44,10 @@ export interface AutoDepletionInput {
    *  recent manual log, or the last auto-depletion run. Null = not eligible
    *  yet (no history to anchor the clock to). */
   accountedThrough: string | null
+  /** The item's discard window once opened, when it has one. Its presence is
+   *  how the app marks a container-tracked drug (insulin), which this function
+   *  must not touch — see the exclusion note above. */
+  inUseDays?: number | null
 }
 
 export interface AutoDepletionResult {
@@ -49,6 +62,10 @@ export function computeAutoDepletion(
   input: AutoDepletionInput,
   now: Date = new Date()
 ): AutoDepletionResult | null {
+  // A discard window means a container-tracked drug, not a worn device. How
+  // fast one is actually used comes down to dosing we never see, so this
+  // declines rather than inventing a cycle for it.
+  if (input.inUseDays != null && input.inUseDays > 0) return null
   const wearDays = daysPerUnitFromRate(input.usageRatePerDay)
   if (wearDays === null || wearDays <= 0) return null
   if (!input.accountedThrough) return null

@@ -10,6 +10,7 @@ interface SupplyRow {
   name: string
   quantity: number
   usage_rate_per_day: number | null
+  in_use_days: number | null
   auto_depleted_through: string | null
   updated_at: string | null
 }
@@ -50,7 +51,9 @@ export function AutoDepleteSync() {
         const [{ data: supplies }, { data: changes }] = await Promise.all([
           supabase
             .from('supplies')
-            .select('id, name, quantity, usage_rate_per_day, auto_depleted_through, updated_at')
+            // in_use_days comes along so computeAutoDepletion can decline a
+            // container-tracked drug; without it that exclusion is dead code.
+            .select('id, name, quantity, usage_rate_per_day, in_use_days, auto_depleted_through, updated_at')
             .eq('user_id', user.id)
             .gt('quantity', 0)
             .not('usage_rate_per_day', 'is', null),
@@ -76,7 +79,12 @@ export function AutoDepleteSync() {
           const accountedThrough = candidates.reduce((a, b) => (a > b ? a : b))
 
           const result = computeAutoDepletion(
-            { quantity: s.quantity, usageRatePerDay: s.usage_rate_per_day ?? 0, accountedThrough },
+            {
+              quantity: s.quantity,
+              usageRatePerDay: s.usage_rate_per_day ?? 0,
+              inUseDays: s.in_use_days,
+              accountedThrough,
+            },
             now
           )
           if (!result) continue

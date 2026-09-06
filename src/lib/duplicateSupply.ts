@@ -148,17 +148,11 @@ export function findByNameAndBrand<T extends NamedSupply>(
   return null
 }
 
-/**
- * Would merging this box silently switch OFF the opened-vial discard clock?
- *
- * `depletion.effectiveRunwayDays` only lets the in-use clock cap the runway while
- * `quantity <= 1` (with sealed spares on hand the discard date is not the runway,
- * so folding it in would fire a false "reorder now"). That is the right rule, but
- * it means a restock that pushes an OPEN single vial past 1 quietly removes the
- * discard date from the headline number. The user should be told, not surprised.
+/*
+ * `hidesInUseClock` used to live here: it warned that restocking an OPEN single
+ * vial pushed quantity past 1 and so switched the discard clock out of the
+ * headline runway. That was true of the old rule and is not true any more --
+ * `depletion.stockRunwayDays` now folds the window into the number at every
+ * quantity, crediting the open container with exactly the days left on its
+ * clock. There is nothing left to warn about, so the warning went with it.
  */
-export function hidesInUseClock(stored: StoredSupply, addQuantity: number): boolean {
-  if (!stored.openedDate || !stored.inUseDays || stored.inUseDays <= 0) return false
-  const added = Number.isFinite(addQuantity) && addQuantity > 0 ? Math.floor(addQuantity) : 1
-  return stored.quantity <= 1 && stored.quantity + added > 1
-}

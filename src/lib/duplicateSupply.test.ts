@@ -6,7 +6,6 @@ import {
   planRestock,
   findByNameAndBrand,
   normalizeSupplyName,
-  hidesInUseClock,
   type StoredSupply,
 } from './duplicateSupply'
 
@@ -143,30 +142,5 @@ describe('findByNameAndBrand (items with no barcode)', () => {
     expect(findByNameAndBrand(rows, 'Humalog')).toBeNull()
     expect(findByNameAndBrand(rows, '')).toBeNull()
     expect(findByNameAndBrand(rows, '   ')).toBeNull()
-  })
-})
-
-describe('hidesInUseClock', () => {
-  const openVial: StoredSupply = {
-    quantity: 1,
-    expirationDate: null,
-    lotNumber: null,
-    openedDate: '2026-08-01',
-    inUseDays: 28,
-  }
-
-  it('flags a restock that pushes an OPEN single vial past one unit', () => {
-    // depletion.ts stops applying the discard cap once quantity > 1.
-    expect(hidesInUseClock(openVial, 4)).toBe(true)
-  })
-
-  it('stays quiet when the clock keeps applying', () => {
-    expect(hidesInUseClock({ ...openVial, quantity: 3 }, 2)).toBe(false) // already > 1
-  })
-
-  it('stays quiet when the item runs no in-use clock', () => {
-    expect(hidesInUseClock({ ...openVial, openedDate: null }, 4)).toBe(false)
-    expect(hidesInUseClock({ ...openVial, inUseDays: null }, 4)).toBe(false)
-    expect(hidesInUseClock({ ...openVial, inUseDays: 0 }, 4)).toBe(false)
   })
 })

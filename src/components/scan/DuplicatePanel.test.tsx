@@ -133,13 +133,20 @@ describe('a NAME match', () => {
 describe('the opened-vial discard clock', () => {
   const OPENED = { openedDate: '2026-08-01', inUseDays: 28, quantity: 1 }
 
-  it('warns when restocking would stop the discard date capping the runway', () => {
+  it('says nothing about the discard clock, because the runway now carries it', () => {
+    // This panel used to add a caveat here: restocking an open vial past one
+    // unit switched the discard date out of the headline runway, so the user
+    // was warned their number was about to stop meaning what it meant.
+    // depletion.stockRunwayDays folds the window in at every quantity now, so
+    // the number is right either way and the caveat would be noise. If this
+    // ever fails, check whether the runway rule was reverted before re-adding
+    // the copy.
     renderPanel(OPENED, SAME_BOX, 5)
-    expect(screen.getByText(/already open and on its discard clock/i)).toBeInTheDocument()
+    expect(screen.queryByText(/discard clock/i)).not.toBeInTheDocument()
   })
 
-  it('stays quiet when nothing is open', () => {
-    renderPanel({ quantity: 1 }, SAME_BOX, 5)
-    expect(screen.queryByText(/discard clock/i)).not.toBeInTheDocument()
+  it('still offers the restock itself', () => {
+    renderPanel(OPENED, SAME_BOX, 5)
+    expect(screen.getByRole('button', { name: RESTOCK })).toBeInTheDocument()
   })
 })

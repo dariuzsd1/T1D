@@ -62,6 +62,27 @@ describe('computeAutoDepletion — supplement-model wear clock', () => {
     ).toBeNull()
   })
 
+  it('will not touch a container-tracked drug, whatever its rate looks like', () => {
+    // The bug this guards: an insulin rate is CONTAINERS per day, so 20u/day of
+    // a 1000u vial is 0.02 -- a fraction, nowhere near the >1/day cut-off that
+    // filters out strips and lancets. Insulin sailed through and a vial was
+    // being removed from the count every 50 days, silently, on a clock that
+    // also disagreed with the 28-day runway shown beside it.
+    const insulin = { quantity: 5, usageRatePerDay: 20 / 1000, accountedThrough: daysAgo(200) }
+    expect(computeAutoDepletion({ ...insulin, inUseDays: 28 }, now)).toBeNull()
+    expect(computeAutoDepletion({ ...insulin, inUseDays: 56 }, now)).toBeNull()
+    // Without the window it is indistinguishable from a slow wear item, which
+    // is exactly why the window has to be passed in by the caller.
+    expect(computeAutoDepletion(insulin, now)).not.toBeNull()
+  })
+
+  it('still runs for a wear item that has no discard window', () => {
+    // A pod or sensor carries no in-use window, so nothing here changes for it.
+    const pods = { quantity: 10, usageRatePerDay: 1 / 3, accountedThrough: daysAgo(9) }
+    expect(computeAutoDepletion({ ...pods, inUseDays: null }, now)!.unitsToDeplete).toBe(3)
+    expect(computeAutoDepletion({ ...pods, inUseDays: 0 }, now)!.unitsToDeplete).toBe(3)
+  })
+
   it('advances the reference date by cycles consumed, not all the way to now (preserves phase)', () => {
     // 7 days elapsed on a 3-day item -> 2 cycles (6 days accounted), 1 day remainder untouched.
     const result = computeAutoDepletion(
