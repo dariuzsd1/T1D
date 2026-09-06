@@ -19,6 +19,11 @@ export interface CatalogItem {
   // Pipe-separated aliases ("g7|dexcom g7|dex g7") so search matches what users type.
   common_names: string | null
   units_per_box: number | null
+  /** How many UNITS are inside ONE vial or pen, as opposed to units_per_box,
+   *  which counts the vials. Turns a dose into a rate: 40 units a day out of a
+   *  1000-unit vial is 0.04 vials a day. Null where the question does not apply
+   *  (Afrezza cartridges hold 4, 8 or 12; Symlin is dosed in micrograms). */
+  units_per_container: number | null
   // Verified per-unit usage rate (e.g. 0.143/day for a 7-day sensor). Present only
   // for wear-duration items; blank for per-person-consumption items (insulin, strips).
   typical_usage_per_day: number | null

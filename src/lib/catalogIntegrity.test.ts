@@ -197,6 +197,57 @@ describe('product catalog integrity', () => {
     expect(named(contradicted)).toEqual([])
   })
 
+  /**
+   * units_per_container is how many UNITS are inside one vial or pen, as opposed
+   * to units_per_box, which is how many vials or pens are in the carton. It
+   * turns a dose into a rate: 40 units a day out of a 1000-unit vial is 0.04
+   * vials a day. Get it wrong and every insulin runway is wrong by that factor.
+   */
+  const containers = rows.filter((r) => Number(r.units_per_container) > 0)
+
+  it('only claims a container size where the row is measured in units', () => {
+    // Blank is the right answer for Afrezza, whose cartridges hold 4, 8 or 12
+    // units apiece, and for Symlin, which is dosed in micrograms. Filling those
+    // in with a plausible-looking number is how the flat 28-day window happened.
+    const wrongCategory = containers.filter((r) => r.category !== 'insulin')
+    expect(named(wrongCategory)).toEqual([])
+    expect(named(rows.filter((r) => /Afrezza|Symlin/.test(r.product_name) && r.units_per_container)))
+      .toEqual([])
+  })
+
+  it('keeps a container size to the presentations that actually exist', () => {
+    // 300 for a 3 mL U-100 pen or cartridge, 1000 for a 10 mL U-100 vial, and
+    // the concentrated outliers: Toujeo SoloStar 450, Humulin R U-500 vial
+    // 10000. Anything else is a typo or a units mix-up.
+    const KNOWN = new Set([300, 450, 600, 900, 1000, 1500, 10000])
+    const odd = containers.filter((r) => !KNOWN.has(Number(r.units_per_container)))
+    expect(named(odd)).toEqual([])
+  })
+
+  it('does not put a pen-sized figure on a vial, or the reverse', () => {
+    // The mix-up that matters: a vial is an order of magnitude bigger than a
+    // pen, so swapping them makes a runway wrong by ~3x in whichever direction.
+    const swapped = containers.filter((r) => {
+      const n = Number(r.units_per_container)
+      if (r.unit === 'vials') return n < 1000
+      if (r.unit === 'pens' || r.unit === 'cartridges') return n > 900
+      return false
+    })
+    expect(named(swapped)).toEqual([])
+  })
+
+  it('explains itself whenever the figure is not plain U-100 arithmetic', () => {
+    // 10 mL at 100 units/mL is 1000 and needs no note. 450, 900, 1500 and 10000
+    // all come from a concentrated presentation, and a reader has to be able to
+    // tell that from the row rather than assuming a typo and "fixing" it.
+    const unexplained = containers.filter((r) => {
+      const n = Number(r.units_per_container)
+      if (n === 300 || n === 1000) return false
+      return !new RegExp(String(n)).test(r.notes)
+    })
+    expect(named(unexplained)).toEqual([])
+  })
+
   it('reports how stale the verified rows are getting', () => {
     const MONTHS = 12
     const cutoff = new Date()

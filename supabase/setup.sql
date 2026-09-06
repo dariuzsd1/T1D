@@ -567,6 +567,7 @@ create table if not exists public.products (
   pzn                          text,
   unit                         text,
   units_per_box                integer,
+  units_per_container          integer,
   typical_usage_per_day        numeric,
   default_refill_interval_days integer,
   rx_required                  boolean default false,
@@ -586,6 +587,10 @@ create table if not exists public.products (
 
 -- For catalogs imported before these columns existed:
 alter table public.products add column if not exists in_use_days  integer;
+-- How many UNITS are inside ONE vial or pen, as opposed to units_per_box, which
+-- counts the vials. Turns a dose into a rate, so the app can stop asking the
+-- user for it: 40 units a day out of a 1000-unit vial is 0.04 vials a day.
+alter table public.products add column if not exists units_per_container integer;
 alter table public.products add column if not exists discontinued boolean not null default false;
 
 -- For catalogs imported before pzn existed:
@@ -949,6 +954,47 @@ update public.supplies set in_use_days = 10
 
 update public.supplies set in_use_days = 14
   where in_use_days = 28 and name ilike '%novolog%mix%';
+
+-- ============================================================================
+-- 19. UNITS INSIDE ONE CONTAINER  (reference data, not PHI)
+--
+--     units_per_container is how many UNITS are in ONE vial or pen;
+--     units_per_box counts the vials. The app needs it to turn a dose into a
+--     rate (40 units a day out of a 1000-unit vial is 0.04 vials a day), and
+--     without it the user had to look the number up and type it.
+--
+--     Mostly plain arithmetic off the label: U-100 means 100 units/mL, so a
+--     10 mL vial is 1000 and a 3 mL pen or cartridge is 300. The concentrated
+--     presentations are the reason this is a column and not a default.
+-- ============================================================================
+
+update public.products set units_per_container = 1000
+  where units_per_container is null and category = 'insulin' and unit = 'vials'
+    and product_name not in ('Humulin R U-500 (concentrated)');
+
+update public.products set units_per_container = 300
+  where units_per_container is null and category = 'insulin'
+    and unit in ('pens', 'cartridges')
+    and product_name not in (
+      'Toujeo (insulin glargine U-300)',
+      'Afrezza (inhaled insulin)',
+      'Symlin (pramlintide)'
+    );
+
+-- Toujeo SoloStar is 1.5 mL at U-300, so 450 units in a pen a third the volume
+-- of a normal one. (The Max SoloStar is 3 mL = 900; this row is the SoloStar.)
+update public.products set units_per_container = 450
+  where product_name = 'Toujeo (insulin glargine U-300)' and units_per_container is null;
+
+-- The U-500 vial is 20 mL at 500 units/mL: ten thousand units, ten times a
+-- U-100 vial. Defaulting this one to 1000 would have shortened its runway
+-- tenfold. (The U-500 KwikPen is 1500; this row is the vial.)
+update public.products set units_per_container = 10000
+  where product_name = 'Humulin R U-500 (concentrated)' and units_per_container is null;
+
+-- Afrezza and Symlin stay null on purpose. An Afrezza cartridge holds 4, 8 or
+-- 12 units depending which one you pick up, and Symlin is dosed in micrograms,
+-- so there is no single figure to record for either. The prompt asks instead.
 
 -- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql

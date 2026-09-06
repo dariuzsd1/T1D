@@ -79,7 +79,6 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
  * the app can ever say when they will run out. Optional: skipping it leaves the
  * item honestly untracked rather than blocking the add.
  */
-
 function UsagePrompt({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   const { t } = useI18n()
   return (
@@ -137,7 +136,22 @@ export default function ScanPage() {
   // survive the keystroke, and only two real values become a rate.
   const [insulinDose, setInsulinDose] = useState('')
   const [insulinContainer, setInsulinContainer] = useState('')
+
   const [detectingWear, setDetectingWear] = useState(false)
+
+  /**
+   * Prefill the container size from the catalog when it knows one, so the only
+   * thing left to answer is the dose. Prefilled rather than hidden: a row is one
+   * presentation and a user may hold another (Toujeo SoloStar is 450 units, the
+   * Max SoloStar 900), so the number has to stay visible and editable. Never
+   * overwrites something already typed.
+   */
+  const applyContainerSize = (units: number | null | undefined) => {
+    if (!units || units <= 0) return
+    if (insulinContainer !== '') return // never overwrite a number they typed
+    setInsulinContainer(String(units))
+    setAutoRate(insulinRatePerDay(parseFloat(insulinDose.replace(',', '.')), units))
+  }
 
   // Manual entry (the photo doubles as a barcode source and an on-screen reference).
   const [manualName, setManualName] = useState('')
@@ -321,6 +335,7 @@ export default function ScanPage() {
     setAutoRate(item.typical_usage_per_day ?? 0)
     setAutoInUseDays(item.in_use_days ?? null)
     setAutoRefillDays(item.default_refill_interval_days ?? null)
+    applyContainerSize(item.units_per_container)
     setDiscontinued(!!item.discontinued)
     setCatalogMatch(true)
     setPersonalMatch(false)
@@ -389,6 +404,7 @@ export default function ScanPage() {
         setAutoRate(product?.typical_usage_per_day ?? 0)
         setAutoInUseDays(product?.in_use_days ?? null)
         setAutoRefillDays(product?.default_refill_interval_days ?? null)
+        applyContainerSize(product?.units_per_container)
         setDiscontinued(!!product?.discontinued)
         if (product?.category) setCatalogCategory(product.category)
       }
@@ -506,6 +522,7 @@ export default function ScanPage() {
             setAutoRate(product.typical_usage_per_day ?? 0)
             setAutoInUseDays(product.in_use_days ?? null)
             setAutoRefillDays(product.default_refill_interval_days ?? null)
+            applyContainerSize(product.units_per_container)
             setCatalogCategory(product.category ?? null)
             setDiscontinued(!!product.discontinued)
             setCatalogMatch(true)

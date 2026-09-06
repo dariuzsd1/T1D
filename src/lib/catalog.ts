@@ -6,6 +6,11 @@ export interface CatalogProduct {
   category: string | null
   unit: string | null
   units_per_box: number | null
+  /** How many UNITS are inside ONE vial or pen, as opposed to units_per_box,
+   *  which counts the vials. Turns a dose into a rate: 40 units a day out of a
+   *  1000-unit vial is 0.04 vials a day. Null where the question does not apply
+   *  (Afrezza cartridges hold 4, 8 or 12; Symlin is dosed in micrograms). */
+  units_per_container: number | null
   typical_usage_per_day: number | null
   default_refill_interval_days: number | null
   /** Days an opened vial/pen/cartridge stays usable, whatever the printed
@@ -18,7 +23,7 @@ export interface CatalogProduct {
 }
 
 const PRODUCT_COLUMNS =
-  'product_name, brand, category, unit, units_per_box, typical_usage_per_day, default_refill_interval_days, in_use_days, discontinued'
+  'product_name, brand, category, unit, units_per_box, units_per_container, typical_usage_per_day, default_refill_interval_days, in_use_days, discontinued'
 
 type CodeType = 'gtin' | 'pzn' | 'ndc' | 'cip'
 
