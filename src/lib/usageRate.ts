@@ -30,6 +30,41 @@ export function needsUsageRate(category: string | null | undefined, usageRatePer
 }
 
 /**
+ * Insulin is asked for too, but it CANNOT go in the set above.
+ *
+ * A rate is containers per day. For strips that is the same number the user
+ * would say out loud ("six a day"), which is why one box asks one question. For
+ * insulin it is not: someone on 40 units a day would type 40, and the single
+ * prompt would store 40 VIALS a day and report a five-vial stock as running out
+ * this afternoon. The number people know is their dose, and turning a dose into
+ * containers needs the container size as well.
+ *
+ * So insulin gets its own two-field prompt and its own predicate. Keeping them
+ * apart is the point: whatever else changes, a dose must never be read as a
+ * count of containers.
+ */
+export function needsInsulinRate(category: string | null | undefined, usageRatePerDay: number): boolean {
+  if (usageRatePerDay > 0) return false
+  return (category ?? '').trim() === 'insulin'
+}
+
+/**
+ * Containers per day from a dose and a container size: 40 units a day out of a
+ * 1000-unit vial is 0.04 vials a day. Returns 0 unless both numbers are real and
+ * positive, so a half-filled form leaves the runway an honest estimate instead of
+ * a number derived from one field.
+ *
+ * Shared with EditProductModal's insulin tab, which used to inline this. One
+ * definition means the rate a supply is created with and the rate it is later
+ * edited to cannot drift apart.
+ */
+export function insulinRatePerDay(unitsPerDay: number, unitsPerContainer: number): number {
+  if (!Number.isFinite(unitsPerDay) || !Number.isFinite(unitsPerContainer)) return 0
+  if (unitsPerDay <= 0 || unitsPerContainer <= 0) return 0
+  return unitsPerDay / unitsPerContainer
+}
+
+/**
  * Read a typed "per day" answer. Rejects anything that is not a positive, finite
  * number so a stray keystroke cannot become a usage rate, and caps absurd values
  * that would otherwise report a runway of hours.

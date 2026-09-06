@@ -23,6 +23,7 @@ import { BackButton } from '@/components/ui/BackButton'
 import { logActivity } from '@/lib/activity'
 import { CatalogBrowser, type CatalogItem } from '@/components/scan/CatalogBrowser'
 import { DuplicatePanel, type DuplicateMatch } from '@/components/scan/DuplicatePanel'
+import { InsulinUsagePrompt } from '@/components/scan/InsulinUsagePrompt'
 import { DiscontinuedNotice } from '@/components/scan/DiscontinuedNotice'
 import { QuantityField, type QuantityValue } from '@/components/scan/QuantityField'
 import { StarterKitModal } from '@/components/scan/StarterKitModal'
@@ -36,7 +37,7 @@ import {
 } from '@/lib/supplyLookup'
 import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
-import { needsUsageRate, parseUsagePerDay } from '@/lib/usageRate'
+import { needsUsageRate, needsInsulinRate, insulinRatePerDay, parseUsagePerDay } from '@/lib/usageRate'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
 import { errorMessage } from '@/lib/utils'
@@ -78,6 +79,7 @@ function WearReadout({ rate, quantity }: { rate: number; quantity: number }) {
  * the app can ever say when they will run out. Optional: skipping it leaves the
  * item honestly untracked rather than blocking the add.
  */
+
 function UsagePrompt({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   const { t } = useI18n()
   return (
@@ -126,6 +128,10 @@ export default function ScanPage() {
   // What the user typed when asked how many they use a day. Held as text so a
   // half-typed "0." survives the keystroke; only a valid answer becomes a rate.
   const [usageInput, setUsageInput] = useState('')
+  // The insulin pair, held as text for the same reason: a half-typed number must
+  // survive the keystroke, and only two real values become a rate.
+  const [insulinDose, setInsulinDose] = useState('')
+  const [insulinContainer, setInsulinContainer] = useState('')
   const [detectingWear, setDetectingWear] = useState(false)
 
   // Manual entry (the photo doubles as a barcode source and an on-screen reference).
@@ -183,6 +189,21 @@ export default function ScanPage() {
     setAutoRate(parseUsagePerDay(v) ?? 0)
   }
   const askUsage = needsUsageRate(catalogCategory, autoRate) || (usageInput !== '' && autoRate === 0)
+  // Insulin asks two numbers instead of one; see InsulinUsagePrompt for why they
+  // must not share a field. Keep asking while the pair is incomplete, so a form
+  // filled halfway still shows what it is waiting for.
+  const askInsulin =
+    needsInsulinRate(catalogCategory, autoRate) ||
+    ((insulinDose !== '' || insulinContainer !== '') && autoRate === 0)
+
+  /** Recompute the rate from whichever of the two insulin fields just changed. */
+  const handleInsulinInput = (which: 'dose' | 'container', v: string) => {
+    const dose = which === 'dose' ? v : insulinDose
+    const container = which === 'container' ? v : insulinContainer
+    if (which === 'dose') setInsulinDose(v)
+    else setInsulinContainer(v)
+    setAutoRate(insulinRatePerDay(parseFloat(dose.replace(',', '.')), parseFloat(container.replace(',', '.'))))
+  }
 
   // Shared by both photo sources (file upload and live camera capture): try to
   // read a barcode straight out of the image. A sharp, close still is often easier
@@ -890,6 +911,15 @@ export default function ScanPage() {
                     {askUsage && (
                   <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
                 )}
+                {askInsulin && (
+                  <InsulinUsagePrompt
+                    id={`insulin-${step}`}
+                    dose={insulinDose}
+                    container={insulinContainer}
+                    onDose={(v) => handleInsulinInput('dose', v)}
+                    onContainer={(v) => handleInsulinInput('container', v)}
+                  />
+                )}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
                   </>
                 )}
@@ -982,6 +1012,15 @@ export default function ScanPage() {
                 {discontinued && <DiscontinuedNotice />}
                 {askUsage && (
                   <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
+                )}
+                {askInsulin && (
+                  <InsulinUsagePrompt
+                    id={`insulin-${step}`}
+                    dose={insulinDose}
+                    container={insulinContainer}
+                    onDose={(v) => handleInsulinInput('dose', v)}
+                    onContainer={(v) => handleInsulinInput('container', v)}
+                  />
                 )}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>
@@ -1121,6 +1160,15 @@ export default function ScanPage() {
                 {discontinued && <DiscontinuedNotice />}
                 {askUsage && (
                   <UsagePrompt id={`usage-${step}`} value={usageInput} onChange={handleUsageInput} />
+                )}
+                {askInsulin && (
+                  <InsulinUsagePrompt
+                    id={`insulin-${step}`}
+                    dose={insulinDose}
+                    container={insulinContainer}
+                    onDose={(v) => handleInsulinInput('dose', v)}
+                    onContainer={(v) => handleInsulinInput('container', v)}
+                  />
                 )}
                 <WearReadout rate={autoRate} quantity={quantity || 0} />
               </div>

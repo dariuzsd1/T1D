@@ -1016,6 +1016,9 @@ export const en = {
   'scan.usagePromptLabel': 'How many do you use per day?',
   'scan.usagePromptPlaceholder': 'e.g. 6',
   'scan.usagePromptHelp': 'Strips, lancets and needles are used a personal number of times a day, so this one cannot be guessed. Without it the app cannot tell you when you will run out.',
+  'scan.insulinPromptLabel': 'How much of this do you use?',
+  'scan.insulinPromptHelp':
+    'Dosing is personal, so the app cannot work this out on its own, and without it insulin is the one supply it can never warn you about. Two numbers: your usual dose from this insulin, and how many units are in one vial or pen (a 10 mL vial holds 1000, a standard pen 300). You can skip this and set it later.',
   'scan.duplicateBody': 'You already have {name} in your supplies ({count} in stock). Restocking keeps it as one item instead of adding a second entry.',
   'scan.duplicateRestock': 'Add {count} to what I have ({total} total)',
   'scan.duplicateMixedBody': "You already have {name} ({count} in stock), but this box has a different expiration date or lot number. Adding it as a separate entry keeps each box's own expiry and lot, which is safer for rotation and recall checks.",
@@ -2201,6 +2204,9 @@ export const fr: Record<TKey, string> = {
   'scan.usagePromptLabel': 'Combien en utilisez-vous par jour ?',
   'scan.usagePromptPlaceholder': 'ex. 6',
   'scan.usagePromptHelp': "Les bandelettes, lancettes et aiguilles s'utilisent un nombre de fois propre à chacun, cela ne peut donc pas être deviné. Sans cette information, l'application ne peut pas vous dire quand vous serez à court.",
+  'scan.insulinPromptLabel': 'Quelle quantité utilisez-vous ?',
+  'scan.insulinPromptHelp':
+    "Les doses sont propres à chacun : l'application ne peut donc pas le deviner, et sans cette information l'insuline est le seul produit pour lequel elle ne pourra jamais vous alerter. Deux chiffres : votre dose habituelle de cette insuline et le nombre d'unités contenues dans un flacon ou un stylo (un flacon de 10 mL en contient 1000, un stylo standard 300). Vous pouvez passer cette étape et la renseigner plus tard.",
   'scan.duplicateBody': "Vous avez déjà {name} dans vos fournitures ({count} en stock). Réapprovisionner le garde en un seul article au lieu d'ajouter une deuxième entrée.",
   'scan.duplicateRestock': "Ajouter {count} à ce que j'ai ({total} au total)",
   'scan.duplicateMixedBody': "Vous avez déjà {name} ({count} en stock), mais cette boîte a une date de péremption ou un numéro de lot différent. L'ajouter comme entrée distincte conserve la péremption et le lot de chaque boîte, ce qui est plus sûr pour la rotation et les rappels de lots.",
@@ -3406,6 +3412,9 @@ export const es: Record<TKey, string> = {
   'scan.usagePromptLabel': '¿Cuántos usas al día?',
   'scan.usagePromptPlaceholder': 'p. ej. 6',
   'scan.usagePromptHelp': 'Las tiras, lancetas y agujas se usan un número de veces distinto en cada persona, así que no se puede adivinar. Sin ese dato la app no puede avisarte de cuándo te quedarás sin existencias.',
+  'scan.insulinPromptLabel': '¿Cuánta usas?',
+  'scan.insulinPromptHelp':
+    'Las dosis son personales, así que la app no puede deducirlo sola, y sin ese dato la insulina es el único suministro del que nunca podrá avisarte. Dos números: tu dosis habitual de esta insulina y cuántas unidades hay en un vial o una pluma (un vial de 10 mL tiene 1000 y una pluma estándar 300). Puedes omitirlo y configurarlo más tarde.',
   'scan.duplicateBody': 'Ya tienes {name} en tus suministros ({count} en stock). Reabastecer lo mantiene como un solo artículo en vez de añadir una segunda entrada.',
   'scan.duplicateRestock': 'Añadir {count} a lo que tengo ({total} en total)',
   'scan.duplicateMixedBody': 'Ya tienes {name} ({count} en stock), pero esta caja tiene una fecha de caducidad o un número de lote diferente. Añadirla como entrada separada conserva la caducidad y el lote de cada caja, lo cual es más seguro para la rotación y los avisos de retirada.',

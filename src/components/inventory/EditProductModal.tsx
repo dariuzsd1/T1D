@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rowToDevice, deviceLabel, type MedicalDevice, type MedicalDeviceRow } from '@/lib/devices'
 import { rowToPrescription, type Prescription } from '@/lib/prescriptions'
 import { rateFromDaysPerUnit, daysPerUnitFromRate } from '@/lib/depletion'
+import { insulinRatePerDay } from '@/lib/usageRate'
 import { useI18n } from '@/lib/i18n'
 
 interface EditProductModalProps {
@@ -127,7 +128,7 @@ export function EditProductModal({ product, onClose, onUpdate, onSaved }: EditPr
     trackMode === 'wear'
       ? rateFromDaysPerUnit(parseFloat(perUnitDays) || 0)
       : trackMode === 'insulin'
-        ? (insulinN > 0 && insulinM > 0 ? insulinN / insulinM : 0)
+        ? insulinRatePerDay(insulinN, insulinM)
         : parseFloat(perDay) > 0
           ? parseFloat(perDay)
           : 0
