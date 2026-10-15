@@ -1125,6 +1125,71 @@ update public.supplies s
    and p.default_refill_interval_days is not null
    and s.catalog_refill_interval_days is null;
 
+
+-- ============================================================================
+-- 21. DE-ORPHAN SUPPLIES THE STARTER KITS NAMED WRONGLY
+--
+--     src/lib/starterKits.ts used to name its supplies in the plural ("Dexcom
+--     G7 Sensors") against catalog rows that are singular ("Dexcom G7 Sensor"),
+--     name three products differently from the manufacturer, and carry Medtronic
+--     on three after the 2026-03 MiniMed rebrand. Every one of the 17 was wrong.
+--
+--     Nothing failed loudly, because nothing joins these at write time. But
+--     `supplies.name` is how everything later finds a supply's catalog row, so
+--     anything onboarding created was permanently orphaned: the backfills in
+--     sections 18 and 20 skipped it, and ProductCard's one-tap restock resolves
+--     units_per_box by name and falls back to 1 on a miss, so Reorder on a
+--     kit-added sensor added one sensor rather than three.
+--
+--     The code is fixed and a test now pins every kit name, brand, box size and
+--     rate to the catalog. Rows already written keep the old string until this
+--     renames them. Guarded on the exact wrong value, so it is idempotent and
+--     cannot touch a name the user typed themselves.
+--
+--     Run order matters: this renames first, then re-runs the two backfills so
+--     the newly matching rows pick up what they missed.
+-- ============================================================================
+
+update public.supplies set name = 'Omnipod 5 Pod'                      where name = 'Omnipod 5 Pods';
+update public.supplies set name = 'Omnipod DASH Pod'                   where name = 'Omnipod DASH Pods';
+update public.supplies set name = 't:slim X2 Cartridge'                where name = 't:slim X2 Cartridges';
+update public.supplies set name = 'Tandem Mobi Cartridge'              where name = 'Tandem Mobi Cartridges';
+update public.supplies set name = 'AutoSoft 90 Infusion Set'           where name = 'AutoSoft 90 Infusion Sets';
+update public.supplies set name = 'MiniMed Reservoir'                  where name = 'MiniMed Reservoirs';
+update public.supplies set name = 'Mio Advance Infusion Set'           where name = 'Mio Advance Infusion Sets';
+update public.supplies set name = 'iLet Cartridge'                     where name = 'iLet Cartridges';
+update public.supplies set name = 'iLet Infusion Set'                  where name = 'iLet Infusion Sets';
+update public.supplies set name = 'mylife YpsoPump Reservoir'          where name = 'YpsoPump Cartridges';
+update public.supplies set name = 'mylife YpsoPump Orbit Infusion Set' where name = 'mylife Orbit Infusion Sets';
+update public.supplies set name = 'BD Ultra-Fine Pen Needles'          where name = 'Pen Needles';
+update public.supplies set name = 'Dexcom G7 Sensor'                   where name = 'Dexcom G7 Sensors';
+update public.supplies set name = 'Dexcom G6 Sensor'                   where name = 'Dexcom G6 Sensors';
+update public.supplies set name = 'FreeStyle Libre 3 Sensor'           where name = 'FreeStyle Libre 3 Sensors';
+update public.supplies set name = 'FreeStyle Libre 2 Sensor'           where name = 'FreeStyle Libre 2 Sensors';
+update public.supplies set name = 'Guardian 4 Sensor'                  where name = 'Guardian 4 Sensors';
+
+-- The stale brand, on the same rows. Narrowed to the three products the rebrand
+-- touched so it cannot rewrite a brand somebody typed.
+update public.supplies set brand = 'MiniMed'
+  where brand = 'Medtronic'
+    and name in ('MiniMed Reservoir', 'Mio Advance Infusion Set', 'Guardian 4 Sensor');
+
+-- Now that those names match, pick up what the backfills could not reach.
+update public.supplies s
+   set catalog_refill_interval_days = p.default_refill_interval_days
+  from public.products p
+ where s.name = p.product_name
+   and p.default_refill_interval_days is not null
+   and s.catalog_refill_interval_days is null;
+
+update public.supplies s
+   set in_use_days = p.in_use_days
+  from public.products p
+ where s.name = p.product_name
+   and p.category = 'insulin'
+   and p.in_use_days is not null
+   and s.in_use_days is null;
+
 -- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
