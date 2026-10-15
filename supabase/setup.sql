@@ -1092,6 +1092,39 @@ update public.products set units_per_container = 10000
 -- 12 units depending which one you pick up, and Symlin is dosed in micrograms,
 -- so there is no single figure to record for either. The prompt asks instead.
 
+
+
+-- ============================================================================
+-- 20. REFILL CYCLE ONTO SUPPLIES ALREADY HELD
+--
+--     The same oversight as the discard window above, found the same way: on a
+--     real database. catalog_refill_interval_days is written only when a supply
+--     is ADDED (src/app/scan/page.tsx), so every item someone already owned
+--     when that shipped still has none. refillRuleFrom then returns null for
+--     all of it, which means no refill-eligible date on Home, nothing on the
+--     calendar, and the feature CLAUDE.md calls the moat staying dark for an
+--     existing inventory no matter how many times setup.sql is re-run.
+--
+--     Lesson worth stating twice: adding a column and writing it on the add
+--     path only ever helps the NEXT item. Anything already on the shelf needs a
+--     backfill, and a feature can look wired up while being inert for every
+--     real row.
+--
+--     Safe to apply broadly rather than to insulin alone. This is the CATALOG's
+--     typical cycle, which lands in its own column and is flagged `estimated`
+--     (see RefillRule.estimated in src/lib/refill.ts), so it can say when a
+--     refill is likely allowed but can never raise the shortfall alarm. Exact
+--     name match and NULL-guarded, like the passes above, so it never overwrites
+--     a cycle the user confirmed off their own label.
+-- ============================================================================
+
+update public.supplies s
+   set catalog_refill_interval_days = p.default_refill_interval_days
+  from public.products p
+ where s.name = p.product_name
+   and p.default_refill_interval_days is not null
+   and s.catalog_refill_interval_days is null;
+
 -- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
