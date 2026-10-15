@@ -940,6 +940,76 @@ update public.products set in_use_days = 30
 -- goes back to null until the app can model a clock with three parts.
 update public.products set in_use_days = null
   where product_name = 'Afrezza (inhaled insulin)' and in_use_days = 28;
+--     ---- Backfill: a column that was never populated -------------------
+--     Everything above corrects a stored 28. That assumed a 28 that was never
+--     there: in_use_days arrived as a later "add column if not exists", which
+--     defaults to NULL, and no import ever filled it from the catalog. So on a
+--     real database every guard above matched nothing, and every insulin still
+--     had no discard window at all.
+--
+--     The lesson for the next correction written this way: guarding on the old
+--     value only works if the old value is actually there. Check first.
+--
+--     Guarded on NULL, so it fills a blank and never touches a figure someone
+--     has already set or corrected. Values mirror data/diabetes_catalog.csv,
+--     each sourced from the manufacturer PI named on the row there.
+-- Backfill: set each insulin window where the column was never populated.
+update public.products set in_use_days = 10
+  where in_use_days is null and product_name in (
+    'Humalog Mix 75/25'
+  );
+
+update public.products set in_use_days = 14
+  where in_use_days is null and product_name in (
+    'NovoLog Mix 70/30'
+  );
+
+update public.products set in_use_days = 28
+  where in_use_days is null and product_name in (
+    'Humalog (insulin lispro)',
+    'Lyumjev (insulin lispro-aabc)',
+    'Admelog (insulin lispro)',
+    'NovoLog (insulin aspart)',
+    'Fiasp (faster insulin aspart)',
+    'Apidra (insulin glulisine)',
+    'Lantus (insulin glargine U-100)',
+    'Basaglar (insulin glargine)',
+    'Semglee (insulin glargine)',
+    'Penfill Insulin Cartridge (3mL)',
+    'Rezvoglar (insulin glargine)',
+    'Merilog (insulin aspart)',
+    'Humalog 100 (5x10 ml vials, DE)'
+  );
+
+update public.products set in_use_days = 30
+  where in_use_days is null and product_name in (
+    'Symlin (pramlintide)'
+  );
+
+update public.products set in_use_days = 31
+  where in_use_days is null and product_name in (
+    'Humulin R (regular insulin)',
+    'Humulin N (NPH insulin)',
+    'Humulin 70/30'
+  );
+
+update public.products set in_use_days = 40
+  where in_use_days is null and product_name in (
+    'Humulin R U-500 (concentrated)'
+  );
+
+update public.products set in_use_days = 42
+  where in_use_days is null and product_name in (
+    'Levemir (insulin detemir)',
+    'Novolin R (regular insulin)',
+    'Novolin N (NPH insulin)'
+  );
+
+update public.products set in_use_days = 56
+  where in_use_days is null and product_name in (
+    'Toujeo (insulin glargine U-300)',
+    'Tresiba (insulin degludec)'
+  );
 
 --     ---- Backfill: supplies already on shelves -------------------------
 --     Deliberately only the two products where the stored 28 is LONGER than

@@ -19,6 +19,7 @@
 import {
   daysUntilExpiration,
   displayStatus,
+  effectiveRunwayDays,
   isRateEstimated,
   type DisplayStatus,
   type RunwayInput,
@@ -158,4 +159,47 @@ export function itemDisplayStatus(
   // shows up as well, which it could not before. 'unset' loses to anything, so a
   // missing expiry date can no longer hide a real shortage.
   return worse(byExpiry, displayStatus(item, bufferDays, leadTimeDays, now))
+}
+
+/**
+ * Sentinel for "there is nothing here to act on". Sorts last, and stays a finite
+ * number so a subtracting comparator cannot hand back NaN and scramble the list,
+ * which Infinity would do the moment two such items met.
+ */
+export const NO_ACTION_NEEDED = 1e9
+
+/**
+ * Days until this item needs acting on. The honest sort key for "most urgent".
+ *
+ * Home used to rank by `remainingDays` alone, and for a rescue item that number
+ * is the 1-a-day fallback, because rescue items have no usage rate. So a
+ * glucagon pen with fifty good days left reported a runway of 1 and outranked
+ * pods running out in three. That did not just mis-word the headline: Home's
+ * primary button is `reorderTargetFor(mostUrgent)`, so the one action on the
+ * screen pointed at the glucagon.
+ *
+ * The fix is to rank by whatever actually makes an item urgent, which is the
+ * same thing its status is computed from:
+ *
+ *   - nothing on hand    -> 0. You have none; it does not matter what kind it is.
+ *   - judged on expiry   -> days until it expires (negative once it has lapsed,
+ *                           so an expired rescue med sorts to the very front).
+ *   - judged on usage    -> its runway, which already caps itself at the expiry.
+ *   - no expiry recorded -> NO_ACTION_NEEDED. Its status is 'unset' anyway, so
+ *                           it is filtered out before this matters.
+ */
+export function daysUntilActionNeeded(
+  item: RunwayInput & RescueItemInput,
+  now: Date = new Date()
+): number {
+  if (item.quantity <= 0) return 0
+  if (!rescueLeadsWithExpiry(item)) return effectiveRunwayDays(item, now)
+  const exp = daysUntilExpiration(item.expirationDate, now)
+  return exp === null ? NO_ACTION_NEEDED : exp
+}
+
+/** Comparator for `Array.prototype.sort`: soonest action first. */
+export function byUrgency(now: Date = new Date()) {
+  return (a: RunwayInput & RescueItemInput, b: RunwayInput & RescueItemInput) =>
+    daysUntilActionNeeded(a, now) - daysUntilActionNeeded(b, now)
 }

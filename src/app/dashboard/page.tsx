@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { useStore, type Product } from '@/lib/store'
 import { useInventory } from '@/lib/useInventory'
 import { effectiveLeadTimeDays } from '@/lib/depletion'
-import { itemDisplayStatus } from '@/lib/rescueItems'
+import { itemDisplayStatus, byUrgency } from '@/lib/rescueItems'
 import { nextEligibleRefillDate, refillRuleFrom } from '@/lib/refill'
 import { reorderTargetFor } from '@/lib/suppliers'
 import { logActivity } from '@/lib/activity'
@@ -99,7 +99,12 @@ export default function DashboardPage() {
   }, [loading, extrasLoaded, profileLoading, profile, inventory.length, deviceCount, router])
 
   const now = useMemo(() => new Date(), [])
-  const sorted = [...inventory].sort((a, b) => a.remainingDays - b.remainingDays)
+  // Ranked by when each item needs acting on, NOT by runway. A rescue item has
+  // no usage rate, so its runway is the 1-a-day fallback: ranking on that put a
+  // glucagon pen with fifty good days left ahead of pods running out in three,
+  // and `mostUrgent` below is what the single reorder button points at. See
+  // rescueItems.daysUntilActionNeeded.
+  const sorted = [...inventory].sort(byUrgency(now))
   // displayStatus, not raw stockStatus: an estimated rate never alarms ('unset'),
   // so a freshly added box doesn't greet the user with a warning built on a guess.
   const leadFor = (p: Product) => effectiveLeadTimeDays(p, shippingLeadTimeDays)

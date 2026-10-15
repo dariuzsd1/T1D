@@ -6,6 +6,9 @@ import {
   itemDisplayStatus,
   tracksDailyUse,
   rescueLeadsWithExpiry,
+  daysUntilActionNeeded,
+  byUrgency,
+  NO_ACTION_NEEDED,
   RESCUE_EXPIRY_WARN_DAYS,
 } from './rescueItems'
 
@@ -179,5 +182,70 @@ describe('fast carbs running out (the answer that used to be discarded)', () => 
     // from NOW is comfortable and one just behind NOW is expired.
     expect(itemDisplayStatus(tabs(200, { expirationDate: isoInDays(365) }), 14, 0, NOW)).toBe('ok')
     expect(itemDisplayStatus(tabs(200, { expirationDate: isoInDays(-1) }), 14, 0, NOW)).toBe('out')
+  })
+})
+
+describe('daysUntilActionNeeded (what "most urgent" means on Home)', () => {
+  const pods = { name: 'Omnipod 5 Pod', category: 'patch_pump', quantity: 1, usageRatePerDay: 0.33 }
+  const glucagon = (days: number) => ({
+    name: 'Gvoke HypoPen (glucagon)', category: 'glucagon', quantity: 1,
+    usageRatePerDay: 0, expirationDate: isoInDays(days),
+  })
+
+  it('ranks the thing that is actually running out first', () => {
+    // THE BUG. Home ranked by remainingDays, and a rescue item has no usage
+    // rate, so its runway is the 1-a-day fallback. A glucagon pen good for
+    // another fifty days reported 1 and beat pods running out in three. Home's
+    // only button is reorderTargetFor(mostUrgent), so it pointed at the
+    // glucagon while the pods ran out.
+    const ranked = [glucagon(50), pods].sort(byUrgency(NOW))
+    expect(ranked[0].name).toBe('Omnipod 5 Pod')
+    expect(daysUntilActionNeeded(pods, NOW)).toBe(3)
+    // A range, not 50 exactly: isoInDays truncates to a date string, so whether
+    // this lands on 49 or 50 depends on the machine's offset from UTC. The claim
+    // under test is that it is nowhere near the 1 the old ranking produced.
+    expect(daysUntilActionNeeded(glucagon(50), NOW)).toBeGreaterThanOrEqual(49)
+    expect(daysUntilActionNeeded(glucagon(50), NOW)).toBeLessThanOrEqual(50)
+  })
+
+  it('still puts a lapsing rescue med ahead of a comfortable consumable', () => {
+    // The flip side, which has to keep working: expiry really is the clock for
+    // these, so one about to lapse outranks a well-stocked box.
+    const sensors = { name: 'Dexcom G7 Sensor', category: 'cgm_sensor', quantity: 9, usageRatePerDay: 0.1 }
+    const ranked = [sensors, glucagon(12)].sort(byUrgency(NOW))
+    expect(ranked[0].name).toBe('Gvoke HypoPen (glucagon)')
+  })
+
+  it('puts an already-expired rescue med at the very front', () => {
+    const ranked = [pods, glucagon(-3)].sort(byUrgency(NOW))
+    expect(ranked[0].name).toBe('Gvoke HypoPen (glucagon)')
+    expect(daysUntilActionNeeded(glucagon(-3), NOW)).toBeLessThan(0)
+  })
+
+  it('treats nothing-on-hand as act-now, whatever kind it is', () => {
+    expect(daysUntilActionNeeded({ ...glucagon(900), quantity: 0 }, NOW)).toBe(0)
+    expect(daysUntilActionNeeded({ ...pods, quantity: 0 }, NOW)).toBe(0)
+  })
+
+  it('sends an item with nothing to act on to the back, without breaking the sort', () => {
+    // No expiry recorded: its status is 'unset' so it never reaches the list,
+    // but the comparator still has to cope. A finite sentinel rather than
+    // Infinity, because Infinity - Infinity is NaN and NaN scrambles a sort.
+    const undated = { name: 'Baqsimi (nasal glucagon)', category: 'glucagon', quantity: 1, usageRatePerDay: 0 }
+    expect(daysUntilActionNeeded(undated, NOW)).toBe(NO_ACTION_NEEDED)
+    const ranked = [undated, { ...undated, name: 'Zegalogue (dasiglucagon)' }, pods].sort(byUrgency(NOW))
+    expect(ranked[0].name).toBe('Omnipod 5 Pod')
+    expect(ranked.map((p) => p.name)).toHaveLength(3)
+  })
+
+  it('ranks fast carbs on their runway once a rate is known', () => {
+    // hypo_treatment with a rate stops leading with expiry, so it ranks on the
+    // runway like any consumable. Eight tabs at four a day is two days.
+    const tabs = {
+      name: 'Dex4 Glucose Tablets', category: 'hypo_treatment', quantity: 8,
+      usageRatePerDay: 4, expirationDate: isoInDays(700),
+    }
+    expect(daysUntilActionNeeded(tabs, NOW)).toBe(2)
+    expect([glucagon(50), tabs].sort(byUrgency(NOW))[0].name).toBe('Dex4 Glucose Tablets')
   })
 })
