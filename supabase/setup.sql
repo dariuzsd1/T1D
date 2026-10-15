@@ -1011,19 +1011,45 @@ update public.products set in_use_days = 56
     'Tresiba (insulin degludec)'
   );
 
---     ---- Backfill: supplies already on shelves -------------------------
---     Deliberately only the two products where the stored 28 is LONGER than
---     the label, because those are the ones where the app is actively saying
---     that insulin past its discard date is still fine to inject. The rest of
---     the corrections above make the app more cautious than the user's saved
---     value, so they can arrive on the next add rather than by rewriting a
---     number someone may have set deliberately.
+--     ---- Backfill: insulin already on shelves ---------------------------
+--     Fixing `products` alone changes nothing for insulin a user already holds:
+--     a supply carries its own copy of the window, written when it was added,
+--     and before the catalog had one that copy was either blank or the edit
+--     dialog's hard-coded 28.
+--
+--     Joined on an EXACT name match to the catalog rather than a LIKE pattern.
+--     The add flow writes `supplies.name` straight from `products.product_name`,
+--     so anything added from the catalog or a barcode matches exactly, and
+--     reading the figure through the join means it can never drift from the
+--     reviewed value the way a hard-coded pair would. A hand-typed name that
+--     differs by so much as its casing will not match, and that is the intended
+--     outcome: better to leave it blank than to guess which product it is.
+--
+--     Two passes, both idempotent, and neither can lengthen a window:
 
-update public.supplies set in_use_days = 10
-  where in_use_days = 28 and name ilike '%humalog%mix%';
+--     1. Fill a blank. Nothing is being overridden, so this is unconditional.
+update public.supplies s
+   set in_use_days = p.in_use_days
+  from public.products p
+ where s.name = p.product_name
+   and p.category = 'insulin'
+   and p.in_use_days is not null
+   and s.in_use_days is null;
 
-update public.supplies set in_use_days = 14
-  where in_use_days = 28 and name ilike '%novolog%mix%';
+--     2. Shorten a stored window the label contradicts. This is the direction
+--     that matters: a Humalog Mix pen sitting on 28 means the app tells someone
+--     insulin is fine to inject eighteen days after the label says to bin it,
+--     and that is worth overriding even if they typed the 28 themselves. The
+--     reverse is deliberately NOT done -- where the label is LONGER than the
+--     stored value the app is merely over-cautious, and quietly stretching
+--     someone's discard date is not a call this script should make.
+update public.supplies s
+   set in_use_days = p.in_use_days
+  from public.products p
+ where s.name = p.product_name
+   and p.category = 'insulin'
+   and p.in_use_days is not null
+   and s.in_use_days > p.in_use_days;
 
 -- ============================================================================
 -- 19. UNITS INSIDE ONE CONTAINER  (reference data, not PHI)
