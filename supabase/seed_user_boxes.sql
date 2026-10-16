@@ -226,9 +226,15 @@ insert into public.products
          'MiniMed''s smallest and only app-controlled AID pump. Ships in the US paired with the Instinct sensor'
   where not exists (select 1 from public.products where product_name = 'MiniMed Flex System');
 
+-- default_refill_interval_days was missing from this column list, so the row
+-- landed with a null cycle against the catalog's 90. Caught by
+-- scripts/check-live-catalog.mjs, which is the only thing that compares this
+-- table to data/diabetes_catalog.csv.
 insert into public.products
-  (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day, rx_required, notes)
-  select 'cgm_sensor', 'Abbott', 'Instinct Sensor', 'instinct|instinct sensor|minimed instinct', 'sensors', 1, 0.067, true,
+  (category, brand, product_name, common_names, unit, units_per_box, typical_usage_per_day,
+   default_refill_interval_days, rx_required, notes)
+  select 'cgm_sensor', 'Abbott', 'Instinct Sensor', 'instinct|instinct sensor|minimed instinct', 'sensors', 1, 0.067,
+         90, true,
          'Up to 15-day wear = ~0.067/day. Made by Abbott for the MiniMed 780G and Flex systems'
   where not exists (select 1 from public.products where product_name = 'Instinct Sensor');
 

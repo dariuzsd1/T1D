@@ -1118,6 +1118,13 @@ update public.products set units_per_container = 10000
 --     a cycle the user confirmed off their own label.
 -- ============================================================================
 
+-- Instinct Sensor was inserted by seed_user_boxes.sql without
+-- default_refill_interval_days in its column list, so it landed null against the
+-- catalog's 90. The seed file is fixed for fresh installs; this repairs a row
+-- already written. Found by scripts/check-live-catalog.mjs.
+update public.products set default_refill_interval_days = 90
+  where product_name = 'Instinct Sensor' and default_refill_interval_days is null;
+
 update public.supplies s
    set catalog_refill_interval_days = p.default_refill_interval_days
   from public.products p
