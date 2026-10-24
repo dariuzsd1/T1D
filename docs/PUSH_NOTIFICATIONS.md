@@ -33,16 +33,41 @@ Treat it like a password. Never commit it.
 Re-run `supabase/setup.sql` in the SQL editor (idempotent). It creates
 `fcm_tokens`, `notification_prefs`, and the new `notification_log` (§16).
 
-### 3. Deploy the function (5 min, pick ONE way)
+### 3. Deploy the function (5 min)
 
-**Dashboard (no installs):** Supabase Dashboard → Edge Functions →
-*Deploy a new function* → name it exactly `notify-refills` → paste the entire
-contents of `supabase/functions/notify-refills/index.ts` → Deploy.
+> **Dashboard copy-paste no longer works, and this doc used to say it did.**
+> `index.ts` imports the depletion engine from `../_shared/depletion.ts`
+> (line 44). Pasting just `index.ts` into the dashboard leaves that relative
+> import pointing at nothing. The function has to be deployed as a *bundle* so
+> the `_shared/` file travels with it, which means the CLI.
 
-**CLI (if you have it):**
 ```
-supabase functions deploy notify-refills --no-verify-jwt --project-ref <PROJECT-REF>
+npx supabase login
+npx supabase functions deploy notify-refills --no-verify-jwt --project-ref <PROJECT-REF>
 ```
+
+`npx` avoids a global install. The project ref is the subdomain in your Supabase
+dashboard URL.
+
+### 3a. REDEPLOY whenever `supabase/functions/**` changes — including `_shared/`
+
+This is the easiest thing in the project to forget, and the consequence is
+silent. Vercel auto-deploys the app on every push; **nothing auto-deploys this
+function.** CI builds and tests it but has no Supabase step. So the app can be
+running corrected math while the daily push is still computing the old answers,
+and nobody finds out, because a notification that says the wrong number looks
+exactly like one that says the right number.
+
+That is not hypothetical. The 2026-09/10 audit changed `_shared/depletion.ts`
+three times — the insulin in-use window, the measured wear rate, and threading
+`now` through — and the deployed function kept using the pre-audit engine until
+it was redeployed by hand. Which is precisely the drift `_shared/depletion.ts`
+exists to prevent: read the comment at the top of that file, where the same
+thing happened once before and left "the one channel meant to reach a user
+without them opening the app" warning latest of all.
+
+CI prints a reminder when a push touches `supabase/functions/**`. Treat it as a
+to-do, not noise.
 Turn **JWT verification OFF** for this function (dashboard: Edge Functions →
 notify-refills → its settings → toggle *Verify JWT* off). The function is
 instead protected by a secret you set in the next step, sent as a custom header
