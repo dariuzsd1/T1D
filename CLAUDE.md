@@ -49,12 +49,27 @@ The insurance refill engine models two real per-plan rule shapes (eligible at X%
 or N days before run-out), editable per supply. Reorder is still a hand-off to a supplier's site (no
 vendor API), but the app now tracks it: a self-reported "Mark as ordered" note quiets the proactive
 nags (banner + push) for a grace window without ever hiding a true stockout. All routes build clean;
-the test suite is green (170+ tests as of 2026-07-09).
+the test suite is green (511 tests as of 2026-10-25).
+
+**Two invariants worth knowing before touching intake or the catalog**, both the product of the
+2026-09/10 audit (see the `audit-punchlist` memory):
+- **`src/lib/supplyColumns.ts` is the only thing that writes a new supply's optional columns.** Both
+  intake paths (the scan page, and `addSupply.createSupplies` for starter kits) insert the core
+  columns and then write the optional ones in a best-effort follow-up update. They used to assemble
+  that payload each by hand, and **every column added after they were written drifted between them** —
+  a missing optional column never fails loudly, it just reads NULL forever. `supplyColumns.test.ts`
+  fails if either path writes a column directly.
+- **`npm run check:catalog` diffs the live `products` table against `data/diabetes_catalog.csv`.** Run
+  it after any catalog edit. Needs no credential (the anon key already in `.env.local` is enough,
+  because `products` carries a public-read policy) and exits non-zero on drift. It exists because the
+  worst bugs of that audit were invisible to the test suite: every test asserted what a function
+  does, none asserted what was in the table.
 
 **Known still-open, non-urgent (check `user-todo.md` memory for anything actively in flight):**
 - Expanding TanStack Query beyond Home/Supplies/Reorder/Calendar to the rest of the dashboard.
-- No route/component/E2E test coverage (unit tests only, though CI now also runs `eslint` on every
-  push) — the remaining technical gap identified by the 2026-07-08 re-audit.
+- Genuine end-to-end coverage (Playwright) is the only testing gap left, and is judged not obviously
+  worth it for a single-user app. Route handlers, components and a `/dashboard` smoke render are all
+  covered; jsdom + @testing-library are wired up (see BACKLOG.md for the two gotchas).
 - Success-metric instrumentation (e.g. reorder-cycle completion rate) — not yet built.
 - True one-tap reorder via a supplier/DME API (real Edgepark/Byram/CCS integration) — needs a vendor
   partnership, not just code; today's self-reported order tracking is the honest interim step.

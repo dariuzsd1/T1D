@@ -48,9 +48,21 @@ The refill list's grouping and its exported text are covered too (`src/lib/refil
 the real English dictionary rather than a stub translator — a stub that echoes keys lets a
 wrong-but-plausible message pass.
 
-- **Remaining scope:** a `/dashboard` smoke render against a mocked backend, which is the last
-  significant uncovered surface. After that the gap is genuine end-to-end (Playwright), which is a
+The `/dashboard` smoke render is now done too (`src/app/dashboard/page.test.tsx`), which was the last
+significant uncovered surface. It mounts the real page with only the plumbing stubbed — router,
+supabase client, analytics and `useInventory` — so the ranking, status and copy decisions all run for
+real. Two things it taught, both worth copying: seed the zustand store directly rather than mocking a
+fetch, and assert the router was NOT called, because a silent onboarding redirect leaves an empty DOM
+and passes every other assertion vacuously.
+
+- **Remaining scope:** nothing on this item. What is left is genuine end-to-end (Playwright), a
   separate tooling decision and not obviously worth it for a single-user app.
+- **The gap this coverage does NOT close**, learned the hard way across the 2026-09/10 audit: these
+  tests all assert what a *function* does, and the worst bugs were about what was in the *table*.
+  Seven of them — a discard window whose UPDATE guard never matched, columns written by one intake
+  path and not the other, starter-kit names that matched no catalog row — were invisible to a green
+  suite and surfaced only by querying the real database. `npm run check:catalog` now covers the
+  catalog half of that; `supplies` still needs either a query by hand or the service role key.
 - **Acceptance:** CI fails on a broken route, a broken caregiver-access rule, or a broken render of any
   covered component. The first two are already true. Prove each new test by reintroducing the bug it
   guards and watching it fail — that is how the ProductCard and SQL-lint tests were validated.
