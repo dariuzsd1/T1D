@@ -1226,6 +1226,38 @@ update public.supplies s
    and p.typical_usage_per_day is not null
    and s.usage_rate_per_day is null;
 
+-- ============================================================================
+-- 23. CATEGORY ONTO SUPPLIES THAT NEVER GOT ONE
+--
+--     src/app/scan/page.tsx never wrote supplies.category. It passed the catalog
+--     category to the zustand store but left it out of the row, so every supply
+--     ever added by scanning, by barcode or from the catalog browser landed with
+--     category NULL. Only the starter-kit path (addSupply.createSupplies) wrote
+--     it. Found by renaming one hand-typed row and noticing the pod beside it
+--     had no category either.
+--
+--     What it costs: rescueItems.rescueKindOf reads this column FIRST and falls
+--     back to matching product names against keywords. So glucagon and ketone
+--     strips kept working by luck rather than design -- every rescue product
+--     currently in the catalog happens to contain one of those keywords in its
+--     name. One that did not would have been treated as an ordinary consumable:
+--     judged on a usage runway it has no rate for, and left out of the long
+--     expiry warnings that exist precisely so a rescue med cannot quietly lapse.
+--
+--     Exact name match, NULL-guarded, and the value is the catalog's own
+--     category, so nothing is being inferred. The code is fixed too, so new
+--     adds no longer need this.
+-- ============================================================================
+
+update public.supplies s
+   set category = p.category
+  from public.products p
+ where s.name = p.product_name
+   and p.category is not null
+   and s.category is null;
+
+
+
 
 
 -- ============================================================================

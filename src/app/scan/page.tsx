@@ -295,6 +295,19 @@ export default function ScanPage() {
     if (rate > 0) idPayload.usage_rate_per_day = rate
     if (autoInUseDays && autoInUseDays > 0) idPayload.in_use_days = autoInUseDays
     if (autoRefillDays && autoRefillDays > 0) idPayload.catalog_refill_interval_days = autoRefillDays
+    // The catalog category, which this path never wrote. It was passed to the
+    // store but not to the row, so every supply ever added by scanning, by
+    // barcode or from the catalog browser landed with category NULL while the
+    // starter-kit path (addSupply.createSupplies) wrote it correctly.
+    //
+    // rescueItems.rescueKindOf reads this first and falls back to matching
+    // product names against keywords, so glucagon and ketones kept working by
+    // luck rather than design: every rescue product currently in the catalog
+    // happens to contain one of those keywords in its name. A rescue item that
+    // did not would have been treated as an ordinary consumable, judged on a
+    // usage runway it has no rate for, and left out of the expiry warnings that
+    // exist precisely so a rescue med cannot quietly lapse.
+    if (catalogCategory && catalogCategory !== 'unknown') idPayload.category = catalogCategory
     if (Object.keys(idPayload).length > 0) {
       const { error: idError } = await supabase
         .from('supplies')
