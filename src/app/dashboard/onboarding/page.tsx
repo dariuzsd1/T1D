@@ -11,7 +11,7 @@ import { logActivity } from '@/lib/activity'
 import { createSupplies } from '@/lib/addSupply'
 import { deviceToRow } from '@/lib/devices'
 import {
-  DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, kitDevices, type KitOption,
+  DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, kitDevices, kitSupplyToNewSupply, type KitOption,
 } from '@/lib/starterKits'
 
 /**
@@ -70,10 +70,7 @@ export default function OnboardingPage() {
       const created = await createSupplies(
         supabase,
         user.id,
-        supplies.map((s) => ({
-          name: s.name, brand: s.brand, category: s.category,
-          quantity: s.unitsPerBox, usageRatePerDay: s.usageRatePerDay,
-        })),
+        supplies.map(kitSupplyToNewSupply),
       )
       created.forEach((p) => { addProduct(p); void logActivity('supply_added', p.name) })
 

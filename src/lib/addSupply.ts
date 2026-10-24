@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Product } from './store'
+import { supplyColumns } from './supplyColumns'
 
 export interface NewSupply {
   name: string
@@ -11,6 +12,13 @@ export interface NewSupply {
   /** Days an opened container stays usable, from the catalog. Undefined leaves
    *  the discard clock unset rather than assuming the common 28. */
   inUseDays?: number | null
+  /** The catalog's typical dispensing cycle. Was never written by this path,
+   *  so nothing from onboarding had a refill-eligible date. */
+  refillIntervalDays?: number | null
+  /** The manufacturer has stopped making it. Three of the five CGM starter
+   *  kits build from discontinued sensors, and without this the reorder list
+   *  kept offering to reorder them. */
+  discontinued?: boolean | null
   expirationDate?: string | null
 }
 
@@ -44,13 +52,19 @@ export async function createSupplies(
   // separately so a "column does not exist" error can't break the core insert.
   await Promise.all(
     data.map((row: { id: string }, i: number) => {
-      const patch: Record<string, unknown> = {}
-      const rate = items[i]?.usageRatePerDay ?? 0
-      if (rate > 0) patch.usage_rate_per_day = rate
-      const window = items[i]?.inUseDays ?? 0
-      if (window > 0) patch.in_use_days = window
-      const category = items[i]?.category?.trim()
-      if (category && category !== 'unknown') patch.category = category
+      // Same builder as the scan page, so the two can no longer drift. This
+      // path used to write three of the eight columns: no refill cycle, so
+      // nothing from onboarding ever got a refill-eligible date, and no
+      // discontinued flag, even though three of the five CGM kits build from
+      // sensors their makers have discontinued.
+      const it = items[i]
+      const patch = supplyColumns({
+        category: it?.category,
+        usageRatePerDay: it?.usageRatePerDay,
+        inUseDays: it?.inUseDays,
+        catalogRefillIntervalDays: it?.refillIntervalDays,
+        discontinued: it?.discontinued,
+      })
       return Object.keys(patch).length
         ? supabase.from('supplies').update(patch).eq('id', row.id)
         : Promise.resolve()

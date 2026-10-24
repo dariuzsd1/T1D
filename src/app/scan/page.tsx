@@ -38,6 +38,7 @@ import {
 import { parseSupplyCode, type SupplyCode } from '@/lib/supplyCode'
 import { daysPerUnitFromRate } from '@/lib/depletion'
 import { needsUsageRate, needsInsulinRate, insulinRatePerDay, parseUsagePerDay } from '@/lib/usageRate'
+import { supplyColumns } from '@/lib/supplyColumns'
 import { decodeBarcodeFromImage } from '@/lib/barcode'
 import { useI18n } from '@/lib/i18n'
 import { errorMessage } from '@/lib/utils'
@@ -287,27 +288,19 @@ export default function ScanPage() {
     // from the start, not the 1-unit/day fallback). A miss on these optional
     // columns must never undo the core insert above (docs/BARCODE_SCANNING.md).
     const rate = opts?.usageRatePerDay && opts.usageRatePerDay > 0 ? opts.usageRatePerDay : 0
-    const idPayload: Record<string, unknown> = {}
-    if (opts?.gtin) idPayload.barcode = opts.gtin
-    if (opts?.pzn) idPayload.pzn = opts.pzn
-    if (discontinued) idPayload.discontinued = true
-    if (opts?.lot) idPayload.lot_number = opts.lot
-    if (rate > 0) idPayload.usage_rate_per_day = rate
-    if (autoInUseDays && autoInUseDays > 0) idPayload.in_use_days = autoInUseDays
-    if (autoRefillDays && autoRefillDays > 0) idPayload.catalog_refill_interval_days = autoRefillDays
-    // The catalog category, which this path never wrote. It was passed to the
-    // store but not to the row, so every supply ever added by scanning, by
-    // barcode or from the catalog browser landed with category NULL while the
-    // starter-kit path (addSupply.createSupplies) wrote it correctly.
-    //
-    // rescueItems.rescueKindOf reads this first and falls back to matching
-    // product names against keywords, so glucagon and ketones kept working by
-    // luck rather than design: every rescue product currently in the catalog
-    // happens to contain one of those keywords in its name. A rescue item that
-    // did not would have been treated as an ordinary consumable, judged on a
-    // usage runway it has no rate for, and left out of the expiry warnings that
-    // exist precisely so a rescue med cannot quietly lapse.
-    if (catalogCategory && catalogCategory !== 'unknown') idPayload.category = catalogCategory
+    // Built through supplyColumns so this path and the starter-kit path cannot
+    // write different column sets. They did, six times over, and a missing
+    // optional column never fails loudly -- it just reads NULL forever.
+    const idPayload = supplyColumns({
+      barcode: opts?.gtin,
+      pzn: opts?.pzn,
+      lotNumber: opts?.lot,
+      discontinued,
+      usageRatePerDay: rate,
+      inUseDays: autoInUseDays,
+      catalogRefillIntervalDays: autoRefillDays,
+      category: catalogCategory,
+    })
     if (Object.keys(idPayload).length > 0) {
       const { error: idError } = await supabase
         .from('supplies')

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, type KitSupply } from './starterKits'
+import { DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, kitSupplyToNewSupply, type KitSupply } from './starterKits'
 
 /**
  * The starter kits must name products the way the catalog names them.
@@ -108,5 +108,47 @@ describe('starter kits line up with the catalog', () => {
         expect(kitSupplies(d.id, c.id).length).toBeGreaterThan(0)
       }
     }
+  })
+})
+
+describe('kits carry the facts the catalog has', () => {
+  it('matches the catalog refill cycle', () => {
+    // This path wrote no cycle at all, so nothing from onboarding ever got a
+    // refill-eligible date and the moat was dark for every kit user.
+    const wrong = allKitSupplies.filter((s) => {
+      const row = byName.get(s.name)
+      return row ? Number(row.default_refill_interval_days) !== s.refillIntervalDays : false
+    })
+    expect(wrong.map((s) => `${s.name}: kit ${s.refillIntervalDays} vs catalog ${byName.get(s.name)!.default_refill_interval_days}`))
+      .toEqual([])
+  })
+
+  it('flags exactly the products their makers have discontinued', () => {
+    // Three of the five CGM kits build from discontinued sensors. Without the
+    // flag, refillList's "ask for a replacement" override never fires and the
+    // app keeps telling someone to reorder a sensor nobody sells.
+    const mismatched = allKitSupplies.filter((s) => {
+      const row = byName.get(s.name)
+      if (!row) return false
+      return Boolean(row.discontinued) !== Boolean(s.discontinued)
+    })
+    expect(mismatched.map((s) => s.name)).toEqual([])
+    // And it is genuinely three, so a future catalog edit that retires another
+    // product cannot pass by flagging none of them.
+    expect(allKitSupplies.filter((s) => s.discontinued).map((s) => s.name).sort()).toEqual([
+      'Dexcom G6 Sensor', 'FreeStyle Libre 2 Sensor', 'FreeStyle Libre 3 Sensor',
+    ])
+  })
+
+  it('hands createSupplies every fact it declares', () => {
+    // The converter exists because two callers each spelled this out by hand
+    // and both dropped whatever was added to KitSupply after they were written.
+    const s = allKitSupplies.find((x) => x.discontinued)!
+    const mapped = kitSupplyToNewSupply(s)
+    expect(mapped).toMatchObject({
+      name: s.name, brand: s.brand, category: s.category,
+      quantity: s.unitsPerBox, usageRatePerDay: s.usageRatePerDay,
+      refillIntervalDays: s.refillIntervalDays, discontinued: true,
+    })
   })
 })

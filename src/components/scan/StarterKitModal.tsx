@@ -10,7 +10,7 @@ import { useDialog } from '@/lib/useDialog'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { createSupplies } from '@/lib/addSupply'
-import { DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, type KitOption } from '@/lib/starterKits'
+import { DELIVERY_OPTIONS, CGM_OPTIONS, kitSupplies, kitSupplyToNewSupply, type KitOption } from '@/lib/starterKits'
 import { useI18n } from '@/lib/i18n'
 
 /**
@@ -47,13 +47,7 @@ export function StarterKitModal({ onClose }: { onClose: () => void }) {
       const created = await createSupplies(
         supabase,
         user.id,
-        supplies.map(s => ({
-          name: s.name,
-          brand: s.brand,
-          category: s.category,
-          quantity: s.unitsPerBox,
-          usageRatePerDay: s.usageRatePerDay,
-        })),
+        supplies.map(kitSupplyToNewSupply),
       )
       created.forEach(p => {
         addProduct(p)

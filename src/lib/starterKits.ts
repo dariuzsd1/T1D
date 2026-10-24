@@ -17,6 +17,13 @@ export interface KitSupply {
   unitsPerBox: number
   /** units/day. 0 = per-person → runway shown as an estimate, not a known fact. */
   usageRatePerDay: number
+  /** The catalog's typical dispensing cycle. Carried so onboarding produces a
+   *  refill-eligible date the way the scan path does; it never did before. */
+  refillIntervalDays: number
+  /** True when the maker has stopped producing it. The G6 kit and both
+   *  pre-Plus Libre kits build from discontinued sensors, and without this the
+   *  reorder list offered to reorder a product nobody sells. */
+  discontinued?: boolean
 }
 
 export interface KitOption {
@@ -46,7 +53,7 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Insulet',
     device: { brand: 'Omnipod', model: 'Omnipod 5', kind: 'pump' },
     supplies: [
-      { name: 'Omnipod 5 Pod', brand: 'Insulet', category: 'patch_pump', unitsPerBox: 5, usageRatePerDay: POD_3DAY },
+      { name: 'Omnipod 5 Pod', brand: 'Insulet', category: 'patch_pump', unitsPerBox: 5, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -55,7 +62,7 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Insulet',
     device: { brand: 'Omnipod', model: 'Omnipod DASH', kind: 'pump' },
     supplies: [
-      { name: 'Omnipod DASH Pod', brand: 'Insulet', category: 'patch_pump', unitsPerBox: 5, usageRatePerDay: POD_3DAY },
+      { name: 'Omnipod DASH Pod', brand: 'Insulet', category: 'patch_pump', unitsPerBox: 5, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -64,8 +71,8 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Tandem',
     device: { brand: 'Tandem', model: 't:slim X2', kind: 'pump' },
     supplies: [
-      { name: 't:slim X2 Cartridge', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
-      { name: 'AutoSoft 90 Infusion Set', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 't:slim X2 Cartridge', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
+      { name: 'AutoSoft 90 Infusion Set', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -74,8 +81,8 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Tandem',
     device: { brand: 'Tandem', model: 'Mobi', kind: 'pump' },
     supplies: [
-      { name: 'Tandem Mobi Cartridge', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
-      { name: 'AutoSoft 90 Infusion Set', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'Tandem Mobi Cartridge', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
+      { name: 'AutoSoft 90 Infusion Set', brand: 'Tandem', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -84,8 +91,8 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Medtronic',
     device: { brand: 'Medtronic', model: 'MiniMed 780G', kind: 'pump' },
     supplies: [
-      { name: 'MiniMed Reservoir', brand: 'MiniMed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
-      { name: 'Mio Advance Infusion Set', brand: 'MiniMed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'MiniMed Reservoir', brand: 'MiniMed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
+      { name: 'Mio Advance Infusion Set', brand: 'MiniMed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -94,8 +101,8 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Beta Bionics',
     device: { brand: 'Beta Bionics', model: 'iLet', kind: 'pump' },
     supplies: [
-      { name: 'iLet Cartridge', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
-      { name: 'iLet Infusion Set', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'iLet Cartridge', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
+      { name: 'iLet Infusion Set', brand: 'Beta Bionics', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -104,8 +111,8 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     sublabel: 'Ypsomed',
     device: { brand: 'Ypsomed', model: 'YpsoPump', kind: 'pump' },
     supplies: [
-      { name: 'mylife YpsoPump Reservoir', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
-      { name: 'mylife YpsoPump Orbit Infusion Set', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY },
+      { name: 'mylife YpsoPump Reservoir', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
+      { name: 'mylife YpsoPump Orbit Infusion Set', brand: 'Ypsomed', category: 'infusion_set', unitsPerBox: 10, usageRatePerDay: POD_3DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -113,7 +120,7 @@ export const DELIVERY_OPTIONS: KitOption[] = [
     label: 'Insulin pens (MDI)',
     sublabel: 'No pump',
     supplies: [
-      { name: 'BD Ultra-Fine Pen Needles', brand: 'BD', category: 'mdi_supply', unitsPerBox: 90, usageRatePerDay: 0 },
+      { name: 'BD Ultra-Fine Pen Needles', brand: 'BD', category: 'mdi_supply', unitsPerBox: 90, usageRatePerDay: 0, refillIntervalDays: 90 },
     ],
   },
 ]
@@ -125,7 +132,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Dexcom',
     device: { brand: 'Dexcom', model: 'G7', kind: 'cgm' },
     supplies: [
-      { name: 'Dexcom G7 Sensor', brand: 'Dexcom', category: 'cgm_sensor', unitsPerBox: 3, usageRatePerDay: SENSOR_10DAY },
+      { name: 'Dexcom G7 Sensor', brand: 'Dexcom', category: 'cgm_sensor', unitsPerBox: 3, usageRatePerDay: SENSOR_10DAY, refillIntervalDays: 90 },
     ],
   },
   {
@@ -134,7 +141,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Dexcom',
     device: { brand: 'Dexcom', model: 'G6', kind: 'cgm' },
     supplies: [
-      { name: 'Dexcom G6 Sensor', brand: 'Dexcom', category: 'cgm_sensor', unitsPerBox: 3, usageRatePerDay: SENSOR_10DAY },
+      { name: 'Dexcom G6 Sensor', brand: 'Dexcom', category: 'cgm_sensor', unitsPerBox: 3, usageRatePerDay: SENSOR_10DAY, refillIntervalDays: 90, discontinued: true },
     ],
   },
   {
@@ -143,7 +150,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Abbott',
     device: { brand: 'Abbott', model: 'FreeStyle Libre 3', kind: 'cgm' },
     supplies: [
-      { name: 'FreeStyle Libre 3 Sensor', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_14DAY },
+      { name: 'FreeStyle Libre 3 Sensor', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_14DAY, refillIntervalDays: 90, discontinued: true },
     ],
   },
   {
@@ -152,7 +159,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Abbott',
     device: { brand: 'Abbott', model: 'FreeStyle Libre 2', kind: 'cgm' },
     supplies: [
-      { name: 'FreeStyle Libre 2 Sensor', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_14DAY },
+      { name: 'FreeStyle Libre 2 Sensor', brand: 'Abbott', category: 'cgm_sensor', unitsPerBox: 1, usageRatePerDay: SENSOR_14DAY, refillIntervalDays: 90, discontinued: true },
     ],
   },
   {
@@ -161,7 +168,7 @@ export const CGM_OPTIONS: KitOption[] = [
     sublabel: 'Medtronic',
     device: { brand: 'Medtronic', model: 'Guardian 4', kind: 'cgm' },
     supplies: [
-      { name: 'Guardian 4 Sensor', brand: 'MiniMed', category: 'cgm_sensor', unitsPerBox: 5, usageRatePerDay: SENSOR_7DAY },
+      { name: 'Guardian 4 Sensor', brand: 'MiniMed', category: 'cgm_sensor', unitsPerBox: 5, usageRatePerDay: SENSOR_7DAY, refillIntervalDays: 90 },
     ],
   },
 ]
@@ -183,4 +190,28 @@ export function kitDevices(
   return [delivery?.device, cgm?.device].filter(
     (d): d is { brand: string; model: string; kind: 'pump' | 'cgm' } => Boolean(d),
   )
+}
+
+/**
+ * A kit entry in the shape `addSupply.createSupplies` wants.
+ *
+ * One mapping, because there are two callers (first-run onboarding and the
+ * Quick Start modal) and each used to spell it out by hand. That is the same
+ * duplication that cost six columns elsewhere: both dropped every field added
+ * to KitSupply after they were written, silently, because a missing optional
+ * column just reads NULL.
+ *
+ * inUseDays and expirationDate are deliberately absent: no kit contains insulin,
+ * and nothing here has a box in hand to read an expiry off.
+ */
+export function kitSupplyToNewSupply(s: KitSupply) {
+  return {
+    name: s.name,
+    brand: s.brand,
+    category: s.category,
+    quantity: s.unitsPerBox,
+    usageRatePerDay: s.usageRatePerDay,
+    refillIntervalDays: s.refillIntervalDays,
+    discontinued: s.discontinued,
+  }
 }
