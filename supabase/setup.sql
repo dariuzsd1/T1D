@@ -1198,6 +1198,37 @@ update public.supplies s
    and s.in_use_days is null;
 
 -- ============================================================================
+-- 22. WEAR RATE ONTO SUPPLIES THAT NEVER GOT ONE
+--
+--     The last of the add-path-only gaps, and found the same way as the rest:
+--     by listing a real inventory and noticing two rows missing from it. Three
+--     Guardian sensors, two with a rate. Three Mio sets, two with a rate. The
+--     two without were 'unset', which means no runway, and excluded from the
+--     reorder list, the calendar and the risk banner.
+--
+--     Honest to backfill, unlike the insulin dose next door. A sensor's wear
+--     rate is a verified product fact that is the same for everybody, and it is
+--     exactly what the add path already copies, so there is nothing per-person
+--     being guessed at here. An insulin dose is the opposite, which is why no
+--     statement in this file ever sets usage_rate_per_day for one.
+--
+--     No category filter is needed. The catalog only carries
+--     typical_usage_per_day for things that are WORN (sensors, pods, sets,
+--     reservoirs, cartridges); insulin, strips, lancets and hypo carbs are
+--     deliberately blank there because their usage is per-person. So
+--     `p.typical_usage_per_day is not null` already excludes every one of them.
+-- ============================================================================
+
+update public.supplies s
+   set usage_rate_per_day = p.typical_usage_per_day
+  from public.products p
+ where s.name = p.product_name
+   and p.typical_usage_per_day is not null
+   and s.usage_rate_per_day is null;
+
+
+
+-- ============================================================================
 -- DONE. Tables + security are ready. Sample data is in supabase/seed.sql
 -- (optional — run that separately after you've signed in once).
 -- ============================================================================
