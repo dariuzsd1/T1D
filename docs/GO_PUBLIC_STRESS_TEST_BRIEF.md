@@ -158,10 +158,14 @@ Work these out yourself; the list above is a floor, not a ceiling.
    diabetes subreddit or Facebook group, and what is needed before that is
    survivable — a bug channel, a catalog-contribution route, a status page, a
    privacy policy and terms, a way to answer "is my data safe".
-8. **The rollout itself.** Propose a staged plan: private beta size, who to
-   recruit, what to instrument before launch (success metrics are not yet
-   built), what to say publicly about accuracy and limitations, and the
-   kill-switch if something is badly wrong.
+8. **The rollout itself.** `docs/GO_PUBLIC_REVIEW_PLAN.md` already sets the
+   stages and their gates — stage 1 is ten to fifteen people the author knows,
+   using it for real; stage 2 is a public beta and is gated on a legal
+   consultation and clinical review. **Read it before proposing a rollout, and
+   challenge it rather than duplicating it.** Specifically: is the stage-1 gate
+   sufficient, does the engineering support the stage-2 gate, and what is missing
+   from either? Success metrics are not yet built, which matters for deciding
+   whether stage 1 taught anyone anything.
 
 ## DELIVERABLE
 
